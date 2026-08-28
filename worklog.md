@@ -716,3 +716,39 @@ Stage Summary:
 - Evidence: docs/screenshots/qa-01..qa-22 (22 new screenshots).
 - Remaining risks: auth-route rate limiting open; no service worker (install prompt needs SW on some browsers — manifest alone enables A2HS on Android); in-memory rate limiter is single-node; ~25 hardcoded English strings remain (frozen dictionaries prevent new keys).
 - Recommended next: WebSocket live notifications (mini-service), real OCR/embeddings provider swaps, i18n dictionary extension via coordinated contract change, T7 verification upload→approve→badge visual pass.
+
+---
+Task ID: 5-ws (orchestrator round)
+Agent: Orchestrator (WebSocket live notifications + branded error pages + employer polish)
+Task: Assess project, QA via agent-browser, then add WebSocket real-time notifications mini-service + branded 404/error/loading pages + employer component styling polish.
+
+Work Log:
+- Reviewed worklog.md tail: previous round (4-qa) added PWA, admin analytics, saved jobs, rate limiting, landing/tracker/passport polish.
+- Health checks: server 200, lint 0 errors, 49/49 tests pass.
+- agent-browser QA sweep across landing/login/worker feed/tracker/passport/verify/employer dashboard/candidates/pipeline/jobs/post/admin/admin-verifications/kaam-card/job-detail/mobile 375px — ALL pages clean, no bugs found this round (previous round's fixes held).
+- New feature: WebSocket live notifications (real-time delivery layer on top of the 15s polling fallback).
+  - Created mini-services/notifications-ws/ (port 3003, socket.io v4, path "/"): subscribe/relay/heartbeat/disconnect events, per-user rooms (user:{userId}), shared-secret auth on relay events, 30s heartbeat broadcast. Auto-restart wrapper (run.sh) because the sandbox reaps detached processes between Bash tool calls.
+  - Created src/lib/notifications/ws-relay.ts — server-side singleton socket.io-client connection from Next.js (127.0.0.1:3003, server-to-server, websocket transport). Fire-and-forget relayNotification() called from pushNotification(). Graceful degradation: if mini-service down, polling catches up.
+  - Created src/lib/notifications/ws-client.ts — browser-side module-level socket store with useSyncExternalStore-style listeners. Connects via io("/?XTransformPort=3003") (gateway-routed, never absolute URL). Exposes ConnectionState (idle/connecting/connected/disconnected) + onNotification/onHeartbeat.
+  - Refactored src/lib/notifications.ts → src/lib/notifications/index.ts (folder) + pushNotification() now also fires relayNotification(). All existing imports (@/lib/notifications) still resolve.
+  - Upgraded src/hooks/use-notifications.ts: hybrid 15s polling + WS subscription. On WS incoming: eagerly bumps unread + prepends item + fans out to onIncoming callbacks + refreshes from DB. Exposes connection state + setUserId + onIncoming.
+  - Upgraded src/components/worker/NotificationsBell.tsx: subscribes to WS room via session.user.id, renders a live "Live/Polling/Connecting" indicator with pulsing emerald dot, shows sonner toast on incoming notifications (with View action + type-specific icon), preserves the open-popover behavior.
+  - Verified live: when mini-service is up, browser connects → "[ws] connected socket=... subscribed user:demo-worker" in service log → NotificationsBell shows "INDICATOR: Live". When service is down (sandbox reaps it), indicator shows "Polling" and the 15s /api/notifications polling still delivers.
+  - Gateway routing confirmed: curl http://localhost:81/?XTransformPort=3003&EIO=4&transport=polling returns the socket.io handshake when the mini-service is alive. Caddy's active Caddyfile (/app/Caddyfile, root-only) differs from the project's but DOES route XTransformPort correctly (verified with a plain HTTP test server on 3005).
+- New feature: branded error/loading pages.
+  - src/app/not-found.tsx — branded 404 with gradient "404" text, saffron underline swoosh, "This page took a different bridge." headline (ShramSetu = labor bridge), Jobs/Login CTAs, sticky footer. VLM-verified 8/10.
+  - src/app/error.tsx — client error boundary with AlertTriangle icon, destructive-tinted backdrop, "Try again" (reset) + "Back to home" CTAs, error digest display, console.error logging.
+  - src/app/loading.tsx — branded route-loading skeleton with header + LoadingSkeleton body.
+- Styling polish pass on employer components (mandatory "more details"):
+  - CandidateCard: added motion entrance, avatar initials circle (primary tint, hover scale), match-score top gradient hairline (navy→emerald ≥70, navy→saffron ≥50), corner hover lift, "View →" affordance with arrow slide.
+  - PipelineKanban: fixed STATUS_TONE color violations (was border-t-sky-400/blue + border-t-violet-400/violet → now navy primary / saffron accent / emerald / rose, no blue/indigo); added per-column status dots, shadow-sm, dashed empty-state border, tabular-nums count badges. VLM-verified 9/10, no color violations.
+  - Candidate detail page (/employer/candidates/[id]): added framer-motion entrance + sticky aside (lg:sticky lg:top-20) for the shortlist/endorse rail.
+- Final verification: lint 0 errors, 49/49 tests pass. VLM-verified: 404 page 8/10, candidate cards 8/10, pipeline 9/10. Mobile 375px still clean (no new overflows introduced).
+- Captured screenshots: qa-23-branded-404.png, qa-24-ws-live-notifications.png, qa-25-candidate-cards-polish.png, qa-26-pipeline-polish.png.
+
+Stage Summary:
+- New features: WebSocket live notifications (mini-service + server relay + client hook + UI), branded 404/error/loading pages.
+- Styling: employer candidate cards + pipeline kanban + candidate detail polished; PipelineKanban color-rule violations fixed.
+- All frozen contracts untouched.
+- Known sandbox limitation: the dev server (port 3000) and the notifications mini-service (port 3003) are reaped by the sandbox between Bash tool calls. Both auto-restart on next invocation; the WS feature degrades gracefully to 15s polling when the mini-service is down. The cron job (webDevReview, every 15 min) will continue autonomous QA/dev and restart services as needed.
+- Recommended next: (1) seed one pending verification so T7 (upload→approve→badge) can be visually demonstrated end-to-end; (2) i18n dictionary extension via coordinated contract change to replace remaining hardcoded English; (3) production hardening: swap in-memory rate limiter for Upstash/Redis, wire real OCR/embeddings providers.

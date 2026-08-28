@@ -37,10 +37,10 @@ const STATUS_KEYS: Record<Status, "trackerStageApplied" | "trackerStageShortlist
 };
 
 const STATUS_TONE: Record<Status, string> = {
-  applied: "border-t-border bg-muted/30",
-  shortlisted: "border-t-amber-400 bg-amber-50/60",
-  interview: "border-t-sky-400 bg-sky-50/60",
-  offer: "border-t-violet-400 bg-violet-50/60",
+  applied: "border-t-muted-foreground/40 bg-muted/30",
+  shortlisted: "border-t-accent bg-accent/[0.06]",
+  interview: "border-t-primary bg-primary/[0.05]",
+  offer: "border-t-accent bg-accent/[0.10]",
   hired: "border-t-emerald-500 bg-emerald-50/60",
   rejected: "border-t-rose-400 bg-rose-50/60",
 };
@@ -258,15 +258,18 @@ function PipelineColumn({
     <div className="shrink-0 w-72 sm:w-80 snap-start">
       <div
         ref={setNodeRef}
-        className={`flex flex-col gap-2 rounded-xl border-t-4 ${STATUS_TONE[status]} p-3 min-h-48`}
+        className={`flex flex-col gap-2 rounded-xl border border-border border-t-4 ${STATUS_TONE[status]} p-3 min-h-48 shadow-sm transition-shadow`}
       >
         <div className="flex items-center justify-between px-1">
-          <h3 className="font-semibold text-sm">{title}</h3>
-          <Badge variant="outline" className="text-xs">{applications.length}</Badge>
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <span className={`size-1.5 rounded-full ${status === "hired" ? "bg-emerald-500" : status === "rejected" ? "bg-rose-400" : status === "offer" ? "bg-accent" : status === "interview" ? "bg-primary" : status === "shortlisted" ? "bg-accent/70" : "bg-muted-foreground/40"}`} aria-hidden />
+            {title}
+          </h3>
+          <Badge variant="outline" className="text-xs tabular-nums">{applications.length}</Badge>
         </div>
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {applications.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-6 text-center">
+            <p className="text-xs text-muted-foreground py-6 text-center border border-dashed border-border/60 rounded-lg">
               No candidates here.
             </p>
           ) : (

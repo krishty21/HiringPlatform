@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, MapPin, Briefcase, Star, Languages, Eye, Zap } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import type { Skill } from "@/lib/schemas";
 
 interface CandidateDetail {
@@ -113,7 +114,13 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
 
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
           {/* Skill Passport — left/main */}
-          <Card className="passport-card">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="h-full"
+          >
+          <Card className="passport-card h-full">
             <CardContent className="p-6 flex flex-col gap-4">
               <div className="flex items-start gap-4">
                 <Avatar className="size-16 border-2 border-primary/30">
@@ -233,9 +240,10 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
               )}
             </CardContent>
           </Card>
+          </motion.div>
 
           {/* Side rail — actions */}
-          <aside className="flex flex-col gap-4">
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Shortlist for a job</CardTitle>

@@ -19,6 +19,7 @@
 | 6 | Public + i18n + Polish (WS6) | B6 | `done` | PUB-01..03, I18N-01..04 | All 3 PUB + 4 I18N PASS; ~30 hardcoded English strings flagged in frozen/other-WS files for orchestrator Phase 2 i18n completion pass (none in WS6's own files). |
 | 3-doc | Documentation (Phase 3) | Phase 3 Documentation | `done` | Section 14 deliverables: README, docs/architecture, docs/database, docs/api, docs/algorithms, docs/security, EXPLANATION_LOG, DECISIONS, STATUS, ROADMAP, FINAL_REPORT, .env.example | All 12 deliverables created; worklog appended. |
 | 4-qa | QA + Polish + Features round | Orchestrator | `done` | agent-browser QA sweep (14 screenshots), 5 bug fixes, PWA manifest+icons, admin analytics charts, saved-jobs bookmarks, rate limiting, landing/tracker/passport/job-detail styling polish | All bugs fixed; lint clean; 49/49 tests; mobile 375px overflow fixed on /, /verify, /employer/post; PWA installable; 4 recharts charts on /admin; localStorage bookmarks; 10/min AI + 20/min applications rate limits. |
+| 5-ws | WebSocket + branded error pages + employer polish | Orchestrator | `done` | WebSocket live notifications mini-service (port 3003) + server relay + client hook + NotificationsBell live indicator + branded 404/error/loading + employer candidate-card/pipeline/candidate-detail polish | WS connects ("Live") when mini-service is up; 15s polling fallback covers downtime; 0 lint errors; 49/49 tests; PipelineKanban color violations fixed (blue/violet → navy/saffron); VLM 8-9/10 on new pages. |
 
 ---
 

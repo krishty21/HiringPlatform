@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -15,8 +16,15 @@ import { cn } from "@/lib/utils";
 export function NotificationsBell() {
   const { t } = useLanguage();
   const router = useRouter();
-  const { items, unread, markAllRead } = useNotifications(15000);
+  const { data: session } = useSession();
+  const { items, unread, markAllRead, connection, setUserId, onIncoming } = useNotifications(15000);
   const [open, setOpen] = useState(false);
+
+  // Subscribe to the WebSocket room once we know the user id.
+  useEffect(() => {
+    const uid = (session?.user as { id?: string } | undefined)?.id ?? null;
+    setUserId(uid);
+  }, [session, setUserId]);
 
   function gotoItem(item: NotificationItem) {
     setOpen(false);
@@ -30,6 +38,24 @@ export function NotificationsBell() {
     }
   }
 
+  // Toast on incoming WS notification (only when popover is closed — open popover
+  // already shows the item in the list, no toast needed).
+  useEffect(() => {
+    return onIncoming((n: NotificationItem) => {
+      if (open) return;
+      const text = notificationText(n, t);
+      const Icon = iconForType(n.type);
+      toast(text, {
+        duration: 5000,
+        action: { label: "View", onClick: () => gotoItem(n) },
+        icon: <Icon className="size-4 text-accent-foreground" />,
+      });
+    });
+  }, [onIncoming, open, t]);
+
+  const connected = connection === "connected";
+  const stateLabel = connected ? "Live" : connection === "connecting" ? "Connecting" : "Polling";
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
@@ -42,7 +68,7 @@ export function NotificationsBell() {
         >
           <Bell className="size-5" />
           {unread > 0 && (
-            <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums px-1">
+            <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums px-1 animate-in zoom-in-50 duration-200">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -51,18 +77,36 @@ export function NotificationsBell() {
       <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0">
         <div className="flex items-center justify-between p-3 border-b border-border">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">{t("notifTitle")}</DropdownMenuLabel>
-          {unread > 0 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs gap-1 px-2"
-              onClick={() => { void markAllRead(); }}
+          <div className="flex items-center gap-3">
+            {/* Real-time connection indicator */}
+            <span
+              className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"
+              title={connected ? "Real-time connected" : "Polling fallback (15s)"}
             >
-              <CheckCheck className="size-3" />
-              Mark all read
-            </Button>
-          )}
+              <span className="relative flex size-1.5" aria-hidden>
+                {connected && (
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                )}
+                <span className={cn(
+                  "relative inline-flex size-1.5 rounded-full",
+                  connected ? "bg-emerald-500" : connection === "connecting" ? "bg-amber-500" : "bg-muted-foreground/50",
+                )} />
+              </span>
+              {stateLabel}
+            </span>
+            {unread > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1 px-2"
+                onClick={() => { void markAllRead(); }}
+              >
+                <CheckCheck className="size-3" />
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
         <DropdownMenuSeparator className="m-0" />
         <ScrollArea className="max-h-96">
