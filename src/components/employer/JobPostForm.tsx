@@ -357,17 +357,17 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
 
       {/* Description + AI */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
           <CardTitle className="text-lg">{t("jobDescription")}</CardTitle>
           <Button
             type="button"
             variant="outline"
             onClick={generateDescription}
             disabled={aiBusy || !tradeId || !city}
-            className="gap-2"
+            className="gap-2 min-h-11 whitespace-normal text-left"
           >
-            {aiBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {aiBusy ? t("postJobAiWorking") : t("postJobAiDesc")}
+            {aiBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 shrink-0" />}
+            <span>{aiBusy ? t("postJobAiWorking") : t("postJobAiDesc")}</span>
           </Button>
         </CardHeader>
         <CardContent className="grid gap-2">

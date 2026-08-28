@@ -23,8 +23,10 @@ import {
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
 import {
-  ShieldCheck, Star, MapPin, Zap, Eye, Briefcase, Share2, Loader2, Save, Sparkles,
+  ShieldCheck, Star, MapPin, Zap, Eye, Briefcase, Share2, Loader2, Save, Sparkles, Check,
 } from "lucide-react";
+
+const TRUST_LADDER = ["new", "id_verified", "skill_verified", "top_pro"] as const;
 
 interface WorkerProfileData {
   id: string;
@@ -327,6 +329,58 @@ export default function WorkerProfilePage() {
             </div>
 
             <Separator />
+
+            {/* Trust tier ladder — New → ID Verified → Skill Verified → Top Pro */}
+            <div className="grid gap-2 rounded-lg border border-border bg-card/50 p-3" aria-label={`${t("passportTier")}: ${profile.trustScore}/100`}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <ShieldCheck className="size-3.5 text-primary" />
+                  {t("passportTier")}
+                </span>
+                <span className="tabular-nums font-bold">{profile.trustScore}/100 · {t("passportTrustScore")}</span>
+              </div>
+              <ol className="flex items-center gap-0" aria-hidden>
+                {([
+                  ["new", t("passportTierNew")],
+                  ["id_verified", t("passportTierIdVerified")],
+                  ["skill_verified", t("passportTierSkillVerified")],
+                  ["top_pro", t("passportTierTopPro")],
+                ] as const).map(([tier, label], i) => {
+                  const currentIdx = TRUST_LADDER.indexOf(profile.trustTier);
+                  const state = i < currentIdx ? "done" : i === currentIdx ? "current" : "todo";
+                  return (
+                    <li key={tier} className="flex-1 flex flex-col items-center gap-1.5 last:flex-none">
+                      <div className="flex items-center w-full">
+                        {i > 0 && (
+                          <span className={`h-0.5 flex-1 mx-0.5 rounded-full ${i <= currentIdx ? "bg-primary/60" : "bg-border"}`} />
+                        )}
+                        <span
+                          className={`size-6 rounded-full grid place-items-center border-2 text-[10px] font-bold transition-colors ${
+                            state === "done"
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : state === "current"
+                                ? "bg-accent/15 border-accent text-accent-foreground ring-4 ring-accent/15"
+                                : "bg-muted/50 border-border text-muted-foreground/60"
+                          }`}
+                        >
+                          {state === "done" ? <Check className="size-3" /> : i + 1}
+                        </span>
+                        {i < 3 && (
+                          <span className={`h-0.5 flex-1 mx-0.5 rounded-full ${i < currentIdx ? "bg-primary/60" : "bg-border"}`} />
+                        )}
+                      </div>
+                      <span
+                        className={`text-[10px] font-medium text-center leading-tight ${
+                          state === "current" ? "text-accent-foreground" : "text-muted-foreground"
+                        } ${i === 3 ? "whitespace-nowrap" : ""}`}
+                      >
+                        {label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
 
             {/* Strength meter — live (WRK-04) */}
             <div className="grid gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">

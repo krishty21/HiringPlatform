@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import { requireUser, errorResponse, HTTPError } from "@/lib/authz";
 import { getAIProvider } from "@/lib/ai";
+import { rateLimit, clientKey, rateLimitResponse } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const OcrPrecheckBody = z.object({
@@ -30,7 +31,12 @@ const MANUAL_REVIEW_FALLBACK = {
 export async function POST(req: Request) {
   try {
     // Worker or employer — admins don't upload verification docs themselves.
-    await requireUser(["worker", "employer"]);
+    const user = await requireUser(["worker", "employer"]);
+
+    // LLM cost protection (STATUS.md finding #4): 10 req/min per user,
+    // keyed by user AFTER auth so anonymous callers can't burn AI spend.
+    const rl = rateLimit(clientKey(req, user.id), { limit: 10, windowMs: 60_000 });
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
 
     const body = await req.json();
     const parsed = OcrPrecheckBody.parse(body);

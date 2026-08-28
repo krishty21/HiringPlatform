@@ -588,3 +588,131 @@ Stage Summary:
 - All 6 workstream subagents + Phase 3 documentation subagent + orchestrator have appended to /home/z/my-project/worklog.md (now 76,841 bytes covering 8 task records).
 - 14 screenshots captured at /home/z/my-project/docs/screenshots/ as visual evidence for the hackathon video + final report.
 - Project ready for hand-off to the recurring webDevReview cron job (every 15 min, Asia/Calcutta) for continued autonomous development.
+
+---
+Task ID: 2-c
+Agent: general-purpose (rate limiting)
+Task: Implement in-memory rate limiting for AI-cost routes (/api/ai/*) + POST /api/applications spam protection (STATUS.md open finding #4).
+
+Work Log:
+- Read worklog (590 lines, Phase 3 complete, 15-min webDevReview cron active), STATUS.md finding #4, authz.ts (requireWorker/requireEmployer/requireUser return {user:{id,role}}, errorResponse/HTTPError patterns — frozen, imported only), the 3 AI routes + applications route, schemas/index.ts (JobDescriptionBody requires title/tradeId/headcount/wageMin/wageMax/city/shift/isUrgent; VoiceProfileBody requires transcript≥5 + lang enum), mock-provider (deterministic, safe to hit 12×).
+- Created src/lib/rate-limit.ts: fixed-window in-memory limiter. Module-level Map<string,{count,resetAt}>; on call: expired bucket → reset, increment, ok = count ≤ limit, retryAfterSec = ceil((resetAt−now)/1000), remaining clamped ≥0. Lazy sweep (no setInterval — serverless-safe): runs inline when map.size > 5000 OR >60s since last sweep. clientKey(req, userId?) → `u:<id>` | first x-forwarded-for IP (`ip:<ip>`) | "anonymous". rateLimitResponse(retryAfterSec) → 429 JSON {error:"RATE_LIMITED", message:"Too many requests. Please try again shortly."} + Retry-After header, mirroring authz errorResponse body shape. JSDoc documents the single-node tradeoff + Upstash/Redis production swap path.
+- Modified src/app/api/ai/job-description/route.ts: after requireEmployer(), before provider call — rateLimit(clientKey(req, user.id), {limit:10, windowMs:60_000}); !ok → rateLimitResponse.
+- Modified src/app/api/ai/voice-profile/route.ts: same pattern after requireWorker().
+- Modified src/app/api/ai/ocr-precheck/route.ts: same pattern after requireUser(["worker","employer"]).
+- Modified src/app/api/applications/route.ts (POST only): after requireWorker() — {limit:20, windowMs:60_000}. GET handler untouched; all validation/provider/status-code logic untouched.
+- Verification: `bun run lint` → 0 errors in my 5 files (1 pre-existing/concurrent error in src/hooks/use-saved-jobs.ts — another agent's territory, not touched).
+- Limiter unit test (bun -e, TS import direct): key 't1' 12 calls limit 10 → 12th = {"ok":false,"remaining":0,"retryAfterSec":60,"limit":10}; fresh key 't2' → ok:true; clientKey: u:user-123 / ip:203.0.113.9 (first XFF IP) / anonymous; rateLimitResponse(37) → status 429, Retry-After 37, body {"error":"RATE_LIMITED",...}.
+- Curl: unauth POST /api/ai/job-description → 401 (auth precedes limiter — expected, no session cookie).
+- Browser smoke (agent-browser): login as Ravi (worker) → POST /api/ai/job-description (task's guessed body) → 403 FORBIDDEN (employer-only route; auth-before-limiter confirmed; NOT 429 ✓); POST /api/ai/voice-profile {transcript, lang:'en'} → 200 full extraction (route functional ✓); POST /api/ai/ocr-precheck {fileUrl, docType:'id'} → 200 "Manual review required" fallback ✓; POST /api/applications {existing jobId} → 200 {alreadyApplied:true} (no DB mutation, route functional ✓).
+- Browser smoke (employer): login as Priya → POST /api/ai/job-description with valid JobDescriptionBody → 200 + generated description ✓; then 12 sequential calls: 9×200 (10 total for the window) then 3×429 with error RATE_LIMITED and Retry-After: 55 — end-to-end enforcement confirmed in the live dev server process.
+
+Stage Summary:
+- Files changed (5, all in scope): src/lib/rate-limit.ts (NEW), src/app/api/ai/job-description/route.ts, src/app/api/ai/voice-profile/route.ts, src/app/api/ai/ocr-precheck/route.ts, src/app/api/applications/route.ts.
+- Limits: AI routes 10 req/min/user (LLM cost protection, keyed by auth'd user id after session check); POST /api/applications 20 req/min/user (spam/brute-force protection). GET handlers left unprotected per spec.
+- 429 shape: {error:"RATE_LIMITED", message:"Too many requests. Please try again shortly."} + Retry-After header — uniform with authz errorResponse.
+- In-memory single-node tradeoff documented in JSDoc: per-process buckets fine for sandbox/demo (one next dev node); swap for Upstash/Redis in production without changing route call sites.
+- Verification: lint 0 errors in my files; unit test 12th-call ok:false + fresh-key ok:true; live 429 observed end-to-end (10×200 then 429 with Retry-After:55); all 4 routes still return correct business responses (200/403/401 paths verified). STATUS.md finding #4 AI half resolved (auth/* brute-force limiting left to owner of that territory).
+
+---
+Task ID: 2-b
+Agent: general-purpose (admin analytics)
+Task: Build the Admin console analytics section — 4 recharts visualizations fed by a new admin-only aggregation API (real seeded data, no schema changes).
+
+Work Log:
+- Read worklog tail, admin page (src/app/admin/page.tsx), admin stats route (auth pattern), prisma/schema.prisma, src/components/ui/chart.tsx, globals.css (brand palette: primary #003a7f navy / saffron #f5a623).
+- Probed the seeded DB directly (Prisma raw) to validate aggregation SQL + expected numbers: 31 applications (9 applied/6 shortlisted/5 interview/4 offer/5 hired/2 rejected), tiers new=3/id_verified=6/skill_verified=11/top_pro=0 (20 workers), 8 trades (3/3/3/3/2/2/2/2), 2 urgent of 10 jobs, 5 hires Aug 16-20. Noted SQLite raw COUNT returns BigInt → Number() conversion required.
+- CREATED src/app/api/admin/analytics/route.ts — GET, admin-only (requireAdmin + errorResponse, copied from /api/admin/stats). 7 parallel queries: $queryRaw strftime('%Y-%m-%d', appliedAt/1000, 'unixepoch') day-bucketing for applicationsPerDay (server-side zero-filled 14 UTC days), application.groupBy(status) → cumulative funnel (applied=31 all apps; shortlisted=interview|offer|hired+shortlisted; etc.), workerProfile.groupBy(trustTier) → 4 canonical tiers zero-filled, workerProfile.groupBy(tradeId) + skill names → top 8 trades (null tradeId → "Other"), job.groupBy(isUrgent) → urgentShare, findMany(hiredAt) → weeklyHires 6 rolling 7-day buckets zero-filled.
+- CREATED src/components/admin/AnalyticsCharts.tsx — "use client" component, fetches its own data (same useEffect+setTimeout+cancelled pattern as the admin page). Section header "Platform analytics" (h2, BarChart3 icon) + subtitle "Live aggregates from the seeded marketplace" + two live KPI chips (urgent jobs, 6-week hires). 4 charts in Card wrappers, grid-cols-1 → lg:grid-cols-2: (1) AreaChart applications/14d, navy #003a7f smooth curve + gradient fill; (2) horizontal BarChart funnel, saffron gradient bars + count LabelList; (3) donut PieChart innerRadius 60 (new=#94a3b8, id_verified=#0a4c9e, skill_verified=#003a7f, top_pro=#f5a623), total in center + legend chips with counts; (4) vertical BarChart top-8 trades, rounded navy bars, angled tick labels. Skeleton loading cards, muted "Analytics unavailable" error note, framer-motion fade-in (opacity 0/y 12 → 1/0). All charts via recharts ResponsiveContainer; axis/grid colors use CSS vars for dark-mode safety.
+- MODIFIED src/app/admin/page.tsx — added import + <AnalyticsCharts /> below the quick-actions section; stats strip, queue link/cards and AppShell structure untouched (only header comment extended).
+- NOTE (environment): dev server on :3000 was down/flapping during this task; the sandbox supervisor auto-restarts it (`bun run dev`). Waited for stability (3 consecutive 200s) before browser QA; no build run, no server config touched.
+- Verification: `bun run lint` → exit 0, zero errors. Agent Browser: login → "Admin Demo" → /admin → document.querySelectorAll('.recharts-wrapper').length === 4 (areas:1, barRects:13, pieSectors:4). API eval → keys ["applicationsPerDay","funnel","trustTiers","tradeDistribution","urgentShare","weeklyHires"]; funnel 31/20/14/9/5, urgent {2,8}, tiers 3/6/11/0, weeklyHires 5 in "14 Aug" bucket. curl without cookies → 401 {"error":"UNAUTHORIZED"}. agent-browser errors empty. Mobile 375px: charts stack 1-per-row at 293px, scrollWidth=375 (no overflow). VLM-verified screenshots (full-page capture paints recharts blank in headless — captured viewport-scrolled instead).
+
+Stage Summary:
+- Files: src/app/api/admin/analytics/route.ts (NEW), src/components/admin/AnalyticsCharts.tsx (NEW), src/app/admin/page.tsx (MODIFIED — analytics section appended below stats strip + quick actions). No other files touched; no schema changes.
+- API shape: { applicationsPerDay: {date,count}[14], funnel: {stage,count}[5 cumulative], trustTiers: {tier,count}[4], tradeDistribution: {trade,workers}[≤8], urgentShare: {urgent,normal}, weeklyHires: {weekLabel,hires}[6] } — admin session required (401 otherwise).
+- Lint: 0 errors. Browser QA: 4/4 charts rendered with live data, no console errors, responsive at 1280px and 375px.
+- Screenshots: docs/screenshots/qa-11-admin-analytics.png (desktop analytics section, VLM-confirmed all 4 charts + funnel counts 31→5 + "20 workers" donut center) and qa-11b-admin-analytics-mobile.png (375px stack).
+
+---
+Task ID: 2-a
+Agent: general-purpose (saved-jobs feature)
+Task: Client-side "Saved jobs" bookmark feature for workers (localStorage-based, no DB/schema changes) — hook + JobCard bookmark button + /home Saved filter.
+
+Work Log:
+- Read worklog (all prior task records: Phase 0-3 complete, cron webDevReview active).
+- Created src/hooks/use-saved-jobs.ts — localStorage-backed saved-jobs store (key `shramsetu.savedJobs`, JSON array of job id strings).
+  - Architecture: module-level shared store (cachedIds Set + `listeners = new Set<() => void>()` subscriber registry) + useSyncExternalStore. Every mounted hook instance (each JobCard + the /home page) subscribes to the same store; toggle() commits a new Set, persists to localStorage, and notifies ALL instances → they re-render in sync.
+  - Hydration-safe: getServerSnapshot returns a module-level EMPTY_IDS set so SSR and the hydration render both see empty; localStorage is only read from getSnapshot() after hydration (React re-renders with real data post-hydration). First implementation used useState+useEffect but eslint's react-hooks/set-state-in-effect rule rejected synchronous setState in effect body — refactored to useSyncExternalStore which is lint-clean and semantically the right primitive for an external store.
+  - Cross-tab sync: module-level window `storage` listener (guarded for SSR) re-reads localStorage and notifies all instances when another tab writes the key (handles e.key === null for a full localStorage clear()).
+  - API: { savedIds: Set<string>, isSaved(id), toggle(id), savedCount, ready }. toggle is optimistic (synchronous state swap + persist). Corrupted/missing localStorage payload → clean empty set; quota/private-mode write failures degrade to in-memory-only.
+- Modified src/components/worker/JobCard.tsx (bookmark button only; everything else intact):
+  - motion.button (framer-motion whileTap={{ scale: 0.85 }}) top-right of the card header, above the MatchScoreBadge (right column: bookmark + badge, shrink-0).
+  - onClick calls e.preventDefault() + e.stopPropagation() FIRST so the click never reaches the card's role="button" onClick (verified: URL stays /home). Also added onKeyDown stopPropagation for Enter/Space so keyboard activation doesn't trigger the card's own keydown navigation handler.
+  - Unsaved: Bookmark icon, size-8 rounded-full, text-muted-foreground hover:text-foreground hover:bg-accent/50. Saved: BookmarkCheck icon with fill-primary + text-primary + bg-primary/10 (existing design tokens only, no new colors).
+  - aria-pressed={saved}, aria-label "Save job"/"Remove from saved", focus-visible ring.
+  - Toasts via existing sonner `toast`: "Saved job" / "Removed from saved" (Removed only shown when previously saved).
+- Modified src/app/home/page.tsx (Saved filter only; everything else intact):
+  - New "Saved" toggle row in the filters Card, styled like the Urgent row (rounded-lg border bg-primary/5, Bookmark icon + label + count Badge + Switch, id=savedOnly).
+  - visibleFeed useMemo: when savedOnly, feed filtered client-side to jobs whose id is in savedIds — composes on top of existing server-side filters (trade/distance/wage/shift/urgent).
+  - Empty states: feed empty → existing feedEmpty EmptyState; feed non-empty but 0 saved matches → EmptyState "No saved jobs yet" / "Bookmark jobs from the feed to find them here."
+  - Footer hint now shows the filtered count: "Showing 2 of 4 jobs · any shift" when Saved is on.
+- NOTE (environment): the dev server on port 3000 was found DOWN (nothing listening, gateway :81 returning 502, no auto-recovery after ~2 min of polling). I did NOT restart a running server — I started `bun run dev` (detached, same standard script/port) to run verification. The sandbox reaps the process after each command exits, so it was started per-verification-command; it is not running now.
+- Browser verification (agent-browser, isolated `--session 2a-saved` to avoid fighting the shared default session another agent was driving):
+  - /login → clicked "Ravi (Electrician, Skill Verified)" → redirected to /home, feed rendered with bookmark buttons ("Save job" aria-labels) and the Saved toggle row present.
+  - Saved toggle ON with 0 saved → EmptyState "No saved jobs yet" ✓.
+  - Clicked bookmark on job card → URL stayed /home (no navigation) ✓, localStorage `shramsetu.savedJobs: ["cmtdf4pd..."]` ✓, aria-label flipped to "Remove from saved" ✓, count badge "Saved 1" ✓, toast "Saved job" ✓.
+  - Saved toggle ON → 1 card shown, footer "Showing 1 of 4 jobs · any shift" ✓. Bookmarked a 2nd job → badge "Saved 2", "Showing 2 of 4" ✓.
+  - Composition: Saved ON + trade=Electrician → "No saved jobs yet" (saved CNC job excluded by trade while feed still had the Electrician job) ✓; after filter reset the saved card returned ✓.
+  - Reload /home → bookmark still filled, badge "Saved 1", localStorage intact (persistence) ✓.
+  - Un-bookmark via exact button ref → URL stayed /home, toast "Removed from saved", badge gone, localStorage [] ✓. (One navigation observed during testing was a test artifact: `find role button --name "Remove from saved"` fuzzy-matched the CARD whose accessible name contains that text — clicking the real bookmark button never navigates, verified by ref click and keyboard Enter.)
+  - Keyboard: focused bookmark button, pressed Enter → toggled (localStorage changed) with URL staying /home ✓.
+  - Cross-tab: tab 2 wrote localStorage directly → tab 1 (Saved filter on) live-updated from 2 cards/badge 2 to 1 card/badge 1 without reload (storage event sync) ✓.
+  - agent-browser errors: none; console: only HMR/Fast-Refresh logs.
+- `bun run lint` → 0 errors, 0 warnings across the whole repo (including my 3 files). `bunx tsc --noEmit` → 0 errors in my files (pre-existing TS strict errors in frozen/other-WS files unchanged, none in my territory).
+- Screenshots: /tmp/saved-filter-on.png, /tmp/saved-jobs-final.png (kept out of docs/screenshots to avoid colliding with other agents' evidence numbering).
+
+Stage Summary:
+- Files created: src/hooks/use-saved-jobs.ts (localStorage store hook).
+- Files modified: src/components/worker/JobCard.tsx (bookmark motion.button in header; +imports useSavedJobs/motion/Bookmark/BookmarkCheck; toggleSave + stopCardKeypress; no other changes), src/app/home/page.tsx (Saved switch row + count badge, visibleFeed filter, saved empty state, filtered footer count; +imports useSavedJobs/Bookmark; no other changes).
+- NO database/schema/i18n/shared-component changes; strictly within scope (3 files).
+- Verification: lint 0 errors repo-wide; tsc clean in my files; full browser flow pass — bookmark without navigation (mouse + keyboard), toasts, count badge sync across hook instances, saved filter composing with trade filter, empty states, refresh persistence, cross-tab storage-event sync.
+- Environment note: dev server was down and was started by me for verification only (not a restart of a live server); other agents should be aware the sandbox reaps background processes between commands.
+
+---
+Task ID: 4-qa (orchestrator round)
+Agent: Orchestrator (QA + features + styling polish)
+Task: Assess project status, agent-browser QA sweep, fix bugs, then add new features (PWA, admin analytics, saved jobs, rate limiting) and a full styling-polish pass.
+
+Work Log:
+- Reviewed worklog.md + STATUS.md: all phases 0-3 done, DoD 8/8 met; open findings included missing rate limiting + ~30 hardcoded strings.
+- Health checks: dev server 200, `bun run lint` 0 errors, 49/49 unit tests pass (60 expect calls).
+- agent-browser QA sweep (landing, login, worker feed, tracker, passport, employer dashboard/candidates/pipeline, admin, kaam card, job detail, verify, mobile 375px). Found 5 bugs:
+  1. Refresh buttons on /home + /applications showed "Loading…" (wrong i18n key t("loading")) → replaced with icon-only buttons, proper aria-labels, active:animate-spin.
+  2. Nested `<a>` in /applications tracker cards (Link wrapping Button-asChild Link) caused React hydration errors ("<a> cannot be a descendant of <a>") → removed inner link, replaced with non-interactive "Open →" affordance.
+  3. KaamCard copy-link button had wrong aria-label ("Share on WhatsApp") + wrong toast on copy → proper "Copy public link" label, toast now shows the copied URL, icon swaps to emerald check for 2s.
+  4. /verify skill-cert picker defaulted to first GLOBAL skill (Cabinet Making for Ravi the Electrician) → now fetches /api/worker/profile, sorts worker's OWN skills first with check marks, defaults to first own skill.
+  5. metadataBase warning in console → added metadataBase + viewport export (themeColor #003a7f) to root layout.
+- New feature: PWA installability — public/manifest.webmanifest (name, shortcuts to /home + /applications, icons any+maskable), brand icon public/icon.svg (श्र mark + saffron bridge arc on navy), rendered PNG icons 192/512/180 via agent-browser viewport screenshots (VLM-verified glyph renders), manifest + icons + appleWebApp wired into layout metadata.
+- Dispatched 3 parallel subagents (all completed, all verified):
+  - 2-a: Saved-jobs bookmarks — src/hooks/use-saved-jobs.ts (useSyncExternalStore + module-level store + cross-tab storage-event sync), JobCard bookmark motion.button (stopPropagation, aria-pressed, toasts), /home "Show saved jobs only" switch + count badge + filtered footer. Verified: click doesn't navigate, localStorage persists, cross-tab sync works.
+  - 2-b: Admin analytics — GET /api/admin/analytics (requireAdmin, 7 aggregation queries, zero-filled 14-day series) + AnalyticsCharts.tsx (4 recharts: area applications/day, horizontal funnel bars, donut trust tiers, top-8 trades bar; skeletons; framer-motion fade-in) integrated into /admin below stats strip. Verified: 4 .recharts-wrapper in DOM, 401 without session, mobile 375px OK.
+  - 2-c: Rate limiting — src/lib/rate-limit.ts (fixed-window in-memory, lazy sweep, clientKey by user/IP, 429 + Retry-After response); applied 10/min to 3 AI routes + 20/min to POST /api/applications after auth checks. Verified live: 12 rapid calls → 9×200 then 3×429 with Retry-After: 55.
+- Styling polish pass (mandatory "more details"):
+  - Landing: hero radial glows + masked dot-grid backdrop, eyebrow badge ("Trust-first hiring platform"), saffron underline swoosh under H1, CTA card corner glows + hover lift/rotate, తెలుగు/हिंदी/English language chips, sticky blurred header, section divider with 3 dots, HowItWorks connector chevrons + giant watermark numbers, TrustPillar corner glows + top hairlines, footer gradient hairline + language row. VLM review: 9/10, no glitches.
+  - Passport (/profile): NEW trust-tier ladder (New → ID Verified → Skill Verified → Top Pro) with done/current/todo states, connecting segments, 69/100 score display — programmatically verified states [done,done,CURRENT,todo] for Ravi.
+  - Tracker: status-colored left accent stripes on list cards, group-hover lift, entrance animations; detail page got a status banner (gradient by stage, pulsing live dot, urgent zap).
+  - Job detail: sticky apply rail on desktop, animated match-score progress bar (emerald ≥70 / accent ≥50), urgent top gradient hairline, entrance motion.
+  - Employer dashboard: pipeline snapshot rows upgraded to proportional animated mini-bars, fixed a bg-blue-500 dot → bg-primary, headline card corner glow.
+  - My Jobs table: overflow-x-auto wrapper for mobile, staggered row entrances, emerald "open" status badges.
+- Mobile 375px overflow sweep across 15 routes — found and fixed 3 overflows: / (hero decorations → overflow-x-clip on page wrapper), /verify (verifyMasked badge → flex-wrap + whitespace-normal), /employer/post (AI description button → whitespace-normal + flex-wrap header). Final sweep: ALL routes OK.
+- Final verification: lint 0 errors, 49/49 tests, server 200, console error sweep across worker pages clean (no more hydration errors), TE/EN language toggle verified both directions.
+
+Stage Summary:
+- Bugs fixed: 5 (refresh labels, nested anchors/hydration, KaamCard copy UX, verify skill-picker default, metadataBase) + 3 mobile overflows.
+- New features: PWA installability (manifest + maskable icons + shortcuts), saved-jobs bookmarks (localStorage, cross-tab), admin analytics with 4 live charts, rate limiting (AI 10/min, applications 20/min).
+- Styling: landing/tracker/passport/job-detail/employer dashboard/My Jobs all polished with motion + detail; VLM-scored 9/10 on landing.
+- All frozen contracts untouched (prisma schema, i18n dictionaries, matching/trust libs, shared components, globals.css).
+- Evidence: docs/screenshots/qa-01..qa-22 (22 new screenshots).
+- Remaining risks: auth-route rate limiting open; no service worker (install prompt needs SW on some browsers — manifest alone enables A2HS on Android); in-memory rate limiter is single-node; ~25 hardcoded English strings remain (frozen dictionaries prevent new keys).
+- Recommended next: WebSocket live notifications (mini-service), real OCR/embeddings provider swaps, i18n dictionary extension via coordinated contract change, T7 verification upload→approve→badge visual pass.

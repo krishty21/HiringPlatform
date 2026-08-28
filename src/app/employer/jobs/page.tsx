@@ -70,6 +70,7 @@ export default function MyJobsPage() {
 
       {jobs && jobs.length > 0 && (
         <Card className="overflow-hidden">
+          <div className="overflow-x-auto shramsetu-scroll">
           <Table>
             <TableHeader>
               <TableRow>
@@ -82,8 +83,8 @@ export default function MyJobsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map(j => (
-                <TableRow key={j.id}>
+              {jobs.map((j, idx) => (
+                <TableRow key={j.id} className="animate-in fade-in slide-in-from-bottom-1 duration-300" style={{ animationDelay: `${idx * 40}ms` }}>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium flex items-center gap-2">
@@ -113,7 +114,10 @@ export default function MyJobsPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={j.status === "open" ? "default" : "secondary"}>
+                    <Badge
+                      variant={j.status === "open" ? "default" : "secondary"}
+                      className={j.status === "open" ? "bg-emerald-600" : ""}
+                    >
                       {j.status}
                     </Badge>
                   </TableCell>
@@ -131,6 +135,7 @@ export default function MyJobsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </Card>
       )}
     </AppShell>

@@ -1,13 +1,15 @@
 "use client";
-// /admin — admin home (ADM-02: platform stats strip).
+// /admin — admin home (ADM-02: platform stats strip + ADM-03: analytics charts).
 // Renders 4 StatCards: Total Users, Total Jobs, Total Hires, Pending Docs
-// (the latter links to /admin/verifications).
+// (the latter links to /admin/verifications), plus the analytics section below
+// (see src/components/admin/AnalyticsCharts.tsx).
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { AppShell } from "@/components/shared/AppShell";
 import { StatCard } from "@/components/shared/StatCard";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 import { Users, Briefcase, ShieldCheck, FileCheck, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -123,6 +125,9 @@ export default function AdminHomePage() {
             </div>
           </Link>
         </section>
+
+        {/* Platform analytics — visual charts from live aggregates */}
+        <AnalyticsCharts />
       </div>
     </AppShell>
   );

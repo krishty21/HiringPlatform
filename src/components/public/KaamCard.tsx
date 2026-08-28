@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export type PublicWorkerSkill = {
   proficiency: number;
@@ -83,10 +83,17 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
     toast.success(t("kaamCardShareWhatsApp"));
   };
 
+  const [copied, setCopied] = useState(false);
+
   const onCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      toast.success(t("kaamCardShareWhatsApp"));
+      setCopied(true);
+      toast.success(shareUrl, {
+        description: t("kaamCardPoweredBy"),
+        duration: 4000,
+      });
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       // graceful fallback
       toast.error(t("errGeneric"));
@@ -293,9 +300,14 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
             type="button"
             onClick={onCopyLink}
             className="self-center inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11 px-3"
-            aria-label={t("kaamCardShareWhatsApp")}
+            aria-label="Copy public link"
+            title="Copy public link"
           >
-            <Check className="size-3.5" aria-hidden />
+            {copied ? (
+              <Check className="size-3.5 text-emerald-600" aria-hidden />
+            ) : (
+              <Share2 className="size-3.5" aria-hidden />
+            )}
             <span>{t("kaamCardPoweredBy")}</span>
           </button>
         </CardContent>

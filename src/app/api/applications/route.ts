@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireWorker, errorResponse } from "@/lib/authz";
+import { rateLimit, clientKey, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/applications — one-tap apply
 export async function POST(req: Request) {
   try {
-    const { profile } = await requireWorker();
+    const { user, profile } = await requireWorker();
+
+    // Brute-force/spam protection (STATUS.md finding #4): 20 applies/min
+    // per worker, keyed by user AFTER auth.
+    const rl = rateLimit(clientKey(req, user.id), { limit: 20, windowMs: 60_000 });
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
+
     const body = await req.json();
     const { jobId } = body as { jobId?: string };
     if (!jobId) return errorResponse(new Error("VALIDATION"));

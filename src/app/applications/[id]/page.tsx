@@ -13,8 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import {
-  ArrowLeft, MapPin, Briefcase, Users, Clock, Share2, Building2, RefreshCcw,
+  ArrowLeft, MapPin, Briefcase, Users, Clock, Share2, Building2, RefreshCcw, Zap,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import type { Application } from "@/lib/schemas";
 
 interface ApplicationDetail extends Application {
@@ -95,6 +96,21 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
     ? (lang === "hi" ? app.job.trade.nameHi : lang === "te" ? app.job.trade.nameTe : app.job.trade.nameEn)
     : null;
 
+  const stageKey =
+    app.status === "hired" ? "trackerStageHired" :
+    app.status === "rejected" ? "trackerStageRejected" :
+    app.status === "offer" ? "trackerStageOffer" :
+    app.status === "interview" ? "trackerStageInterview" :
+    app.status === "shortlisted" ? "trackerStageShortlisted" :
+    "trackerStageApplied";
+  const statusTone =
+    app.status === "hired" ? "from-emerald-500/15 to-emerald-500/[0.03] border-emerald-500/30 text-emerald-700" :
+    app.status === "rejected" ? "from-red-500/10 to-red-500/[0.02] border-red-500/30 text-red-600" :
+    app.status === "offer" ? "from-accent/20 to-accent/[0.04] border-accent/40 text-accent-foreground" :
+    app.status === "interview" ? "from-primary/10 to-primary/[0.03] border-primary/30 text-primary" :
+    app.status === "shortlisted" ? "from-primary/10 to-primary/[0.03] border-primary/30 text-primary" :
+    "from-muted/40 to-transparent border-border text-muted-foreground";
+
   return (
     <AppShell>
       <div className="flex flex-col gap-4">
@@ -103,9 +119,36 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           {t("back")}
         </Link>
 
+        {/* Status banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className={`rounded-xl border bg-gradient-to-r ${statusTone} px-4 py-3 flex items-center justify-between gap-3 flex-wrap`}
+          role="status"
+        >
+          <div className="flex items-center gap-2.5">
+            {app.job.isUrgent && <Zap className="size-4" aria-hidden />}
+            <span className="text-sm font-bold uppercase tracking-wide">{t(stageKey)}</span>
+          </div>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span className="relative flex size-2" aria-hidden>
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-current opacity-60" />
+              <span className="relative inline-flex size-2 rounded-full bg-current" />
+            </span>
+            Live · 5s poll
+          </span>
+        </motion.div>
+
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
           {/* Job summary */}
-          <Card>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="h-full"
+          >
+          <Card className="h-full">
             <CardContent className="p-6 flex flex-col gap-4">
               <div>
                 <p className="text-xs text-muted-foreground">{t("navApplications")}</p>
@@ -189,11 +232,12 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
               </div>
             </CardContent>
           </Card>
+          </motion.div>
 
           {/* Tracker timeline (WRK-07) */}
           <aside className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <RefreshCcw className="size-3" />
                 Live · 5s poll
               </p>

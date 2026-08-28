@@ -84,9 +84,16 @@ export default function WorkerApplicationsPage() {
           <p className="text-sm text-muted-foreground mt-1">{t("navApplications")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={load} className="gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={load}
+            aria-label="Refresh applications"
+            title="Refresh"
+            className="size-9 min-h-9 min-w-9 active:animate-spin transition-transform"
+          >
             <RefreshCcw className="size-4" />
-            {t("loading")}
           </Button>
           <NotificationsBell />
         </div>
@@ -112,11 +119,19 @@ export default function WorkerApplicationsPage() {
             const stageKey = STAGE_KEYS[a.status] ?? "trackerStageApplied";
             const tone = STAGE_TONE[a.status] ?? STAGE_TONE.applied;
             const isTerminal = a.status === "hired" || a.status === "rejected";
+            const accentBar =
+              a.status === "hired" ? "bg-emerald-500" :
+              a.status === "rejected" ? "bg-red-400" :
+              a.status === "offer" ? "bg-accent" :
+              a.status === "interview" ? "bg-primary" :
+              a.status === "shortlisted" ? "bg-primary/70" :
+              "bg-muted-foreground/40";
             return (
-              <li key={a.id}>
-                <Link href={`/applications/${a.id}`} className="block">
-                  <Card className="cursor-pointer transition-all hover:shadow-md hover:border-primary/40">
-                    <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
+              <li key={a.id} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <Link href={`/applications/${a.id}`} className="group block">
+                  <Card className="cursor-pointer transition-all group-hover:shadow-md group-hover:border-primary/40 group-hover:-translate-y-0.5 relative overflow-hidden">
+                    <span aria-hidden className={`absolute left-0 top-0 bottom-0 w-1 ${accentBar}`} />
+                    <CardContent className="p-4 pl-5 flex items-center justify-between gap-3 flex-wrap">
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-base line-clamp-1">{a.job.title}</p>
                         <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
@@ -148,12 +163,10 @@ export default function WorkerApplicationsPage() {
                           {a.status === "hired" ? <CheckCircle2 className="size-3" /> : a.status === "rejected" ? <XCircle className="size-3" /> : null}
                           {t(stageKey)}
                         </Badge>
-                        <Button asChild size="sm" variant="ghost" className="gap-1 min-h-9">
-                          <Link href={`/applications/${a.id}`}>
-                            {t("trackerTitle")}
-                            <ArrowRight className="size-3.5" />
-                          </Link>
-                        </Button>
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-primary opacity-70 group-hover:opacity-100 transition-opacity">
+                          {t("open")}
+                          <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
                         {!isTerminal && <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> live</span>}
                       </div>
                     </CardContent>

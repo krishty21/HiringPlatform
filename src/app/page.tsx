@@ -12,7 +12,7 @@ export default function LandingPage() {
   const { t } = useLanguage();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-secondary/40 via-background to-background">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-secondary/40 via-background to-background overflow-x-clip">
       <LandingHeader />
 
       <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 py-10 sm:py-16 gap-14 sm:gap-20">
@@ -46,6 +46,15 @@ export default function LandingPage() {
           />
         </section>
 
+        {/* Section divider */}
+        <div aria-hidden className="max-w-5xl w-full flex items-center gap-4 opacity-60">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-border" />
+          <div className="size-1.5 rounded-full bg-accent/70" />
+          <div className="size-1.5 rounded-full bg-primary/70" />
+          <div className="size-1.5 rounded-full bg-accent/70" />
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-border" />
+        </div>
+
         {/* How it works */}
         <section className="max-w-5xl w-full flex flex-col gap-8 sm:gap-10">
           <motion.div
@@ -62,7 +71,7 @@ export default function LandingPage() {
               {t("landingHowItWorksSubtitle")}
             </p>
           </motion.div>
-          <div className="grid md:grid-cols-3 gap-5 sm:gap-6">
+          <div className="grid md:grid-cols-3 gap-5 sm:gap-8">
             <HowItWorksStep
               number={1}
               icon={Mic}
@@ -83,6 +92,7 @@ export default function LandingPage() {
               titleKey="landingStep3Title"
               bodyKey="landingStep3Body"
               delay={0.16}
+              isLast
             />
           </div>
         </section>

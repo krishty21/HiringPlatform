@@ -8,9 +8,12 @@ import { WageDisplay } from "@/components/shared/WageDisplay";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { useSavedJobs } from "@/hooks/use-saved-jobs";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import {
   MapPin, Zap, Briefcase, Users, Share2, Loader2, Check, Clock,
+  Bookmark, BookmarkCheck,
 } from "lucide-react";
 
 export interface WorkerJobCardData {
@@ -38,6 +41,25 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
   const router = useRouter();
   const [applied, setApplied] = useState(initialApplied);
   const [submitting, setSubmitting] = useState(false);
+  const { isSaved, toggle } = useSavedJobs();
+  const saved = isSaved(job.id);
+
+  function toggleSave(e: React.MouseEvent) {
+    // MUST come first — the whole card is clickable, so stop the event before
+    // it bubbles up to the card's onClick (which navigates to the job detail).
+    e.preventDefault();
+    e.stopPropagation();
+    const wasSaved = isSaved(job.id);
+    toggle(job.id);
+    if (wasSaved) toast.success("Removed from saved");
+    else toast.success("Saved job");
+  }
+
+  function stopCardKeypress(e: React.KeyboardEvent) {
+    // Keyboard equivalent of stopPropagation: the card's onKeyDown handler
+    // opens the job on Enter/Space — swallow those when focus is on the button.
+    if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+  }
 
   async function apply(e: React.MouseEvent) {
     e.preventDefault();
@@ -96,7 +118,7 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
           </div>
         )}
 
-        {/* Title + match */}
+        {/* Title + match + bookmark */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-base leading-tight line-clamp-2">{job.title}</p>
@@ -110,7 +132,27 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
               </span>
             </p>
           </div>
-          {job.matchScore != null && <MatchScoreBadge score={job.matchScore} size="md" />}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.85 }}
+              onClick={toggleSave}
+              onKeyDown={stopCardKeypress}
+              aria-pressed={saved}
+              aria-label={saved ? "Remove from saved" : "Save job"}
+              title={saved ? "Remove from saved" : "Save job"}
+              className={`grid place-items-center size-8 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                saved
+                  ? "text-primary bg-primary/10 hover:bg-primary/15"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              }`}
+            >
+              {saved
+                ? <BookmarkCheck className="size-[18px] fill-primary" />
+                : <Bookmark className="size-[18px] fill-none" />}
+            </motion.button>
+            {job.matchScore != null && <MatchScoreBadge score={job.matchScore} size="md" />}
+          </div>
         </div>
 
         {/* Employer verified */}

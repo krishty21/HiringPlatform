@@ -14,6 +14,7 @@ import { TimeToHireHeadline } from "@/components/dashboard/TimeToHireHeadline";
 import { PerJobDrilldownRow, type PerJob } from "@/components/dashboard/PerJobDrilldownRow";
 import { LayoutDashboard, Briefcase, UserPlus, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { motion } from "framer-motion";
 
 interface DashboardData {
   timeToHireHours: number | null;
@@ -66,8 +67,14 @@ export default function EmployerDashboardPage() {
         </header>
 
         {/* Headline: avg time-to-hire (huge numerals) */}
-        <Card>
-          <CardContent className="p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+        <Card className="relative overflow-hidden">
+          <div aria-hidden className="absolute -right-10 -top-10 size-40 rounded-full bg-primary/5 blur-2xl" />
+          <CardContent className="relative p-6">
             {!data ? (
               <div className="h-16 w-72 bg-muted/40 rounded animate-pulse" />
             ) : (
@@ -75,6 +82,7 @@ export default function EmployerDashboardPage() {
             )}
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* StatCards: 3-4 across on desktop, 2x2 on mobile */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -140,21 +148,25 @@ export default function EmployerDashboardPage() {
                 <PipelineSummaryRow
                   label={t("dashFunnelApplied")}
                   value={data.funnel.applied}
-                  tone="bg-blue-500"
+                  max={data.funnel.applied}
+                  tone="bg-primary"
                 />
                 <PipelineSummaryRow
                   label={t("dashFunnelShortlisted")}
                   value={data.funnel.shortlisted}
-                  tone="bg-amber-500"
+                  max={data.funnel.applied}
+                  tone="bg-accent"
                 />
                 <PipelineSummaryRow
                   label={t("dashFunnelInterview")}
                   value={data.funnel.interview + data.funnel.offer}
+                  max={data.funnel.applied}
                   tone="bg-orange-500"
                 />
                 <PipelineSummaryRow
                   label={t("dashFunnelHired")}
                   value={data.funnel.hired}
+                  max={data.funnel.applied}
                   tone="bg-emerald-600"
                 />
               </CardContent>
@@ -194,19 +206,32 @@ export default function EmployerDashboardPage() {
 function PipelineSummaryRow({
   label,
   value,
+  max,
   tone,
 }: {
   label: string;
   value: number;
+  max: number;
   tone: string;
 }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className={`size-2 rounded-full ${tone}`} aria-hidden />
-        <span className="text-sm text-muted-foreground">{label}</span>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`size-2 rounded-full ${tone}`} aria-hidden />
+          <span className="text-sm text-muted-foreground">{label}</span>
+        </div>
+        <span className="text-sm font-semibold tabular-nums">{value}</span>
       </div>
-      <span className="text-sm font-semibold tabular-nums">{value}</span>
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className={`h-full rounded-full ${tone}`}
+        />
+      </div>
     </div>
   );
 }

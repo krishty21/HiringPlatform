@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, MapPin, Briefcase, Users, Share2, Loader2, Check, Zap, Clock, Sparkles,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface JobDetail {
   id: string;
@@ -114,7 +115,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         </Link>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Card className={job.isUrgent ? "border-accent/60" : ""}>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="h-full"
+          >
+          <Card className={`relative overflow-hidden h-full ${job.isUrgent ? "border-accent/60" : ""}`}>
+            {job.isUrgent && (
+              <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-accent/70 to-transparent" />
+            )}
             <CardContent className="p-6 flex flex-col gap-4">
               {/* Header */}
               <div>
@@ -143,9 +153,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
               {/* Match score */}
               {job.matchScore != null && (
-                <div className="flex items-center gap-2">
-                  <MatchScoreBadge score={job.matchScore} size="lg" />
-                  <span className="text-xs text-muted-foreground">{t("feedWhy", { score: job.matchScore })}</span>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <MatchScoreBadge score={job.matchScore} size="lg" />
+                    <span className="text-xs text-muted-foreground">{t("feedWhy", { score: job.matchScore })}</span>
+                  </div>
+                  <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden" aria-hidden>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${job.matchScore}%` }}
+                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+                      className={`h-full rounded-full ${job.matchScore >= 70 ? "bg-emerald-500" : job.matchScore >= 50 ? "bg-accent" : "bg-muted-foreground/50"}`}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -229,10 +249,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               )}
             </CardContent>
           </Card>
+          </motion.div>
 
-          {/* Apply rail */}
-          <aside className="flex flex-col gap-4">
-            <Card className="border-primary/30">
+          {/* Apply rail — sticky on desktop */}
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+            >
+            <Card className="border-primary/30 shadow-sm">
               <CardContent className="p-4 flex flex-col gap-3">
                 <p className="text-sm font-semibold flex items-center gap-2">
                   <Sparkles className="size-4 text-accent-foreground" />
@@ -268,6 +294,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 )}
               </CardContent>
             </Card>
+            </motion.div>
           </aside>
         </div>
       </div>

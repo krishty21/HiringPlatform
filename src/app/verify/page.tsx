@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, FileText } from "lucide-react";
+import { ShieldCheck, FileText, Check } from "lucide-react";
 
 interface SkillRow {
   id: string;
@@ -30,21 +30,42 @@ export default function VerifyPage() {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role as "worker" | "employer" | "admin" | undefined;
   const [skills, setSkills] = useState<SkillRow[] | null>(null);
+  const [mySkillIds, setMySkillIds] = useState<Set<string>>(new Set());
   const [pickedSkillId, setPickedSkillId] = useState<string | undefined>(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Workers need the skills list to attach a skill cert to a specific skill.
+  // Default the picker to one of the worker's OWN skills (not the first global skill).
   useEffect(() => {
     if (role !== "worker") return;
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch("/api/skills", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { items: SkillRow[] };
-        if (!cancelled) {
-          setSkills(data.items);
-          if (data.items[0]) setPickedSkillId(data.items[0].id);
+        const [skillsRes, profileRes] = await Promise.all([
+          fetch("/api/skills", { cache: "no-store" }),
+          fetch("/api/worker/profile", { cache: "no-store" }),
+        ]);
+        if (cancelled) return;
+        let ownIds: Set<string> = new Set();
+        if (profileRes.ok) {
+          const profile = (await profileRes.json()) as { skills?: { skillId: string }[] };
+          ownIds = new Set((profile.skills ?? []).map(s => s.skillId));
+        }
+        setMySkillIds(ownIds);
+        if (skillsRes.ok) {
+          const data = (await skillsRes.json()) as { items: SkillRow[] };
+          if (cancelled) return;
+          // Own skills first (stable), then the rest.
+          const sorted = [...data.items].sort((a, b) => {
+            const aOwn = ownIds.has(a.id) ? 0 : 1;
+            const bOwn = ownIds.has(b.id) ? 0 : 1;
+            return aOwn - bOwn;
+          });
+          setSkills(sorted);
+          const firstOwn = sorted.find(s => ownIds.has(s.id));
+          setPickedSkillId((firstOwn ?? sorted[0])?.id);
+        } else {
+          setSkills([]);
         }
       } catch {}
     };
@@ -97,7 +118,12 @@ export default function VerifyPage() {
                         <SelectContent className="max-h-72 shramsetu-scroll">
                           {skills.map((s) => (
                             <SelectItem key={s.id} value={s.id}>
-                              {s.nameEn} · {s.category}
+                              <span className="inline-flex items-center gap-1.5">
+                                {mySkillIds.has(s.id) && (
+                                  <Check className="size-3.5 text-emerald-600" aria-hidden />
+                                )}
+                                {s.nameEn} · {s.category}
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -130,9 +156,12 @@ export default function VerifyPage() {
 
         {/* Status list */}
         <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="text-lg font-semibold">{t("verifyTitle")}</h2>
-            <Badge variant="outline" className="bg-accent/15 text-accent-foreground border-accent/40">
+            <Badge
+              variant="outline"
+              className="bg-accent/15 text-accent-foreground border-accent/40 max-w-full sm:max-w-none whitespace-normal text-left leading-snug h-auto py-1"
+            >
               {t("verifyMasked")}
             </Badge>
           </div>

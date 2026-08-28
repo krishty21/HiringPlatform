@@ -22,8 +22,9 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { useSavedJobs } from "@/hooks/use-saved-jobs";
 import { useSession } from "next-auth/react";
-import { Search, Briefcase, Eye, Sparkles, Zap, RefreshCcw, Filter, RotateCcw, MapPin } from "lucide-react";
+import { Search, Briefcase, Eye, Sparkles, Zap, RefreshCcw, Filter, RotateCcw, MapPin, Bookmark } from "lucide-react";
 import type { Skill } from "@/lib/schemas";
 import { toast } from "sonner";
 
@@ -47,6 +48,8 @@ export default function WorkerHomePage() {
   const { t } = useLanguage();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { savedIds, savedCount } = useSavedJobs();
+  const [savedOnly, setSavedOnly] = useState(false);
 
   const [skills, setSkills] = useState<Skill[]>([]);
   const [feed, setFeed] = useState<WorkerJobCardData[] | null>(null);
@@ -188,6 +191,13 @@ export default function WorkerHomePage() {
 
   const tradeSkills = useMemo(() => skills.filter(s => TRADE_NAMES.has(s.nameEn)), [skills]);
 
+  // Saved filter composes on top of the server-side filters (trade/distance/wage/shift/urgent).
+  const visibleFeed = useMemo(() => {
+    if (feed === null) return null;
+    if (!savedOnly) return feed;
+    return feed.filter(job => savedIds.has(job.id));
+  }, [feed, savedOnly, savedIds]);
+
   // Wait for auth/profile to resolve before rendering content
   if (status === "loading" || profileExists === null) {
     return (
@@ -210,12 +220,13 @@ export default function WorkerHomePage() {
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() => { loadFeed(); loadDashboard(); }}
-            className="gap-1.5"
+            aria-label="Refresh feed"
+            title="Refresh"
+            className="size-9 min-h-9 min-w-9 active:animate-spin transition-transform"
           >
             <RefreshCcw className="size-4" />
-            {t("loading")}
           </Button>
           <NotificationsBell />
         </div>
@@ -384,6 +395,25 @@ export default function WorkerHomePage() {
               onCheckedChange={(v) => setFilters(f => ({ ...f, urgentOnly: v }))}
             />
           </div>
+
+          {/* Saved jobs filter (client-side, localStorage) */}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2.5">
+            <Label htmlFor="savedOnly" className="text-sm font-medium flex items-center gap-2">
+              <Bookmark className="size-4 text-primary" />
+              Saved
+              {savedCount > 0 && (
+                <Badge variant="secondary" className="text-[10px] tabular-nums" aria-label={`${savedCount} saved jobs`}>
+                  {savedCount}
+                </Badge>
+              )}
+            </Label>
+            <Switch
+              id="savedOnly"
+              checked={savedOnly}
+              onCheckedChange={setSavedOnly}
+              aria-label="Show saved jobs only"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -398,18 +428,26 @@ export default function WorkerHomePage() {
         />
       )}
 
-      {feed && feed.length > 0 && (
+      {feed && feed.length > 0 && visibleFeed && visibleFeed.length === 0 && (
+        <EmptyState
+          icon={Search}
+          title="No saved jobs yet"
+          description="Bookmark jobs from the feed to find them here."
+        />
+      )}
+
+      {visibleFeed && visibleFeed.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {feed.map(job => (
+          {visibleFeed.map(job => (
             <JobCard key={job.id} job={job} />
           ))}
         </div>
       )}
 
       {/* Footer pagination hint */}
-      {feed && feed.length > 0 && (
+      {visibleFeed && visibleFeed.length > 0 && (
         <p className="text-xs text-muted-foreground text-center mt-4">
-          Showing {feed.length} jobs · <Badge variant="outline" className="text-[10px]">{filters.shift} shift</Badge>
+          Showing {visibleFeed.length}{savedOnly && feed ? ` of ${feed.length}` : ""} jobs · <Badge variant="outline" className="text-[10px]">{filters.shift} shift</Badge>
         </p>
       )}
     </AppShell>
