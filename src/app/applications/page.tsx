@@ -1,0 +1,169 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { AppShell } from "@/components/shared/AppShell";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+import { WageDisplay } from "@/components/shared/WageDisplay";
+import { VerificationBadge } from "@/components/shared/VerificationBadge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import {
+  Briefcase, MapPin, ArrowRight, Clock, CheckCircle2, XCircle, Loader2, RefreshCcw,
+} from "lucide-react";
+import type { Application } from "@/lib/schemas";
+import { NotificationsBell } from "@/components/worker/NotificationsBell";
+
+interface MyApplicationItem extends Application {
+  job: {
+    id: string;
+    title: string;
+    tradeId: string | null;
+    trade?: { nameEn: string; nameHi: string; nameTe: string; category: string } | null;
+    headcount: number;
+    wageMin: number;
+    wageMax: number;
+    city: string;
+    shift: "day" | "night" | "any";
+    isUrgent: boolean;
+    employer?: { id: string; companyName: string; city: string; isVerified: boolean };
+  };
+}
+
+const STAGE_KEYS: Record<string, "trackerStageApplied" | "trackerStageShortlisted" | "trackerStageInterview" | "trackerStageOffer" | "trackerStageHired" | "trackerStageRejected"> = {
+  applied: "trackerStageApplied",
+  shortlisted: "trackerStageShortlisted",
+  interview: "trackerStageInterview",
+  offer: "trackerStageOffer",
+  hired: "trackerStageHired",
+  rejected: "trackerStageRejected",
+};
+
+const STAGE_TONE: Record<string, string> = {
+  applied: "bg-muted text-muted-foreground border-border",
+  shortlisted: "bg-amber-100 text-amber-800 border-amber-300",
+  interview: "bg-violet-100 text-violet-800 border-violet-300",
+  offer: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  hired: "bg-emerald-200 text-emerald-900 border-emerald-400",
+  rejected: "bg-rose-100 text-rose-800 border-rose-300",
+};
+
+export default function WorkerApplicationsPage() {
+  const { t, lang } = useLanguage();
+  const [apps, setApps] = useState<MyApplicationItem[] | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/applications/mine", { cache: "no-store" });
+      if (!res.ok) {
+        setApps([]);
+        return;
+      }
+      const data = (await res.json()) as { items: MyApplicationItem[] };
+      setApps(data.items ?? []);
+    } catch {
+      setApps([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Defer the initial load to avoid setState-in-effect anti-pattern.
+    const id = setTimeout(load, 0);
+    // Poll every 5s for live status updates (WRK-07: status reflects within 5s)
+    const pollId = setInterval(load, 5000);
+    return () => { clearTimeout(id); clearInterval(pollId); };
+  }, [load]);
+
+  return (
+    <AppShell>
+      <header className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("trackerTitle")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("navApplications")}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={load} className="gap-1.5">
+            <RefreshCcw className="size-4" />
+            {t("loading")}
+          </Button>
+          <NotificationsBell />
+        </div>
+      </header>
+
+      {apps === null && <LoadingSkeleton count={3} />}
+
+      {apps && apps.length === 0 && (
+        <EmptyState
+          icon={Briefcase}
+          title={t("trackerEmpty")}
+          description={t("feedTitle")}
+          action={<Button asChild><Link href="/home">{t("navHome")}</Link></Button>}
+        />
+      )}
+
+      {apps && apps.length > 0 && (
+        <ul className="grid gap-3">
+          {apps.map(a => {
+            const tradeName = a.job.trade
+              ? (lang === "hi" ? a.job.trade.nameHi : lang === "te" ? a.job.trade.nameTe : a.job.trade.nameEn)
+              : null;
+            const stageKey = STAGE_KEYS[a.status] ?? "trackerStageApplied";
+            const tone = STAGE_TONE[a.status] ?? STAGE_TONE.applied;
+            const isTerminal = a.status === "hired" || a.status === "rejected";
+            return (
+              <li key={a.id}>
+                <Link href={`/applications/${a.id}`} className="block">
+                  <Card className="cursor-pointer transition-all hover:shadow-md hover:border-primary/40">
+                    <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base line-clamp-1">{a.job.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          {tradeName && <span>{tradeName}</span>}
+                          {tradeName && <span aria-hidden>·</span>}
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="size-3" />{a.job.city}
+                          </span>
+                          {a.job.employer && (
+                            <span className="inline-flex items-center gap-1">
+                              <span aria-hidden>·</span>
+                              {a.job.employer.companyName}
+                              {a.job.employer.isVerified && (
+                                <VerificationBadge status="approved" label={t("feedVerifiedEmployer")} />
+                              )}
+                            </span>
+                          )}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <WageDisplay min={a.job.wageMin} max={a.job.wageMax} size="sm" />
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="size-3" />
+                            {new Date(a.appliedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant="outline" className={`${tone} border font-semibold gap-1`}>
+                          {a.status === "hired" ? <CheckCircle2 className="size-3" /> : a.status === "rejected" ? <XCircle className="size-3" /> : null}
+                          {t(stageKey)}
+                        </Badge>
+                        <Button asChild size="sm" variant="ghost" className="gap-1 min-h-9">
+                          <Link href={`/applications/${a.id}`}>
+                            {t("trackerTitle")}
+                            <ArrowRight className="size-3.5" />
+                          </Link>
+                        </Button>
+                        {!isTerminal && <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> live</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </AppShell>
+  );
+}

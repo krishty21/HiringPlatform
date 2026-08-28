@@ -1,0 +1,247 @@
+// ShramSetu — Prisma schema (SQLite)
+// Mirrors SRD §6 data model verbatim. SQLite has no native enums or arrays,
+// so role/status/tier columns are String + zod-validated at the API boundary;
+// JSON-shaped columns are String and parsed/serialized at the type boundary.
+// RLS-equivalent enforcement lives in src/lib/authz.ts (per-row scoping by session).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  role      String   @default("worker") // worker | employer | admin (zod-validated)
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workerProfile  WorkerProfile?
+  employerProfile EmployerProfile?
+  verifications  VerificationDocument[]
+  notifications Notification[]
+  signinTokens   SigninToken[]
+}
+
+model Skill {
+  id        String   @id @default(cuid())
+  nameEn    String   @unique
+  nameHi    String
+  nameTe    String
+  category  String   @default("general") // electrician | plumber | welder | cnc | fitter | delivery | carpenter | mason
+  createdAt DateTime @default(now())
+
+  workerSkills WorkerSkill[]
+  jobSkills     JobSkill[]
+  workerTrade   WorkerProfile[] @relation("WorkerTrade")
+  jobTrade      Job[]
+  endorsements  Endorsement[]
+}
+
+model WorkerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fullName  String
+  tradeId   String?  // → Skill (the worker's primary trade)
+  trade     Skill?   @relation("WorkerTrade", fields: [tradeId], references: [id])
+  yearsExp  Int      @default(0)
+  city      String
+  lat       Float
+  lng       Float
+  wageMin   Int      @default(0)   // ₹/day
+  wageMax   Int      @default(0)   // ₹/day
+  shiftPref String   @default("any") // day | night | any
+  languages String   @default("[]")  // JSON array of "en"|"hi"|"te"
+  bio       String   @default("")
+  photoUrl  String?
+  availableToday Boolean @default(false)
+  trustTier String   @default("new") // new | id_verified | skill_verified | top_pro
+  trustScore Int    @default(30)
+  passportPublic Boolean @default(true)
+  profileViews Int  @default(0)
+  maxRadiusKm Int   @default(15)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  skills        WorkerSkill[]
+  applications  Application[]
+  endorsements  Endorsement[]
+  matchScores   MatchScore[]
+
+  @@index([tradeId, availableToday])
+}
+
+model WorkerSkill {
+  workerId   String
+  skillId    String
+  proficiency Int    @default(3) // 1-5
+
+  worker WorkerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  skill  Skill         @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([workerId, skillId])
+}
+
+model EmployerProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName String
+  industry    String   @default("manufacturing")
+  city        String
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jobs    Job[]
+  endorsements Endorsement[]
+}
+
+model Job {
+  id            String   @id @default(cuid())
+  employerId    String
+  employer      EmployerProfile @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  postedBy      String   // user id of the employer who posted
+  title         String
+  tradeId       String?
+  trade         Skill?   @relation(fields: [tradeId], references: [id])
+  headcount     Int      @default(1)
+  wageMin       Int      @default(0)
+  wageMax       Int      @default(0)
+  city          String
+  lat           Float
+  lng           Float
+  shift         String   @default("any") // day | night | any
+  isUrgent      Boolean  @default(false)
+  status        String   @default("open") // open | closed
+  description   String   @default("")
+  viewsCount    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  skills       JobSkill[]
+  applications Application[]
+  matchScores  MatchScore[]
+
+  @@index([tradeId, city])
+  @@index([status, isUrgent])
+}
+
+model JobSkill {
+  jobId    String
+  skillId  String
+  required Boolean @default(true)
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([jobId, skillId])
+}
+
+model Application {
+  id            String   @id @default(cuid())
+  jobId         String
+  workerId      String
+  status        String   @default("applied") // applied | shortlisted | interview | offer | hired | rejected
+  appliedAt     DateTime @default(now())
+  shortlistedAt DateTime?
+  interviewAt   DateTime?
+  offerAt       DateTime?
+  hiredAt       DateTime?
+  rejectedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  job     Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  worker  WorkerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  ratings Rating[]
+
+  @@index([status])
+  @@unique([jobId, workerId]) // one application per worker per job
+}
+
+model VerificationDocument {
+  id            String   @id @default(cuid())
+  ownerUserId   String
+  owner         User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  docType       String   // id | skill_cert | company
+  fileName      String
+  fileType      String   // application/pdf | image/jpeg | image/png
+  fileUrl       String   // path under /storage (private, served via signed URL)
+  extractedJson String   @default("{}") // JSON: name, cert_type, etc. (PII-minimized — no raw IDs)
+  status        String   @default("pending") // pending | approved | rejected
+  reviewerNote  String?
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  createdAt     DateTime @default(now())
+}
+
+model Endorsement {
+  id         String   @id @default(cuid())
+  workerId   String
+  employerId String
+  skillId    String
+  comment    String   @default("")
+  createdAt  DateTime @default(now())
+
+  worker   WorkerProfile  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  employer EmployerProfile @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  skill    Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+}
+
+model Rating {
+  id            String   @id @default(cuid())
+  applicationId String
+  raterId       String
+  rateeId       String
+  score         Int      // 1-5
+  comment       String   @default("")
+  createdAt     DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model MatchScore {
+  jobId         String
+  workerId      String
+  score         Int      // 0-100
+  breakdownJson String   // JSON: {S,D,E,W,T,bonus}
+  computedAt    DateTime @default(now())
+
+  job    Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  worker WorkerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@id([jobId, workerId])
+  @@index([jobId, score])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String   // application_status | new_match | endorsement | verification
+  payloadJson String  @default("{}")
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model SigninToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
