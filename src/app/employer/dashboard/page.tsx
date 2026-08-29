@@ -15,6 +15,7 @@ import { PerJobDrilldownRow, type PerJob } from "@/components/dashboard/PerJobDr
 import { LayoutDashboard, Briefcase, UserPlus, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { motion } from "framer-motion";
+import { EmployerReputationCard } from "@/components/employer/EmployerReputationCard";
 
 interface DashboardData {
   timeToHireHours: number | null;
@@ -130,7 +131,7 @@ export default function EmployerDashboardPage() {
         ) : !data ? (
           <LoadingSkeleton count={2} />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{t("dashFunnel")}</CardTitle>
@@ -171,6 +172,9 @@ export default function EmployerDashboardPage() {
                 />
               </CardContent>
             </Card>
+
+            {/* Round 9: employer reputation summary (rec #1 from round-8 worklog) */}
+            <EmployerReputationCard />
           </div>
         )}
 

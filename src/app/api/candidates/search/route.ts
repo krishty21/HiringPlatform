@@ -50,6 +50,16 @@ export async function GET(req: Request) {
     // Round 8: `topRated` is parsed outside the frozen SearchCandidatesQuery schema
     // (coordinated additive extension — frozen schemas/index.ts stays untouched).
     const topRatedOnly = url.searchParams.get("topRated") === "true";
+    // Round 9: `sort` is parsed outside the frozen schema too. Default = "match".
+    //   match      — matchScore desc (default; preserves EMP-03 spec)
+    //   rating     — ratingAvg desc; tiebreak by ratingCount desc, then matchScore
+    //   distance   — distanceKm asc; ties broken by matchScore
+    //   experience — yearsExp desc; ties broken by matchScore
+    const sortParam = (url.searchParams.get("sort") ?? "match").toLowerCase();
+    const sort: "match" | "rating" | "distance" | "experience" =
+      sortParam === "rating" || sortParam === "distance" || sortParam === "experience"
+        ? sortParam
+        : "match";
 
     // Employer city — used for distance computation when caller doesn't pass lat/lng
     const employer = await db.employerProfile.findUnique({
@@ -213,13 +223,27 @@ export async function GET(req: Request) {
       return true;
     });
 
-    // Sort by match score desc; if urgent job, sort available-today workers first within the same score band
+    // Sort by chosen dimension. Urgent job always promotes available-today
+    // workers within the same score band (EMP-05).
     filtered.sort((a, b) => {
       if (parsed.urgentJobId) {
-        // Urgent job — promote available workers (EMP-05)
         if (a.availableToday !== b.availableToday) return a.availableToday ? -1 : 1;
       }
-      return b.matchScore - a.matchScore;
+      switch (sort) {
+        case "rating":
+          if (b.ratingAvg !== a.ratingAvg) return b.ratingAvg - a.ratingAvg;
+          if (b.ratingCount !== a.ratingCount) return b.ratingCount - a.ratingCount;
+          return b.matchScore - a.matchScore;
+        case "distance":
+          if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+          return b.matchScore - a.matchScore;
+        case "experience":
+          if (b.yearsExp !== a.yearsExp) return b.yearsExp - a.yearsExp;
+          return b.matchScore - a.matchScore;
+        case "match":
+        default:
+          return b.matchScore - a.matchScore;
+      }
     });
 
     return NextResponse.json({
@@ -227,6 +251,7 @@ export async function GET(req: Request) {
       total: filtered.length,
       urgentJobId: parsed.urgentJobId ?? null,
       topRated: topRatedOnly,
+      sort,
     });
   } catch (e) {
     return errorResponse(e);

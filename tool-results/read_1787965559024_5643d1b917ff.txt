@@ -1,0 +1,632 @@
+     1→"use client";
+     2→import { useEffect, useState, useCallback, useMemo } from "react";
+     3→import Link from "next/link";
+     4→import { AppShell } from "@/components/shared/AppShell";
+     5→import { EmptyState } from "@/components/shared/EmptyState";
+     6→import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+     7→import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
+     8→import { WageDisplay } from "@/components/shared/WageDisplay";
+     9→import { StatCard } from "@/components/shared/StatCard";
+    10→import { RatingSummary } from "@/components/ratings/RatingSummary";
+    11→import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+    12→import { Button } from "@/components/ui/button";
+    13→import { Input } from "@/components/ui/input";
+    14→import { Label } from "@/components/ui/label";
+    15→import { Textarea } from "@/components/ui/textarea";
+    16→import { Switch } from "@/components/ui/switch";
+    17→import { Badge } from "@/components/ui/badge";
+    18→import { Progress } from "@/components/ui/progress";
+    19→import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+    20→import { Separator } from "@/components/ui/separator";
+    21→import {
+    22→  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+    23→} from "@/components/ui/select";
+    24→import { useLanguage } from "@/lib/i18n/LanguageProvider";
+    25→import { toast } from "sonner";
+    26→import {
+    27→  ShieldCheck, Star, MapPin, Zap, Eye, Briefcase, Share2, Loader2, Save, Sparkles, Check,
+    28→} from "lucide-react";
+    29→
+    30→const TRUST_LADDER = ["new", "id_verified", "skill_verified", "top_pro"] as const;
+    31→
+    32→interface WorkerProfileData {
+    33→  id: string;
+    34→  fullName: string;
+    35→  tradeId: string | null;
+    36→  trade?: { id: string; nameEn: string; nameHi: string; nameTe: string; category: string } | null;
+    37→  yearsExp: number;
+    38→  city: string;
+    39→  lat: number;
+    40→  lng: number;
+    41→  wageMin: number;
+    42→  wageMax: number;
+    43→  shiftPref: "day" | "night" | "any";
+    44→  languages: string[];
+    45→  bio: string;
+    46→  photoUrl: string | null;
+    47→  availableToday: boolean;
+    48→  trustTier: "new" | "id_verified" | "skill_verified" | "top_pro";
+    49→  trustScore: number;
+    50→  passportPublic: boolean;
+    51→  profileViews: number;
+    52→  maxRadiusKm: number;
+    53→  profileStrength: number;
+    54→  skills: { skillId: string; proficiency: number; skill: { id: string; nameEn: string; nameHi: string; nameTe: string; category: string } }[];
+    55→  endorsements: {
+    56→    id: string;
+    57→    comment: string;
+    58→    createdAt: string;
+    59→    skillName: string;
+    60→    companyName: string;
+    61→    employerVerified: boolean;
+    62→  }[];
+    63→}
+    64→
+    65→const CITIES = [
+    66→  "Bhimavaram", "Tadepalligudem", "Rajahmundry", "Vijayawada",
+    67→  "Visakhapatnam", "Kakinada", "Hyderabad", "Guntur", "Nellore", "Tirupati",
+    68→];
+    69→
+    70→const CITY_LATLNG: Record<string, { lat: number; lng: number }> = {
+    71→  Bhimavaram: { lat: 16.5417, lng: 81.5233 },
+    72→  Tadepalligudem: { lat: 16.8317, lng: 81.5172 },
+    73→  Rajahmundry: { lat: 17.0005, lng: 81.8080 },
+    74→  Vijayawada: { lat: 16.5062, lng: 80.6480 },
+    75→  Visakhapatnam: { lat: 17.6868, lng: 83.2185 },
+    76→  Kakinada: { lat: 16.9600, lng: 82.2377 },
+    77→  Hyderabad: { lat: 17.3850, lng: 78.4867 },
+    78→  Guntur: { lat: 16.3067, lng: 80.4365 },
+    79→  Nellore: { lat: 14.4426, lng: 79.9865 },
+    80→  Tirupati: { lat: 13.6288, lng: 79.4192 },
+    81→};
+    82→
+    83→export default function WorkerProfilePage() {
+    84→  const { t, lang } = useLanguage();
+    85→  const [profile, setProfile] = useState<WorkerProfileData | null>(null);
+    86→  const [notFound, setNotFound] = useState(false);
+    87→  const [saving, setSaving] = useState(false);
+    88→  const [edit, setEdit] = useState({
+    89→    fullName: "",
+    90→    yearsExp: "0",
+    91→    city: "",
+    92→    wageMin: "0",
+    93→    wageMax: "0",
+    94→    shiftPref: "any" as "day" | "night" | "any",
+    95→    bio: "",
+    96→    photoUrl: "",
+    97→    maxRadiusKm: 20,
+    98→    availableToday: false,
+    99→    passportPublic: true,
+   100→  });
+   101→
+   102→  const load = useCallback(async () => {
+   103→    try {
+   104→      const res = await fetch("/api/worker/profile", { cache: "no-store" });
+   105→      if (res.status === 403 || res.status === 404) {
+   106→        setNotFound(true);
+   107→        return;
+   108→      }
+   109→      if (!res.ok) return;
+   110→      const data = (await res.json()) as WorkerProfileData;
+   111→      setProfile(data);
+   112→      setEdit({
+   113→        fullName: data.fullName,
+   114→        yearsExp: String(data.yearsExp),
+   115→        city: data.city,
+   116→        wageMin: String(data.wageMin),
+   117→        wageMax: String(data.wageMax),
+   118→        shiftPref: data.shiftPref,
+   119→        bio: data.bio,
+   120→        photoUrl: data.photoUrl ?? "",
+   121→        maxRadiusKm: data.maxRadiusKm,
+   122→        availableToday: data.availableToday,
+   123→        passportPublic: data.passportPublic,
+   124→      });
+   125→    } catch {}
+   126→  }, []);
+   127→
+   128→  useEffect(() => { load(); }, [load]);
+   129→
+   130→  // Live strength meter
+   131→  const liveStrength = useMemo(() => {
+   132→    if (!profile) return 0;
+   133→    const has = (b: boolean) => (b ? 1 : 0);
+   134→    const filled =
+   135→      has(!!edit.fullName) +
+   136→      has(Number(edit.yearsExp) > 0) +
+   137→      has(!!edit.city) +
+   138→      has(Number(edit.wageMin) > 0 || Number(edit.wageMax) > 0) +
+   139→      has(!!edit.shiftPref) +
+   140→      has(profile.languages.length > 0) +
+   141→      has(!!edit.bio && edit.bio.length > 0);
+   142→    let s = 30 + 10 * filled;
+   143→    s += Math.min(25, 5 * profile.skills.length);
+   144→    if (edit.bio && edit.bio.length > 50) s += 10;
+   145→    if (edit.photoUrl) s += 10;
+   146→    if (profile.trustTier !== "new") s += 10;
+   147→    return Math.min(100, s);
+   148→  }, [profile, edit]);
+   149→
+   150→  async function saveField(field: string, value: unknown) {
+   151→    setSaving(true);
+   152→    try {
+   153→      const res = await fetch("/api/worker/profile", {
+   154→        method: "PATCH",
+   155→        headers: { "content-type": "application/json" },
+   156→        body: JSON.stringify({ [field]: value }),
+   157→      });
+   158→      if (!res.ok) throw new Error("save-failed");
+   159→      await load();
+   160→      toast.success(t("save"));
+   161→    } catch {
+   162→      toast.error(t("errGeneric"));
+   163→    } finally {
+   164→      setSaving(false);
+   165→    }
+   166→  }
+   167→
+   168→  async function toggleAvailable(checked: boolean) {
+   169→    setEdit(e => ({ ...e, availableToday: checked }));
+   170→    setSaving(true);
+   171→    try {
+   172→      const res = await fetch("/api/worker/profile", {
+   173→        method: "PATCH",
+   174→        headers: { "content-type": "application/json" },
+   175→        body: JSON.stringify({ availableToday: checked }),
+   176→      });
+   177→      if (!res.ok) throw new Error("save-failed");
+   178→      toast.success(checked ? "Available today on" : "Available today off");
+   179→      await load();
+   180→    } catch {
+   181→      setEdit(e => ({ ...e, availableToday: !checked }));
+   182→      toast.error(t("errGeneric"));
+   183→    } finally {
+   184→      setSaving(false);
+   185→    }
+   186→  }
+   187→
+   188→  async function togglePassportPublic(checked: boolean) {
+   189→    setEdit(e => ({ ...e, passportPublic: checked }));
+   190→    setSaving(true);
+   191→    try {
+   192→      const res = await fetch("/api/worker/profile", {
+   193→        method: "PATCH",
+   194→        headers: { "content-type": "application/json" },
+   195→        body: JSON.stringify({ passportPublic: checked }),
+   196→      });
+   197→      if (!res.ok) throw new Error("save-failed");
+   198→      toast.success(t("save"));
+   199→      await load();
+   200→    } catch {
+   201→      setEdit(e => ({ ...e, passportPublic: !checked }));
+   202→      toast.error(t("errGeneric"));
+   203→    } finally {
+   204→      setSaving(false);
+   205→    }
+   206→  }
+   207→
+   208→  async function saveProfileEdits() {
+   209→    setSaving(true);
+   210→    try {
+   211→      const body: Record<string, unknown> = {
+   212→        fullName: edit.fullName,
+   213→        yearsExp: Number(edit.yearsExp) || 0,
+   214→        city: edit.city,
+   215→        wageMin: Number(edit.wageMin) || 0,
+   216→        wageMax: Number(edit.wageMax) || 0,
+   217→        shiftPref: edit.shiftPref,
+   218→        bio: edit.bio,
+   219→        photoUrl: edit.photoUrl || null,
+   220→        maxRadiusKm: edit.maxRadiusKm,
+   221→      };
+   222→      if (CITY_LATLNG[edit.city]) {
+   223→        body.lat = CITY_LATLNG[edit.city].lat;
+   224→        body.lng = CITY_LATLNG[edit.city].lng;
+   225→      }
+   226→      const res = await fetch("/api/worker/profile", {
+   227→        method: "PATCH",
+   228→        headers: { "content-type": "application/json" },
+   229→        body: JSON.stringify(body),
+   230→      });
+   231→      if (!res.ok) throw new Error("save-failed");
+   232→      toast.success(t("save"));
+   233→      await load();
+   234→    } catch {
+   235→      toast.error(t("errGeneric"));
+   236→    } finally {
+   237→      setSaving(false);
+   238→    }
+   239→  }
+   240→
+   241→  function shareWhatsApp() {
+   242→    if (!profile) return;
+   243→    const tradeName = profile.trade
+   244→      ? (lang === "hi" ? profile.trade.nameHi : lang === "te" ? profile.trade.nameTe : profile.trade.nameEn)
+   245→      : "Worker";
+   246→    const text = `🪪 ${t("passportKaamCard")} — ${profile.fullName}\n${tradeName} · ${profile.yearsExp} ${t("passportYears")}\n${profile.city} · ${t("passportTier")}: ${profile.trustTier}\n${t("passportWage")}: ₹${profile.wageMin}-${profile.wageMax}${t("perDay")}`;
+   247→    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+   248→    window.open(url, "_blank", "noopener,noreferrer");
+   249→  }
+   250→
+   251→  if (notFound) {
+   252→    return (
+   253→      <AppShell>
+   254→        <EmptyState
+   255→          icon={ShieldCheck}
+   256→          title={t("errNotFound")}
+   257→          description={t("onboardTitle")}
+   258→          action={<Button asChild><Link href="/onboarding/worker">{t("onboardSubmit")}</Link></Button>}
+   259→        />
+   260→      </AppShell>
+   261→    );
+   262→  }
+   263→
+   264→  if (!profile) {
+   265→    return (
+   266→      <AppShell>
+   267→        <LoadingSkeleton count={4} />
+   268→      </AppShell>
+   269→    );
+   270→  }
+   271→
+   272→  const initials = profile.fullName.split(" ").map(p => p[0]).slice(0, 2).join("").toUpperCase();
+   273→  const tradeName = profile.trade
+   274→    ? (lang === "hi" ? profile.trade.nameHi : lang === "te" ? profile.trade.nameTe : profile.trade.nameEn)
+   275→    : "—";
+   276→
+   277→  return (
+   278→    <AppShell>
+   279→      <header className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+   280→        <div>
+   281→          <h1 className="text-2xl font-bold tracking-tight">{t("passportTitle")}</h1>
+   282→          <p className="text-sm text-muted-foreground mt-1">{t("passportKaamCard")}</p>
+   283→        </div>
+   284→        <Button onClick={shareWhatsApp} variant="outline" className="gap-2 min-h-11">
+   285→          <Share2 className="size-4" />
+   286→          {t("passportKaamCardShare")}
+   287→        </Button>
+   288→      </header>
+   289→
+   290→      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+   291→        {/* Skill Passport card */}
+   292→        <Card className="passport-card">
+   293→          <CardContent className="p-6 flex flex-col gap-4">
+   294→            <div className="flex items-start gap-4">
+   295→              <Avatar className="size-16 border-2 border-primary/30">
+   296→                {profile.photoUrl ? (
+   297→                  <img src={profile.photoUrl} alt={profile.fullName} className="size-full object-cover" />
+   298→                ) : (
+   299→                  <AvatarFallback className="text-lg font-bold bg-primary/5 text-primary">{initials}</AvatarFallback>
+   300→                )}
+   301→              </Avatar>
+   302→              <div className="flex-1">
+   303→                <div className="flex items-start justify-between gap-2 flex-wrap">
+   304→                  <div>
+   305→                    <h2 className="text-xl font-bold tracking-tight">{profile.fullName}</h2>
+   306→                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+   307→                      <Briefcase className="size-3.5" />
+   308→                      {tradeName} · {profile.yearsExp} {t("passportYears")}
+   309→                    </p>
+   310→                  </div>
+   311→                  <TrustTierBadge tier={profile.trustTier} score={profile.trustScore} size="lg" />
+   312→                </div>
+   313→                <div className="flex flex-wrap items-center gap-2 mt-2">
+   314→                  {profile.availableToday && (
+   315→                    <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 gap-1 text-xs">
+   316→                      <Zap className="size-3" />
+   317→                      {t("today")}
+   318→                    </Badge>
+   319→                  )}
+   320→                  <Badge variant="outline" className="text-xs gap-1">
+   321→                    <MapPin className="size-3" />
+   322→                    {profile.city}
+   323→                  </Badge>
+   324→                  <Badge variant="outline" className="text-xs gap-1">
+   325→                    <Eye className="size-3" />
+   326→                    {profile.profileViews} views
+   327→                  </Badge>
+   328→                </div>
+   329→              </div>
+   330→            </div>
+   331→
+   332→            <Separator />
+   333→
+   334→            {/* Trust tier ladder — New → ID Verified → Skill Verified → Top Pro */}
+   335→            <div className="grid gap-2 rounded-lg border border-border bg-card/50 p-3" aria-label={`${t("passportTier")}: ${profile.trustScore}/100`}>
+   336→              <div className="flex items-center justify-between text-xs">
+   337→                <span className="font-semibold flex items-center gap-1.5">
+   338→                  <ShieldCheck className="size-3.5 text-primary" />
+   339→                  {t("passportTier")}
+   340→                </span>
+   341→                <span className="tabular-nums font-bold">{profile.trustScore}/100 · {t("passportTrustScore")}</span>
+   342→              </div>
+   343→              <ol className="flex items-center gap-0" aria-hidden>
+   344→                {([
+   345→                  ["new", t("passportTierNew")],
+   346→                  ["id_verified", t("passportTierIdVerified")],
+   347→                  ["skill_verified", t("passportTierSkillVerified")],
+   348→                  ["top_pro", t("passportTierTopPro")],
+   349→                ] as const).map(([tier, label], i) => {
+   350→                  const currentIdx = TRUST_LADDER.indexOf(profile.trustTier);
+   351→                  const state = i < currentIdx ? "done" : i === currentIdx ? "current" : "todo";
+   352→                  return (
+   353→                    <li key={tier} className="flex-1 flex flex-col items-center gap-1.5 last:flex-none">
+   354→                      <div className="flex items-center w-full">
+   355→                        {i > 0 && (
+   356→                          <span className={`h-0.5 flex-1 mx-0.5 rounded-full ${i <= currentIdx ? "bg-primary/60" : "bg-border"}`} />
+   357→                        )}
+   358→                        <span
+   359→                          className={`size-6 rounded-full grid place-items-center border-2 text-[10px] font-bold transition-colors ${
+   360→                            state === "done"
+   361→                              ? "bg-primary border-primary text-primary-foreground"
+   362→                              : state === "current"
+   363→                                ? "bg-accent/15 border-accent text-accent-foreground ring-4 ring-accent/15"
+   364→                                : "bg-muted/50 border-border text-muted-foreground/60"
+   365→                          }`}
+   366→                        >
+   367→                          {state === "done" ? <Check className="size-3" /> : i + 1}
+   368→                        </span>
+   369→                        {i < 3 && (
+   370→                          <span className={`h-0.5 flex-1 mx-0.5 rounded-full ${i < currentIdx ? "bg-primary/60" : "bg-border"}`} />
+   371→                        )}
+   372→                      </div>
+   373→                      <span
+   374→                        className={`text-[10px] font-medium text-center leading-tight ${
+   375→                          state === "current" ? "text-accent-foreground" : "text-muted-foreground"
+   376→                        } ${i === 3 ? "whitespace-nowrap" : ""}`}
+   377→                      >
+   378→                        {label}
+   379→                      </span>
+   380→                    </li>
+   381→                  );
+   382→                })}
+   383→              </ol>
+   384→            </div>
+   385→
+   386→            {/* Strength meter — live (WRK-04) */}
+   387→            <div className="grid gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+   388→              <div className="flex items-center justify-between text-xs">
+   389→                <span className="font-semibold flex items-center gap-1.5">
+   390→                  <Sparkles className="size-3.5" />
+   391→                  {t("passportStrength")}
+   392→                </span>
+   393→                <span className="tabular-nums">{liveStrength}%</span>
+   394→              </div>
+   395→              <Progress value={liveStrength} className="h-2" />
+   396→            </div>
+   397→
+   398→            <Separator />
+   399→
+   400→            {/* Editable fields */}
+   401→            <div className="grid sm:grid-cols-2 gap-4">
+   402→              <div className="grid gap-2">
+   403→                <Label htmlFor="fullName">{t("onboardFullName")}</Label>
+   404→                <Input
+   405→                  id="fullName" value={edit.fullName}
+   406→                  onChange={e => setEdit(s => ({ ...s, fullName: e.target.value }))}
+   407→                  className="min-h-11"
+   408→                />
+   409→              </div>
+   410→              <div className="grid gap-2">
+   411→                <Label htmlFor="yearsExp">{t("onboardYearsExp")}</Label>
+   412→                <Input
+   413→                  id="yearsExp" type="number" min={0} max={50}
+   414→                  value={edit.yearsExp}
+   415→                  onChange={e => setEdit(s => ({ ...s, yearsExp: e.target.value }))}
+   416→                  className="min-h-11"
+   417→                />
+   418→              </div>
+   419→              <div className="grid gap-2">
+   420→                <Label htmlFor="city">{t("onboardCity")}</Label>
+   421→                <Select
+   422→                  value={edit.city}
+   423→                  onValueChange={(v) => setEdit(s => ({ ...s, city: v }))}
+   424→                >
+   425→                  <SelectTrigger id="city" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+   426→                  <SelectContent>
+   427→                    {CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+   428→                  </SelectContent>
+   429→                </Select>
+   430→              </div>
+   431→              <div className="grid gap-2">
+   432→                <Label htmlFor="shift">{t("onboardShift")}</Label>
+   433→                <Select
+   434→                  value={edit.shiftPref}
+   435→                  onValueChange={(v) => setEdit(s => ({ ...s, shiftPref: v as typeof edit.shiftPref }))}
+   436→                >
+   437→                  <SelectTrigger id="shift" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+   438→                  <SelectContent>
+   439→                    <SelectItem value="any">Any</SelectItem>
+   440→                    <SelectItem value="day">Day</SelectItem>
+   441→                    <SelectItem value="night">Night</SelectItem>
+   442→                  </SelectContent>
+   443→                </Select>
+   444→              </div>
+   445→              <div className="grid gap-2">
+   446→                <Label htmlFor="wageMin">{t("onboardWageMin")} (₹/day)</Label>
+   447→                <Input
+   448→                  id="wageMin" type="number" min={0} step={50}
+   449→                  value={edit.wageMin}
+   450→                  onChange={e => setEdit(s => ({ ...s, wageMin: e.target.value }))}
+   451→                  className="min-h-11"
+   452→                />
+   453→              </div>
+   454→              <div className="grid gap-2">
+   455→                <Label htmlFor="wageMax">{t("onboardWageMax")} (₹/day)</Label>
+   456→                <Input
+   457→                  id="wageMax" type="number" min={0} step={50}
+   458→                  value={edit.wageMax}
+   459→                  onChange={e => setEdit(s => ({ ...s, wageMax: e.target.value }))}
+   460→                  className="min-h-11"
+   461→                />
+   462→              </div>
+   463→              <div className="grid gap-2">
+   464→                <Label htmlFor="photoUrl">Photo URL <span className="text-xs text-muted-foreground">({t("optional")})</span></Label>
+   465→                <Input
+   466→                  id="photoUrl" type="url"
+   467→                  value={edit.photoUrl}
+   468→                  onChange={e => setEdit(s => ({ ...s, photoUrl: e.target.value }))}
+   469→                  className="min-h-11" placeholder="https://…"
+   470→                />
+   471→              </div>
+   472→              <div className="grid gap-2">
+   473→                <Label htmlFor="radius">{t("onboardRadius")}: <span className="font-semibold">{edit.maxRadiusKm} {t("km")}</span></Label>
+   474→                <Input
+   475→                  id="radius" type="range" min={1} max={200} step={5}
+   476→                  value={edit.maxRadiusKm}
+   477→                  onChange={e => setEdit(s => ({ ...s, maxRadiusKm: Number(e.target.value) }))}
+   478→                  className="min-h-11"
+   479→                />
+   480→              </div>
+   481→            </div>
+   482→
+   483→            <div className="grid gap-2">
+   484→              <Label htmlFor="bio">{t("onboardBio")} <span className="text-xs text-muted-foreground">({edit.bio.length}/500)</span></Label>
+   485→              <Textarea
+   486→                id="bio" rows={4} maxLength={500}
+   487→                value={edit.bio}
+   488→                onChange={e => setEdit(s => ({ ...s, bio: e.target.value }))}
+   489→                className="min-h-24"
+   490→              />
+   491→            </div>
+   492→
+   493→            <div className="flex items-center gap-2">
+   494→              <Button onClick={saveProfileEdits} disabled={saving} className="gap-2 min-h-11">
+   495→                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+   496→                {t("save")}
+   497→              </Button>
+   498→            </div>
+   499→
+   500→            <Separator />
+   501→
+   502→            {/* Skills (read-only display) */}
+   503→            {profile.skills.length > 0 && (
+   504→              <div>
+   505→                <h3 className="font-semibold text-sm mb-2">{t("passportSkills")}</h3>
+   506→                <div className="grid gap-2 sm:grid-cols-2">
+   507→                  {profile.skills.map(s => {
+   508→                    const name = s.skill
+   509→                      ? (lang === "hi" ? s.skill.nameHi : lang === "te" ? s.skill.nameTe : s.skill.nameEn)
+   510→                      : "—";
+   511→                    return (
+   512→                      <div key={s.skillId} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card/50 px-3 py-2">
+   513→                        <span className="text-sm font-medium">{name}</span>
+   514→                        <div className="flex items-center gap-1" aria-label={`Proficiency ${s.proficiency} of 5`}>
+   515→                          {Array.from({ length: 5 }).map((_, i) => (
+   516→                            <Star
+   517→                              key={i}
+   518→                              className={`size-3 ${i < s.proficiency ? "fill-accent text-accent-foreground" : "text-muted-foreground/30"}`}
+   519→                            />
+   520→                          ))}
+   521→                        </div>
+   522→                      </div>
+   523→                    );
+   524→                  })}
+   525→                </div>
+   526→              </div>
+   527→            )}
+   528→
+   529→            {/* Endorsements */}
+   530→            {profile.endorsements.length > 0 && (
+   531→              <>
+   532→                <Separator />
+   533→                <div>
+   534→                  <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+   535→                    <Star className="size-4 text-accent-foreground" />
+   536→                    {t("passportEndorsements")}
+   537→                    <Badge variant="outline" className="text-xs">{profile.endorsements.length}</Badge>
+   538→                  </h3>
+   539→                  <div className="grid gap-2">
+   540→                    {profile.endorsements.map(e => (
+   541→                      <div key={e.id} className="rounded-md border border-accent/30 bg-accent/5 p-3">
+   542→                        <div className="flex items-center justify-between text-xs">
+   543→                          <span className="font-semibold">{e.companyName}</span>
+   544→                          {e.employerVerified && (
+   545→                            <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300">{t("feedVerifiedEmployer")}</Badge>
+   546→                          )}
+   547→                        </div>
+   548→                        <p className="text-sm mt-1">{e.comment || `"Skilled in ${e.skillName}."`}</p>
+   549→                        <p className="text-[10px] text-muted-foreground mt-1">
+   550→                          {new Date(e.createdAt).toLocaleDateString()}
+   551→                        </p>
+   552→                      </div>
+   553→                    ))}
+   554→                  </div>
+   555→                </div>
+   556→              </>
+   557→            )}
+   558→          </CardContent>
+   559→        </Card>
+   560→
+   561→        {/* Side rail */}
+   562→        <aside className="flex flex-col gap-4">
+   563→          <StatCard
+   564→            label={t("passportViewsThisWeek")}
+   565→            value={profile.profileViews}
+   566→            icon={Eye}
+   567→            tone="accent"
+   568→          />
+   569→
+   570→          {/* Worker's employer-rating summary (R16) — avg rating received from employers */}
+   571→          <RatingSummary
+   572→            endpoint="/api/ratings/worker"
+   573→            userId={profile.id}
+   574→            title={t("ratingSummaryWorkerTitle")}
+   575→          />
+   576→
+   577→          <Card>
+   578→            <CardHeader>
+   579→              <CardTitle className="text-base flex items-center gap-2">
+   580→                <Zap className="size-4 text-emerald-700" />
+   581→                {t("onboardAvailableToday")}
+   582→              </CardTitle>
+   583→            </CardHeader>
+   584→            <CardContent className="flex items-center justify-between gap-3">
+   585→              <Label htmlFor="avail" className="text-sm text-muted-foreground">Visible to employers now</Label>
+   586→              <Switch
+   587→                id="avail"
+   588→                checked={edit.availableToday}
+   589→                onCheckedChange={toggleAvailable}
+   590→                disabled={saving}
+   591→              />
+   592→            </CardContent>
+   593→          </Card>
+   594→
+   595→          <Card>
+   596→            <CardHeader>
+   597→              <CardTitle className="text-base flex items-center gap-2">
+   598→                <ShieldCheck className="size-4 text-primary" />
+   599→                {t("passportKaamCardToggle")}
+   600→              </CardTitle>
+   601→            </CardHeader>
+   602→            <CardContent className="flex flex-col gap-2">
+   603→              <div className="flex items-center justify-between gap-3">
+   604→                <Label htmlFor="pp" className="text-sm text-muted-foreground">{t("passportKaamCardToggleHelp")}</Label>
+   605→                <Switch
+   606→                  id="pp"
+   607→                  checked={edit.passportPublic}
+   608→                  onCheckedChange={togglePassportPublic}
+   609→                  disabled={saving}
+   610→                />
+   611→              </div>
+   612→            </CardContent>
+   613→          </Card>
+   614→
+   615→          <Card className="border-dashed bg-muted/30">
+   616→            <CardContent className="p-4 flex flex-col gap-2">
+   617→              <p className="text-xs font-semibold flex items-center gap-1.5">
+   618→                <Star className="size-3.5 text-accent-foreground" />
+   619→                {t("passportVerifyNow")}
+   620→              </p>
+   621→              <p className="text-xs text-muted-foreground">{t("verifyPiiNote")}</p>
+   622→              <Button asChild variant="outline" size="sm" className="mt-2 gap-1.5 min-h-11 w-full">
+   623→                <Link href="/onboarding/worker">{t("passportUploadCert")}</Link>
+   624→              </Button>
+   625→            </CardContent>
+   626→          </Card>
+   627→        </aside>
+   628→      </div>
+   629→    </AppShell>
+   630→  );
+   631→}
+   632→

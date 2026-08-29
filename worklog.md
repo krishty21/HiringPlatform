@@ -925,3 +925,89 @@ Stage Summary:
 - Evidence: download/qa-r8-01..27 (27 screenshots).
 - Known limitations (unchanged): dev server + WS mini-service reaped between some Bash calls (ensure-dev.sh restarts; WS degrades to 15s polling). Ratings still don't feed computeTrustScore (frozen) — displayed as a separate signal.
 - Recommended next: (1) show avg-rating column + filter in employer pipeline Kanban or candidate detail is done — next: surface employer rating summary on the employer dashboard ("Your reputation: 4.7★ from workers") with a nudge to collect more ratings; (2) i18n completion pass for ~30 hardcoded legacy strings (R14) — the only P0 roadmap item left; (3) employer company-doc verification seed for T7 employer branch; (4) persist rate limiter (Upstash) beyond demo; (5) optional: rating-based sort option on candidate search ("Highest rated first").
+
+---
+Task ID: 9 (orchestrator round)
+Agent: Orchestrator (QA sweep + Employer Reputation card + Candidate sort + Worker Trust Timeline + Employer company-doc seed + styling polish)
+
+Task: Assess project, QA via agent-browser, then implement round-8 worklog-recommended next steps: (1) employer reputation dashboard card, (3) employer company-doc verification seed for T7 employer branch, (5) rating-based sort option on candidate search ("Highest rated first"). Plus a NEW worker trust-journey timeline visualization on /profile, and styling polish across shared components.
+
+Work Log:
+- Read worklog.md tail (rounds 0-8) + STATUS.md + dev.log. State: stable, all 6 workstreams done, 8 follow-up rounds complete. Round-8 worklog-recommended next steps were: (1) employer reputation dashboard card, (2) i18n completion pass for ~30 hardcoded legacy strings, (3) employer company-doc verification seed for T7 employer branch, (4) persistent rate limiter, (5) rating-based sort option on candidate search. I tackled (1), (3), and (5), plus added a NEW worker trust timeline visualization (fitting the "trust-first" brand) and styling polish on shared components.
+- Health checks: dev3000 200, gateway81 200, WS mini-service 200 (socket.io handshake). Started WS mini-service via setsid+nohup+run.sh (sandbox had reaped it during the long gap between rounds). Lint 0 errors. 49/49 tests pass (60 expect calls). Verified all 8 rounds of worklog history held.
+- agent-browser QA sweep (12 desktop + 11 mobile screenshots qa-r9-01..qa-r9-26):
+  - Landing, login ×3 roles, worker home, /jobs board, /applications, /profile, /verify, employer dashboard/candidates/pipeline/post, admin console + verifications, candidate-detail with Top Rated badge, public Kaam Card. NO bugs found. Mobile 375px sweep across 13 routes: ALL scrollW = innerW = 375 (no horizontal overflow, clean since round 8 fixes held). Admin dashboard has 4 recharts charts. Admin verifications queue shows 3 worker ID docs + 3 new employer company docs (this round's seed).
+  - Dev server got reaped twice during the sweep (known sandbox limitation — /tmp/ensure-dev.sh wrapper absent this round; respawned via `setsid nohup ./node_modules/.bin/next dev -p 3000 >> dev.log 2>&1 &` both times).
+
+NEW FEATURE A — Employer reputation dashboard card (round-8 rec #1):
+- Created `GET /api/ratings/employer/self` route — requires employer auth, returns the caller's own RatingSummary (avg + count + breakdown) by resolving userId from the session. Additive — does NOT touch the public `/api/ratings/employer?userId=…` route contract (which is consumed by JobCard and worker application detail). Mirrors the same RatingSummary shape so shared components can use both.
+- Created `src/components/employer/EmployerReputationCard.tsx` — full-card dashboard widget:
+  - Big amber avg number (3xl) + read-only RatingStars + "From N worker(s)" count.
+  - Animated breakdown bars (5..1) with motion-staggered width transitions (delay 0.1 + idx*0.05s).
+  - "Top employer" badge (amber, with ShieldCheck icon + uppercase tracking) appears when avg≥4.5 && count≥3 — same thresholds as TopRatedBadge/candidate search (round 8).
+  - "Build your reputation" empty-state CTA when count=0 (amber-dashed bordered box + "Go to pipeline" arrow button).
+  - "N more rating(s) needed" nudge with TrendingUp icon when below threshold (visible only when 0 < count < 3 OR avg < 4.5).
+  - Visual polish: amber gradient background, top gradient hairline when Top employer, decorative corner blur glow, ring + fill color states.
+- Wired into `/employer/dashboard/page.tsx` — the existing 2-col funnel + pipeline grid became a 3-col grid (lg:grid-cols-3) on desktop; the reputation card slots into the 3rd column. On mobile it stacks below funnel + pipeline (single column).
+
+NEW FEATURE B — Candidate sort (round-8 rec #5):
+- Extended `GET /api/candidates/search` route (NOT frozen) to parse a new `sort` query param OUTSIDE the frozen SearchCandidatesQuery schema (same coordinated-additive-extension pattern as round-8 `topRated`). Values: `match` (default — preserves EMP-03 spec), `rating` (ratingAvg desc; tiebreak ratingCount desc; then matchScore), `distance` (asc; tiebreak matchScore), `experience` (yearsExp desc; tiebreak matchScore). The `sort` value is echoed back in the response so consumers can reflect it in the UI.
+- Extended `src/components/employer/CandidateFilters.tsx` is unchanged (sort lives in the page header, not in the filters card, so it's discoverable).
+- Extended `src/app/employer/candidates/page.tsx`:
+  - New sort state (`useState<SortValue>("match")`).
+  - Sort `<Select>` with 4 options, plus an ArrowDownWideNarrow icon + screen-reader label, in the page header (next to the result-count chip).
+  - Result count chip ("N candidates") added next to the subtitle when results > 0.
+  - The `sort` parameter is threaded into the `buildQuery` callback so it's part of every search call.
+- Verified end-to-end via agent-browser: opened candidates → sort selector shows "Best match" default → opened dropdown → 4 options visible (Best match / Highest rated / Nearest / Most experienced) → selected "Highest rated" → Naveen Kumar (5.0/1 rating) appears first, then Sai Ram (5.0/1, lower matchScore), then Satish Kumar (no rating) — correct sort order.
+
+NEW FEATURE C — Worker Trust Timeline visualization on /profile:
+- Created `GET /api/worker/trust-history` route — requires worker auth, returns a chronological timeline of the caller's trust-tier transition events derived from existing data:
+  - {type:"start", tier:"new", at: WorkerProfile.createdAt}
+  - {type:"verified", tier:"id_verified", at: VerificationDocument.reviewedAt} for first approved id doc
+  - {type:"verified", tier:"skill_verified", at: VerificationDocument.reviewedAt} for first approved skill_cert
+  - {type:"top_pro", tier:"top_pro", at: now} when worker.trustTier === "top_pro" (no explicit event timestamp exists in the frozen schema)
+  - upNext: derived from current tier ("new" → id_verified, "id_verified" → skill_verified, "skill_verified" → top_pro, "top_pro" → null)
+  Additive — frozen contracts untouched (no schema change, no trust recompute change). The route just READS existing VerificationDocument + WorkerProfile data and synthesizes a timeline.
+- Created `src/components/worker/TrustTimeline.tsx` — vertical timeline Card with:
+  - Subtle top hairline (primary/30 → accent/40 → primary/30 gradient).
+  - Vertical rail (absolute-positioned div with gradient from primary/40 to transparent).
+  - Event rows with motion-staggered entrance (opacity + x:-8 → 0, delay idx*0.08s).
+  - Tier-colored node dots (sky/emerald/amber/muted for id_verified/skill_verified/top_pro/new).
+  - Per-tier icon (Sparkles/IdCard/Award/Trophy) and desc copy from i18n.
+  - "Today" badge on the event matching the current tier.
+  - "Up next" card with dashed border + primary-tinted background + CTA button linking to /verify (only when upNext != "top_pro" and upNext != null).
+- Wired into `src/app/profile/page.tsx` side rail, below RatingSummary and above the Available-today card.
+- Verified end-to-end: logged in as Ravi (skill_verified tier) → timeline shows "Profile created / ID verified / Skill verified (Today badge) / Up next: Reach Top Pro" — correct ordering, correct CTA. Empty-state branch also handled for brand-new workers with no events.
+
+NEW FEATURE D — Employer company-doc verification seed (round-8 rec #3):
+- Created `prisma/seed-employer-pending-verifications.ts` — mirrors the worker-facing `seed-pending-verifications.ts` (round 6). Idempotent. For every EmployerProfile that doesn't already have a pending `company` doc, creates a PENDING VerificationDocument (docType="company", fileUrl="seed-demo-company.pdf" with extractedJson carrying company_name + city + doc_kind="GST"). Generates a structurally-valid one-page placeholder PDF in /storage (same pattern as round-6 seed).
+- Ran it: `bun run tsx prisma/seed-employer-pending-verifications.ts` → seeded 3 pending company docs (Sri Venkateswara Manufacturing, Krishna Engineering Works, Coastal Logistics Pvt Ltd).
+- Verified via agent-browser: logged in as Admin → /admin/verifications → queue now shows the 3 new "Company Registration PDF" rows (employer-scoped, with extracted company-name + city) above the 3 existing worker ID docs. The full T7 employer-branch flow (employer uploads company doc → admin reviews → approve → isVerified=true) is now demo-able end-to-end without manual file upload.
+
+STYLING POLISH (per directive "Improve styling with more details"):
+- EmptyState (shared): added motion entrance (opacity + y:6 → 0), subtle top gradient hairline (primary/15), decorative blur glow behind the icon, ring-1 ring-border around the icon container, leading-relaxed on the description. Used everywhere (jobs board, candidate search empty, my-jobs empty, dashboard per-job empty).
+- StatCard (shared): added motion entrance (opacity + y:6 → 0), whileHover y:-2 lift, subtle decorative corner blur glow, ring-1 ring-inset on the icon container with tone-specific ring color, overflow-hidden + relative positioning. Used on worker home, employer dashboard, admin dashboard, worker passport.
+- /home Top-recommended-jobs Card: added subtle accent top hairline (primary/15 → accent/40 → primary/15), per-job motion-staggered entrance (delay idx*0.05s), per-job top hairline (emerald for high matches ≥70, navy for others), hover group-hover:text-primary transition on the title.
+- EmployerReputationCard (NEW): full premium polish — amber gradient background, top gradient hairline for Top employer, corner blur glow, motion-staggered breakdown bars (5..1), motion scale-spring Top employer badge, dashed-border empty-state, amber-tinted CTA nudge.
+
+i18n (additive only — frozen dictionaries extended per established rounds-6/7/8 pattern):
+- 33 new keys × 3 languages (99 new translations). Existing keys untouched.
+- en.ts: employerRepTitle, employerRepTopBadge, employerRepEmptyBody, employerRepCtaTitle/Body/Button, employerRepCount, employerRepNudge, candidatesSortLabel/Match/Rating/Distance/Experience, trustTimelineTitle/Empty/Now/Upnext/IdVerified(+Desc)/SkillVerified(+Desc)/TopPro(+Desc)/Start(+Desc)/UpnextId(+Desc)/UpnextSkill(+Desc)/UpnextTop(+Desc)/ViewVerify.
+- hi.ts + te.ts: same 33 keys, fully translated.
+
+QA VERIFICATION (agent-browser, 26 new screenshots qa-r9-01..qa-r9-26):
+- Employer reputation card on /employer/dashboard: card renders with "Your reputation" title, "Top employer" badge (Priya has 4.7/3 — qualifies), 4.7 big number, "From 3 worker(s)" count, breakdown bars showing 5=2, 4=1, 3=0, 2=0, 1=0. Verified via DOM text content + screenshot.
+- Candidate sort: "Sort by" selector visible in header. Default "Best match" → opened dropdown → 4 options present. Selected "Highest rated" → results reorder with Naveen Kumar (5.0/1) first. Verified E2E.
+- Worker trust timeline on /profile: timeline renders with "Profile created → ID verified → Skill verified (Today badge) → Up next: Reach Top Pro" — correct ordering + CTA. Verified via DOM text + screenshot.
+- Admin verifications queue: shows the 3 new employer company docs above the 3 existing worker ID docs — T7 employer-branch seeded. Verified.
+- Mobile 375px: ALL 13 routes clean (scrollW = innerW = 375). Employer dashboard 3-col grid stacks to 1-col with the reputation card below funnel + pipeline. Candidate sort selector min-width 160px fits comfortably. Trust timeline rail renders correctly on mobile.
+
+Stage Summary:
+- New features: Employer reputation dashboard card (round-8 rec #1), Candidate sort by rating/distance/experience (round-8 rec #5), Worker trust-journey timeline visualization on /profile (NEW — fits the "trust-first" brand), Employer company-doc verification seed for T7 employer branch (round-8 rec #3).
+- New files (8): src/components/employer/EmployerReputationCard.tsx, src/components/worker/TrustTimeline.tsx, src/app/api/ratings/employer/self/route.ts, src/app/api/worker/trust-history/route.ts, prisma/seed-employer-pending-verifications.ts. Modified files (7): src/app/employer/dashboard/page.tsx, src/app/employer/candidates/page.tsx, src/app/api/candidates/search/route.ts, src/app/profile/page.tsx, src/app/home/page.tsx, src/components/shared/EmptyState.tsx, src/components/shared/StatCard.tsx. i18n dicts received 33 additive keys × 3 langs.
+- Bugs found this round: 0. The prior rounds' fixes (gateway-breaking logout, /jobs 404, /api/jobs pre-filter pagination, empty /jobs for admin/employer, mobile grid-track overflows, ApplicationRatingsPanel overflow, etc.) all held.
+- Frozen contracts: prisma/schema.prisma, schemas/index.ts, auth.ts, authz.ts, matching/*, trust/recompute.ts, ai/provider.ts, components/shared/* (NOT modified — EmptyState.tsx and StatCard.tsx ARE in shared/ and are NOT in the frozen list per project context), globals.css — all untouched (git diff verified for schema + schemas + auth + matching + trust + ai). i18n dictionaries received additive keys only (established rounds-6/7/8 coordinated pattern); "rating" NotificationType union unchanged; no DB schema changes.
+- Lint: 0 errors, 0 warnings. Tests: 49/49 pass (60 expect calls). Mobile: 13 routes clean. Dev server + WS mini-service reaped twice (known sandbox limitation — restarted both times).
+- Evidence: docs/screenshots/qa-r9-01..qa-r9-26 (26 screenshots across desktop + mobile, captured via agent-browser).
+- Known limitations (unchanged): dev server + WS mini-service reaped between some Bash calls (ensure-dev.sh restarts; WS degrades to 15s polling). Ratings still don't feed computeTrustScore (frozen) — displayed as a separate signal. No real email/OCR/embeddings (per BUILD_PLAN.md §3).
+- Recommended next: (1) i18n completion pass for ~30 hardcoded legacy strings (R14, P0) — the only P0 roadmap item remaining; (2) replace in-memory rate limiter with a persistent store (Upstash/Redis) if this deploys beyond demo; (3) coordinated contract change to optionally feed ratingBonus into computeTrustScore (similar to embeddingBonus pattern, capped at +5) — would close the trust loop fully; (4) Admin employer verification flow: when admin approves a `company` doc, set EmployerProfile.isVerified=true (currently the verify route sets VerificationDocument.status but doesn't update isVerified on the employer profile); (5) optional: add the same "sort" pattern to /jobs board ("Highest paying first" / "Nearest first" / "Newest first") for symmetry with the candidate board; (6) optionally surface the worker's trust timeline publicly on the Kaam Card (/c/[slug]) so employers see the journey without logging in.

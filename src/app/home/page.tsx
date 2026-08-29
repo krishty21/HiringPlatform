@@ -27,6 +27,7 @@ import { useSession } from "next-auth/react";
 import { Search, Briefcase, Eye, Sparkles, Zap, RefreshCcw, Filter, RotateCcw, MapPin, Bookmark, Compass } from "lucide-react";
 import type { Skill } from "@/lib/schemas";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 interface DashboardData {
   inReviewCount: number;
@@ -280,7 +281,9 @@ export default function WorkerHomePage() {
 
       {/* Top recommended jobs */}
       {dashboard && dashboard.topRecommendedJobs.length > 0 && (
-        <Card className="mb-4">
+        <Card className="mb-4 relative overflow-hidden">
+          {/* Subtle accent hairline */}
+          <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/15 via-accent/40 to-primary/15" />
           <CardContent className="p-4">
             <p className="text-sm font-semibold flex items-center gap-2 mb-3">
               <Sparkles className="size-4 text-accent-foreground" />
@@ -290,27 +293,42 @@ export default function WorkerHomePage() {
               </Link>
             </p>
             <div className="grid gap-2 sm:grid-cols-3">
-              {dashboard.topRecommendedJobs.map(job => (
-                <Link
-                  key={job.id}
-                  href={`/jobs/${job.id}`}
-                  className="rounded-lg border border-border p-3 hover:border-primary/40 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold line-clamp-2 flex-1">{job.title}</p>
-                    <MatchScoreBadge score={job.matchScore ?? 0} size="sm" />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <MapPin className="size-3" />{job.city}
-                    {job.employer?.isVerified && (
-                      <span className="ml-1"><VerificationBadge status="approved" label={t("feedVerifiedEmployer")} /></span>
-                    )}
-                  </p>
-                  <div className="mt-2">
-                    <WageDisplay min={job.wageMin} max={job.wageMax} size="sm" />
-                  </div>
-                </Link>
-              ))}
+              {dashboard.topRecommendedJobs.map((job, idx) => {
+                const score = job.matchScore ?? 0;
+                const isHighMatch = score >= 70;
+                return (
+                  <motion.div
+                    key={job.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05, ease: "easeOut" }}
+                  >
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      className="group relative block rounded-lg border border-border p-3 hover:border-primary/40 hover:shadow-sm transition-all overflow-hidden"
+                    >
+                      {/* Top hairline — emerald for high matches, navy otherwise */}
+                      <div
+                        aria-hidden
+                        className={`absolute inset-x-0 top-0 h-0.5 ${isHighMatch ? "bg-gradient-to-r from-primary to-emerald-500" : "bg-gradient-to-r from-primary/20 to-primary/5"}`}
+                      />
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold line-clamp-2 flex-1 group-hover:text-primary transition-colors">{job.title}</p>
+                        <MatchScoreBadge score={score} size="sm" />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <MapPin className="size-3" />{job.city}
+                        {job.employer?.isVerified && (
+                          <span className="ml-1"><VerificationBadge status="approved" label={t("feedVerifiedEmployer")} /></span>
+                        )}
+                      </p>
+                      <div className="mt-2">
+                        <WageDisplay min={job.wageMin} max={job.wageMax} size="sm" />
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

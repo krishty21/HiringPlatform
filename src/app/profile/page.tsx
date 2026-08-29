@@ -8,6 +8,7 @@ import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
 import { StatCard } from "@/components/shared/StatCard";
 import { RatingSummary } from "@/components/ratings/RatingSummary";
+import { TrustTimeline } from "@/components/worker/TrustTimeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -573,6 +574,9 @@ export default function WorkerProfilePage() {
             userId={profile.id}
             title={t("ratingSummaryWorkerTitle")}
           />
+
+          {/* Round 9: Trust journey timeline — derived from verification events */}
+          <TrustTimeline />
 
           <Card>
             <CardHeader>

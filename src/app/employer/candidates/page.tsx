@@ -11,8 +11,13 @@ import {
   type CandidateFiltersValue,
 } from "@/components/employer/CandidateFilters";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { Search, Zap } from "lucide-react";
+import { Search, Zap, ArrowDownWideNarrow } from "lucide-react";
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from "@/components/ui/select";
 import type { Skill } from "@/lib/schemas";
+
+type SortValue = "match" | "rating" | "distance" | "experience";
 
 function CandidatesPageBody() {
   const { t } = useLanguage();
@@ -21,8 +26,10 @@ function CandidatesPageBody() {
 
   const [skills, setSkills] = useState<Skill[]>([]);
   const [filters, setFilters] = useState<CandidateFiltersValue>(DEFAULT_FILTERS);
+  const [sort, setSort] = useState<SortValue>("match");
   const [results, setResults] = useState<CandidateCardData[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
 
   // Fetch skills for filter dropdown
   useEffect(() => {
@@ -32,8 +39,8 @@ function CandidatesPageBody() {
       .catch(() => setSkills([]));
   }, []);
 
-  // Build query string from filters
-  const buildQuery = useCallback((f: CandidateFiltersValue) => {
+  // Build query string from filters + sort
+  const buildQuery = useCallback((f: CandidateFiltersValue, s: SortValue) => {
     const p = new URLSearchParams();
     if (f.tradeId) p.set("tradeId", f.tradeId);
     if (f.experienceMin) p.set("experienceMin", f.experienceMin);
@@ -45,6 +52,7 @@ function CandidatesPageBody() {
     if (f.availableToday) p.set("availableToday", "true");
     if (f.language) p.set("language", f.language);
     if (f.topRated) p.set("topRated", "true");
+    if (s !== "match") p.set("sort", s);
     if (urgentJobId) p.set("urgentJobId", urgentJobId);
     return p.toString();
   }, [urgentJobId]);
@@ -52,16 +60,18 @@ function CandidatesPageBody() {
   const runSearch = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = buildQuery(filters);
+      const qs = buildQuery(filters, sort);
       const res = await fetch(`/api/candidates/search?${qs}`);
-      const data = await res.json() as { items: CandidateCardData[] };
+      const data = await res.json() as { items: CandidateCardData[]; total: number };
       setResults(data.items ?? []);
+      setTotal(data.total ?? 0);
     } catch {
       setResults([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [filters, buildQuery]);
+  }, [filters, sort, buildQuery]);
 
   // Auto-run search on filter changes (debounced via simple effect)
   useEffect(() => {
@@ -71,10 +81,10 @@ function CandidatesPageBody() {
 
   return (
     <AppShell>
-      <header className="mb-4 flex items-center justify-between">
+      <header className="mb-4 flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("candidatesTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
             Ranked by match score
             {urgentJobId && (
               <span className="inline-flex items-center gap-1 text-rose-700 text-xs font-medium">
@@ -82,7 +92,30 @@ function CandidatesPageBody() {
                 Urgent job — available-today workers first
               </span>
             )}
+            {results && results.length > 0 && (
+              <span className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium tabular-nums">
+                {total} {total === 1 ? "candidate" : "candidates"}
+              </span>
+            )}
           </p>
+        </div>
+        {/* Sort selector — round 9 */}
+        <div className="flex items-center gap-2">
+          <label htmlFor="sortSelect" className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <ArrowDownWideNarrow className="size-3.5" />
+            {t("candidatesSortLabel")}
+          </label>
+          <Select value={sort} onValueChange={(v) => setSort(v as SortValue)}>
+            <SelectTrigger id="sortSelect" className="h-9 min-w-[160px] gap-1.5 text-xs">
+              <SelectValue placeholder={t("candidatesSortMatch")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="match">{t("candidatesSortMatch")}</SelectItem>
+              <SelectItem value="rating">{t("candidatesSortRating")}</SelectItem>
+              <SelectItem value="distance">{t("candidatesSortDistance")}</SelectItem>
+              <SelectItem value="experience">{t("candidatesSortExperience")}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </header>
 
