@@ -26,6 +26,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     if (!worker) throw new HTTPError(404, "NOT_FOUND");
     if (!worker.passportPublic) throw new HTTPError(404, "NOT_FOUND"); // PUB-03 privacy
 
+    // Public-safe trust journey (dates only — no doc contents, no PII).
+    const [firstIdDoc, firstSkillDoc] = await Promise.all([
+      db.verificationDocument.findFirst({
+        where: { ownerUserId: worker.userId, docType: "id", status: "approved" },
+        orderBy: { reviewedAt: "asc" },
+        select: { reviewedAt: true },
+      }),
+      db.verificationDocument.findFirst({
+        where: { ownerUserId: worker.userId, docType: "skill_cert", status: "approved" },
+        orderBy: { reviewedAt: "asc" },
+        select: { reviewedAt: true },
+      }),
+    ]);
+
     // PII minimization — PUB-01: only first name; no last name, email, phone, photo, lat/lng.
     const firstName = worker.fullName.split(/\s+/)[0] || worker.fullName;
 
@@ -56,6 +70,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
           category: s.skill.category,
         })),
         slug: worker.id,
+        trustJourney: {
+          joinedAt: worker.createdAt.toISOString(),
+          idVerifiedAt: firstIdDoc?.reviewedAt?.toISOString() ?? null,
+          skillVerifiedAt: firstSkillDoc?.reviewedAt?.toISOString() ?? null,
+        },
         // NOTE: deliberately NOT included: fullName, lastName, email, phone, photoUrl,
         // lat, lng, languages, bio, profileViews, maxRadiusKm, passportPublic, userId.
       },

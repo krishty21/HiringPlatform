@@ -230,8 +230,8 @@ export default function WorkerHomePage() {
             variant="outline"
             size="icon"
             onClick={() => { loadFeed(); loadDashboard(); }}
-            aria-label="Refresh feed"
-            title="Refresh"
+            aria-label={t("refreshFeedAria")}
+            title={t("refresh")}
             className="size-9 min-h-9 min-w-9 active:animate-spin transition-transform"
           >
             <RefreshCcw className="size-4" />
@@ -357,7 +357,7 @@ export default function WorkerHomePage() {
               >
                 <SelectTrigger className="min-h-11 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">Any trade</SelectItem>
+                  <SelectItem value="any">{t("anyTrade")}</SelectItem>
                   {tradeSkills.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.nameEn}</SelectItem>
                   ))}
@@ -439,7 +439,7 @@ export default function WorkerHomePage() {
               id="savedOnly"
               checked={savedOnly}
               onCheckedChange={setSavedOnly}
-              aria-label="Show saved jobs only"
+              aria-label={t("savedOnlyAria")}
             />
           </div>
         </CardContent>
@@ -452,15 +452,15 @@ export default function WorkerHomePage() {
         <EmptyState
           icon={Search}
           title={t("feedEmpty")}
-          description="Try widening the distance or removing filters."
+          description={t("feedEmptyDesc")}
         />
       )}
 
       {feed && feed.length > 0 && visibleFeed && visibleFeed.length === 0 && (
         <EmptyState
           icon={Search}
-          title="No saved jobs yet"
-          description="Bookmark jobs from the feed to find them here."
+          title={t("noSavedTitle")}
+          description={t("noSavedDesc")}
         />
       )}
 

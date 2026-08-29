@@ -35,7 +35,7 @@ interface FeedResponse {
   hasNext: boolean;
 }
 
-type SortKey = "match" | "wage" | "newest";
+type SortKey = "match" | "wage" | "newest" | "nearest";
 
 const PAGE_SIZE = 9;
 
@@ -220,6 +220,7 @@ function JobBoard() {
     out = [...out].sort((a, b) => {
       if (sort === "match") return (b.matchScore ?? -1) - (a.matchScore ?? -1);
       if (sort === "wage") return b.wageMax - a.wageMax;
+      if (sort === "nearest") return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
       return +new Date(b.createdAt) - +new Date(a.createdAt);
     });
     return out;
@@ -360,6 +361,7 @@ function JobBoard() {
               <SelectContent>
                 <SelectItem value="match">{t("boardSortMatch")}</SelectItem>
                 <SelectItem value="wage">{t("boardSortWage")}</SelectItem>
+                <SelectItem value="nearest">{t("boardSortNearest")}</SelectItem>
                 <SelectItem value="newest">{t("boardSortNewest")}</SelectItem>
               </SelectContent>
             </Select>

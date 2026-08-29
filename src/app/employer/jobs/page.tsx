@@ -46,7 +46,7 @@ export default function MyJobsPage() {
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("myJobsTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">All jobs you have posted.</p>
+          <p className="text-sm text-muted-foreground mt-1">{t("myJobsSub")}</p>
         </div>
         <Button asChild className="gap-2 min-h-11">
           <Link href="/employer/post"><Plus className="size-4" />{t("navPostJob")}</Link>

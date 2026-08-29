@@ -84,10 +84,10 @@ export function CandidateFilters({
             <Label className="text-xs">{t("feedFilterTrade")}</Label>
             <Select value={value.tradeId} onValueChange={(v) => update("tradeId", v === "any" ? "" : v)}>
               <SelectTrigger className="min-h-11 w-full">
-                <SelectValue placeholder="Any trade" />
+                <SelectValue placeholder={t("anyTrade")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="any">Any trade</SelectItem>
+                <SelectItem value="any">{t("anyTrade")}</SelectItem>
                 {categories.map(cat => (
                   <SelectGroupFilter key={cat} cat={cat} skills={skills} />
                 ))}
@@ -133,10 +133,10 @@ export function CandidateFilters({
             <Label className="text-xs">{t("candidatesFilterTrustTier")}</Label>
             <Select value={value.trustTier || "any"} onValueChange={(v) => update("trustTier", v === "any" ? "" : v as CandidateFiltersValue["trustTier"])}>
               <SelectTrigger className="min-h-11 w-full">
-                <SelectValue placeholder="Any tier" />
+                <SelectValue placeholder={t("anyTier")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="any">Any tier</SelectItem>
+                <SelectItem value="any">{t("anyTier")}</SelectItem>
                 <SelectItem value="new">{t("passportTierNew")}</SelectItem>
                 <SelectItem value="id_verified">{t("passportTierIdVerified")}</SelectItem>
                 <SelectItem value="skill_verified">{t("passportTierSkillVerified")}</SelectItem>
@@ -170,10 +170,10 @@ export function CandidateFilters({
             <Label className="text-xs">{t("candidatesFilterLanguage")}</Label>
             <Select value={value.language || "any"} onValueChange={(v) => update("language", v === "any" ? "" : v as CandidateFiltersValue["language"])}>
               <SelectTrigger className="min-h-11 w-full">
-                <SelectValue placeholder="Any language" />
+                <SelectValue placeholder={t("anyLanguage")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="any">Any language</SelectItem>
+                <SelectItem value="any">{t("anyLanguage")}</SelectItem>
                 <SelectItem value="en">English</SelectItem>
                 <SelectItem value="hi">हिन्दी</SelectItem>
                 <SelectItem value="te">తెలుగు</SelectItem>

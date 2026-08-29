@@ -352,7 +352,7 @@ function PipelineCard({
             checked={bulkChecked}
             onCheckedChange={() => onBulkToggle?.()}
             onClick={(e) => e.stopPropagation()}
-            aria-label="Select for bulk shortlist"
+            aria-label={t("bulkSelectAria")}
             className="mt-0.5"
           />
         )}

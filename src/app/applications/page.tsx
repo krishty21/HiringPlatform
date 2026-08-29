@@ -89,8 +89,8 @@ export default function WorkerApplicationsPage() {
             variant="outline"
             size="icon"
             onClick={load}
-            aria-label="Refresh applications"
-            title="Refresh"
+            aria-label={t("refreshApplicationsAria")}
+            title={t("refresh")}
             className="size-9 min-h-9 min-w-9 active:animate-spin transition-transform"
           >
             <RefreshCcw className="size-4" />

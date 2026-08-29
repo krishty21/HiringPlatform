@@ -21,25 +21,18 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Zap, TrendingUp } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 // Brand palette — matches the app primary (#003a7f navy) + saffron accent.
 const PRIMARY = "#003a7f";
 const SAFFRON = "#f5a623";
 const SAFFRON_LIGHT = "#fbc46b";
 
-const TIER_META: Record<string, { label: string; color: string }> = {
-  new: { label: "New", color: "#94a3b8" },
-  id_verified: { label: "ID Verified", color: "#0a4c9e" },
-  skill_verified: { label: "Skill Verified", color: "#003a7f" },
-  top_pro: { label: "Top Pro", color: SAFFRON },
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  applied: "Applied",
-  shortlisted: "Shortlisted",
-  interview: "Interview",
-  offer: "Offer",
-  hired: "Hired",
+const TIER_COLORS: Record<string, string> = {
+  new: "#94a3b8",
+  id_verified: "#0a4c9e",
+  skill_verified: "#003a7f",
+  top_pro: SAFFRON,
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -85,8 +78,23 @@ function ChartTip({
 }
 
 export function AnalyticsCharts() {
+  const { t } = useLanguage();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState(false);
+
+  const TIER_LABELS: Record<string, string> = {
+    new: t("passportTierNew"),
+    id_verified: t("passportTierIdVerified"),
+    skill_verified: t("passportTierSkillVerified"),
+    top_pro: t("passportTierTopPro"),
+  };
+  const STAGE_LABELS: Record<string, string> = {
+    applied: t("trackerStageApplied"),
+    shortlisted: t("trackerStageShortlisted"),
+    interview: t("trackerStageInterview"),
+    offer: t("trackerStageOffer"),
+    hired: t("trackerStageHired"),
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -122,32 +130,32 @@ export function AnalyticsCharts() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="flex flex-col gap-4"
-      aria-label="Platform analytics"
+      aria-label={t("analyticsTitle")}
     >
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <BarChart3 className="size-5 text-primary shrink-0" />
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Platform analytics</h2>
-            <p className="text-sm text-muted-foreground">Live aggregates from the seeded marketplace</p>
+            <h2 className="text-lg font-semibold tracking-tight">{t("analyticsTitle")}</h2>
+            <p className="text-sm text-muted-foreground">{t("analyticsSub")}</p>
           </div>
         </div>
         {data && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
               <Zap className="size-3.5 text-[#f5a623]" aria-hidden />
-              {data.urgentShare.urgent} urgent of {urgentTotal} jobs
+              {t("analyticsUrgentOf", { urgent: data.urgentShare.urgent, total: urgentTotal })}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
               <TrendingUp className="size-3.5 text-primary" aria-hidden />
-              {totalHires} hires · last 6 weeks
+              {t("analyticsHiresWeeks", { count: totalHires })}
             </span>
           </div>
         )}
       </div>
 
       {error ? (
-        <p className="text-sm text-muted-foreground">Analytics unavailable</p>
+        <p className="text-sm text-muted-foreground">{t("analyticsUnavailable")}</p>
       ) : !data ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {[0, 1, 2, 3].map((i) => (
@@ -167,8 +175,8 @@ export function AnalyticsCharts() {
           {/* 1) Applications per day — area chart */}
           <Card className="gap-3">
             <CardHeader>
-              <CardTitle className="text-sm">Applications — last 14 days</CardTitle>
-              <CardDescription>Daily application volume across all jobs</CardDescription>
+              <CardTitle className="text-sm">{t("analyticsApplications14d")}</CardTitle>
+              <CardDescription>{t("analyticsApplicationsDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="h-[248px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -195,7 +203,7 @@ export function AnalyticsCharts() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<ChartTip unit="applications" />} cursor={{ stroke: "var(--border)" }} />
+                  <Tooltip content={<ChartTip unit={t("analyticsApplicationsUnit")} />} cursor={{ stroke: "var(--border)" }} />
                   <Area
                     type="monotone"
                     dataKey="count"
@@ -212,8 +220,8 @@ export function AnalyticsCharts() {
           {/* 2) Hiring funnel — horizontal bars */}
           <Card className="gap-3">
             <CardHeader>
-              <CardTitle className="text-sm">Hiring funnel</CardTitle>
-              <CardDescription>Applications that reached each stage</CardDescription>
+              <CardTitle className="text-sm">{t("dashFunnel")}</CardTitle>
+              <CardDescription>{t("analyticsFunnelDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="h-[248px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -233,7 +241,7 @@ export function AnalyticsCharts() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<ChartTip unit="applications" />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
+                  <Tooltip content={<ChartTip unit={t("analyticsApplicationsUnit")} />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
                   <Bar dataKey="count" fill="url(#funnelBarFill)" radius={[0, 6, 6, 0]} maxBarSize={24}>
                     <LabelList
                       dataKey="count"
@@ -249,8 +257,8 @@ export function AnalyticsCharts() {
           {/* 3) Trust tiers — donut */}
           <Card className="gap-3">
             <CardHeader>
-              <CardTitle className="text-sm">Trust tiers</CardTitle>
-              <CardDescription>Workers by verification level</CardDescription>
+              <CardTitle className="text-sm">{t("passportTier")}</CardTitle>
+              <CardDescription>{t("analyticsTrustTiersDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="relative h-[192px]">
@@ -266,8 +274,8 @@ export function AnalyticsCharts() {
                       stroke="var(--card)"
                       strokeWidth={2}
                     >
-                      {tiers.map((t) => (
-                        <Cell key={t.tier} fill={TIER_META[t.tier]?.color ?? "#94a3b8"} />
+                      {tiers.map((tierItem) => (
+                        <Cell key={tierItem.tier} fill={TIER_COLORS[tierItem.tier] ?? "#94a3b8"} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -275,12 +283,11 @@ export function AnalyticsCharts() {
                         if (!active || !payload?.length) return null;
                         const p = payload[0];
                         const tier = String(p.payload?.tier ?? "");
-                        const meta = TIER_META[tier];
                         return (
                           <div className="rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs shadow-md">
-                            <p className="font-semibold text-foreground">{meta?.label ?? tier}</p>
+                            <p className="font-semibold text-foreground">{TIER_LABELS[tier] ?? tier}</p>
                             <p className="text-muted-foreground">
-                              {p.value} workers · {tierTotal > 0 ? Math.round((Number(p.value) / tierTotal) * 100) : 0}%
+                              {t("analyticsWorkersPct", { count: Number(p.value), pct: tierTotal > 0 ? Math.round((Number(p.value) / tierTotal) * 100) : 0 })}
                             </p>
                           </div>
                         );
@@ -294,14 +301,14 @@ export function AnalyticsCharts() {
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
-                {tiers.map((t) => (
-                  <span key={t.tier} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                {tiers.map((tierItem) => (
+                  <span key={tierItem.tier} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span
                       className="size-2.5 rounded-[3px] shrink-0"
-                      style={{ backgroundColor: TIER_META[t.tier]?.color ?? "#94a3b8" }}
+                      style={{ backgroundColor: TIER_COLORS[tierItem.tier] ?? "#94a3b8" }}
                       aria-hidden
                     />
-                    {TIER_META[t.tier]?.label ?? t.tier} · {t.count}
+                    {TIER_LABELS[tierItem.tier] ?? tierItem.tier} · {tierItem.count}
                   </span>
                 ))}
               </div>
@@ -311,8 +318,8 @@ export function AnalyticsCharts() {
           {/* 4) Workers by trade — vertical bars */}
           <Card className="gap-3">
             <CardHeader>
-              <CardTitle className="text-sm">Workers by trade</CardTitle>
-              <CardDescription>Top 8 trades by worker count</CardDescription>
+              <CardTitle className="text-sm">{t("analyticsTrades")}</CardTitle>
+              <CardDescription>{t("analyticsTradesDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="h-[248px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -335,7 +342,7 @@ export function AnalyticsCharts() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<ChartTip unit="workers" />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
+                  <Tooltip content={<ChartTip unit={t("analyticsWorkersUnit")} />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
                   <Bar dataKey="workers" fill={PRIMARY} radius={[6, 6, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>

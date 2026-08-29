@@ -103,21 +103,21 @@ export default function EmployerDashboardPage() {
               <StatCard
                 label={t("dashNewApplicants")}
                 value={data.newApplicantsToday}
-                hint="Since UTC midnight"
+                hint={t("sinceMidnight")}
                 icon={UserPlus}
                 tone="primary"
               />
               <StatCard
                 label={t("dashHiresThisWeek")}
                 value={data.hiresThisWeek}
-                hint="Last 7 days"
+                hint={t("last7Days")}
                 icon={ShieldCheck}
                 tone="success"
               />
               <StatCard
                 label={t("dashFunnelHired")}
                 value={data.funnel.hired}
-                hint="All-time total"
+                hint={t("allTimeTotal")}
                 icon={ShieldCheck}
                 tone="default"
               />
@@ -143,7 +143,7 @@ export default function EmployerDashboardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Pipeline snapshot</CardTitle>
+                <CardTitle className="text-base">{t("pipelineSnapshot")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <PipelineSummaryRow

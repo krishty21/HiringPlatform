@@ -153,7 +153,7 @@ export function HeroSection() {
         transition={{ duration: 0.5, delay: 0.35 }}
         className="flex flex-col items-center gap-4 mt-2"
       >
-        <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Supported languages">
+        <div className="flex flex-wrap items-center justify-center gap-2" aria-label={t("supportedLanguagesAria")}>
           <span className="rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
             తెలుగు
           </span>

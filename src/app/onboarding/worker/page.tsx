@@ -327,7 +327,7 @@ export default function WorkerOnboardingPage() {
               <div className="grid gap-2">
                 <Label htmlFor="city">{t("onboardCity")}</Label>
                 <Select value={form.city} onValueChange={onCityChange}>
-                  <SelectTrigger id="city" className="min-h-11 w-full"><SelectValue placeholder="Choose city" /></SelectTrigger>
+                  <SelectTrigger id="city" className="min-h-11 w-full"><SelectValue placeholder={t("chooseCity")} /></SelectTrigger>
                   <SelectContent>
                     {Object.keys(CITIES).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
@@ -355,7 +355,7 @@ export default function WorkerOnboardingPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="bio">{t("onboardBio")} <span className="text-xs text-muted-foreground">({form.bio.length}/500)</span></Label>
-              <Textarea id="bio" rows={4} maxLength={500} value={form.bio} onChange={e => update("bio", e.target.value)} className="min-h-24" placeholder="Tell employers about your experience and the kind of work you're looking for." />
+              <Textarea id="bio" rows={4} maxLength={500} value={form.bio} onChange={e => update("bio", e.target.value)} className="min-h-24" placeholder={t("onboardBioPlaceholder")} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="photoUrl">Photo URL <span className="text-xs text-muted-foreground">({t("optional")})</span></Label>

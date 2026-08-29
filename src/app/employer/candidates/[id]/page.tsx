@@ -268,14 +268,14 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
           <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Shortlist for a job</CardTitle>
+                <CardTitle className="text-base">{t("shortlistForJob")}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 <div className="grid gap-2">
-                  <Label htmlFor="jobId">Pick a job</Label>
+                  <Label htmlFor="jobId">{t("pickJob")}</Label>
                   <Select value={shortlistJobId} onValueChange={setShortlistJobId}>
                     <SelectTrigger id="jobId" className="min-h-11 w-full">
-                      <SelectValue placeholder="Choose job" />
+                      <SelectValue placeholder={t("chooseJob")} />
                     </SelectTrigger>
                     <SelectContent>
                       {jobs.map(j => (

@@ -17,6 +17,10 @@ import {
   Lock,
   ArrowLeft,
   Check,
+  IdCard,
+  Award,
+  Trophy,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -44,6 +48,11 @@ export type PublicWorkerData = {
   trustScore: number;
   skills: PublicWorkerSkill[];
   slug: string;
+  trustJourney?: {
+    joinedAt: string;
+    idVerifiedAt: string | null;
+    skillVerifiedAt: string | null;
+  };
 };
 
 const TIER_INDEX: Record<PublicWorkerData["trustTier"], number> = {
@@ -52,6 +61,147 @@ const TIER_INDEX: Record<PublicWorkerData["trustTier"], number> = {
   skill_verified: 2,
   top_pro: 3,
 };
+
+// Locale map for date formatting — follows the card's language toggle.
+const DATE_LOCALES: Record<LanguageCode, string> = { en: "en-IN", hi: "hi-IN", te: "te-IN" };
+
+function formatJourneyDate(iso: string, lang: LanguageCode): string {
+  try {
+    return new Intl.DateTimeFormat(DATE_LOCALES[lang] ?? "en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(iso));
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+// Public trust journey — compact milestone strip (dates only, no PII).
+// Shows what the worker has achieved on ShramSetu so employers can
+// gauge trust at a glance without logging in.
+function KaamTrustJourney({
+  journey,
+  trustTier,
+}: {
+  journey: NonNullable<PublicWorkerData["trustJourney"]>;
+  trustTier: PublicWorkerData["trustTier"];
+}) {
+  const { t, lang } = useLanguage();
+
+  type Milestone = {
+    key: string;
+    label: string;
+    date: string | null;
+    icon: typeof Sparkles;
+    iconClass: string;
+    ringClass: string;
+  };
+
+  const milestones: Milestone[] = [
+    {
+      key: "joined",
+      label: t("kaamTrustJoined"),
+      date: journey.joinedAt,
+      icon: Sparkles,
+      iconClass: "text-muted-foreground",
+      ringClass: "border-border bg-muted/40",
+    },
+  ];
+  if (journey.idVerifiedAt) {
+    milestones.push({
+      key: "id",
+      label: t("kaamTrustIdVerified"),
+      date: journey.idVerifiedAt,
+      icon: IdCard,
+      iconClass: "text-sky-700",
+      ringClass: "border-sky-200 bg-sky-50",
+    });
+  }
+  if (journey.skillVerifiedAt) {
+    milestones.push({
+      key: "skill",
+      label: t("kaamTrustSkillVerified"),
+      date: journey.skillVerifiedAt,
+      icon: Award,
+      iconClass: "text-emerald-700",
+      ringClass: "border-emerald-200 bg-emerald-50",
+    });
+  }
+  if (trustTier === "top_pro") {
+    milestones.push({
+      key: "top",
+      label: t("kaamTrustTopPro"),
+      date: null,
+      icon: Trophy,
+      iconClass: "text-amber-700",
+      ringClass: "border-amber-200 bg-amber-50",
+    });
+  }
+
+  // Nothing achieved beyond joining → don't render the strip.
+  if (milestones.length < 2) return null;
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
+      className="flex flex-col gap-3"
+      aria-label={t("kaamTrustTitle")}
+    >
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        {t("kaamTrustTitle")}
+      </h2>
+      <ol className="relative flex flex-col sm:flex-row sm:items-stretch gap-0 sm:gap-0 rounded-xl border border-border bg-gradient-to-br from-card/80 to-secondary/30 p-3 sm:p-4 overflow-hidden">
+        {/* subtle top hairline */}
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent"
+        />
+        {milestones.map((m, idx) => {
+          const Icon = m.icon;
+          const isLast = idx === milestones.length - 1;
+          return (
+            <motion.li
+              key={m.key}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 + idx * 0.08 }}
+              className="relative flex items-start gap-3 py-2 sm:py-0 sm:flex-1 sm:flex-col sm:items-center sm:gap-2 sm:text-center"
+            >
+              {/* connector — vertical on mobile, horizontal on sm+ */}
+              {!isLast && (
+                <span
+                  aria-hidden
+                  className="absolute left-[19px] top-[38px] bottom-0 w-px bg-gradient-to-b from-border to-transparent sm:left-[calc(50%+24px)] sm:right-[calc(-50%+24px)] sm:top-[19px] sm:bottom-auto sm:h-px sm:w-auto sm:bg-gradient-to-r"
+                />
+              )}
+              <span
+                className={`relative z-10 grid size-10 shrink-0 place-items-center rounded-full border-2 ${m.ringClass}`}
+              >
+                <Icon className={`size-[18px] ${m.iconClass}`} aria-hidden />
+              </span>
+              <span className="flex flex-col sm:items-center gap-0.5 min-w-0">
+                <span className="text-sm font-semibold text-foreground leading-tight">
+                  {m.label}
+                </span>
+                {m.date && (
+                  <span className="text-xs text-muted-foreground">
+                    {formatJourneyDate(m.date, lang)}
+                  </span>
+                )}
+                {!m.date && m.key === "top" && (
+                  <span className="text-xs font-medium text-amber-700">{t("trustTimelineNow")}</span>
+                )}
+              </span>
+            </motion.li>
+          );
+        })}
+      </ol>
+    </motion.section>
+  );
+}
 
 function pickLocalized(
   en: string,
@@ -268,6 +418,11 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
             </div>
           )}
 
+          {/* Trust journey — public milestone strip */}
+          {worker.trustJourney && (
+            <KaamTrustJourney journey={worker.trustJourney} trustTier={worker.trustTier} />
+          )}
+
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button
@@ -302,8 +457,8 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
             type="button"
             onClick={onCopyLink}
             className="self-center inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11 px-3"
-            aria-label="Copy public link"
-            title="Copy public link"
+            aria-label={t("copyPublicLink")}
+            title={t("copyPublicLink")}
           >
             {copied ? (
               <Check className="size-3.5 text-emerald-600" aria-hidden />

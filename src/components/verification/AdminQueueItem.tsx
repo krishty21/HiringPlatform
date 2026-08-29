@@ -177,7 +177,7 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
           <Textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Note (visible to the user). Never include raw ID numbers."
+            placeholder={t("adminNotePlaceholder")}
             rows={3}
             maxLength={500}
           />

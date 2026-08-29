@@ -109,6 +109,21 @@ export default async function PublicKaamCardPage({
     );
   }
 
+  // Public-safe trust journey (dates only — no doc contents, no PII):
+  // first approved ID doc + first approved skill cert review timestamps.
+  const [firstIdDoc, firstSkillDoc] = await Promise.all([
+    db.verificationDocument.findFirst({
+      where: { ownerUserId: worker.userId, docType: "id", status: "approved" },
+      orderBy: { reviewedAt: "asc" },
+      select: { reviewedAt: true },
+    }),
+    db.verificationDocument.findFirst({
+      where: { ownerUserId: worker.userId, docType: "skill_cert", status: "approved" },
+      orderBy: { reviewedAt: "asc" },
+      select: { reviewedAt: true },
+    }),
+  ]);
+
   // PII minimization: first name only; no email, phone, photo, lat/lng, address beyond city.
   const firstName = worker.fullName.split(/\s+/)[0];
   const publicData: PublicWorkerData = {
@@ -137,6 +152,11 @@ export default async function PublicKaamCardPage({
       category: s.skill.category,
     })),
     slug: worker.id,
+    trustJourney: {
+      joinedAt: worker.createdAt.toISOString(),
+      idVerifiedAt: firstIdDoc?.reviewedAt?.toISOString() ?? null,
+      skillVerifiedAt: firstSkillDoc?.reviewedAt?.toISOString() ?? null,
+    },
   };
 
   return (

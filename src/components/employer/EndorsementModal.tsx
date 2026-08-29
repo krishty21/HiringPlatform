@@ -73,7 +73,7 @@ export function EndorsementModal({
             <Label htmlFor="skillId">{t("passportSkills")}</Label>
             <Select value={skillId} onValueChange={setSkillId}>
               <SelectTrigger id="skillId" className="min-h-11 w-full">
-                <SelectValue placeholder="Choose a skill" />
+                <SelectValue placeholder={t("chooseSkill")} />
               </SelectTrigger>
               <SelectContent>
                 {skills.map(s => (
@@ -90,7 +90,7 @@ export function EndorsementModal({
               onChange={e => setComment(e.target.value)}
               rows={4}
               maxLength={500}
-              placeholder="Describe the worker's craft, reliability, results…"
+              placeholder={t("endorsementPlaceholder")}
               className="min-h-24"
             />
           </div>

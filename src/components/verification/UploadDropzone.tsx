@@ -201,7 +201,7 @@ export function UploadDropzone({
                   variant="ghost"
                   size="sm"
                   onClick={() => setPickedFile(null)}
-                  aria-label="Remove file"
+                  aria-label={t("removeFileAria")}
                 >
                   <X className="size-4" />
                 </Button>

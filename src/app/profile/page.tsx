@@ -586,7 +586,7 @@ export default function WorkerProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center justify-between gap-3">
-              <Label htmlFor="avail" className="text-sm text-muted-foreground">Visible to employers now</Label>
+              <Label htmlFor="avail" className="text-sm text-muted-foreground">{t("visibleToEmployers")}</Label>
               <Switch
                 id="avail"
                 checked={edit.availableToday}

@@ -96,7 +96,7 @@ export default function AdminHomePage() {
                 <StatCard
                   label={t("adminStatsPending")}
                   value={stats.pendingDocs}
-                  hint={stats.pendingDocs > 0 ? "Open queue →" : "All clear"}
+                  hint={stats.pendingDocs > 0 ? t("openQueue") : t("allClear")}
                   icon={FileCheck}
                   tone={stats.pendingDocs > 0 ? "accent" : "default"}
                   className="cursor-pointer"

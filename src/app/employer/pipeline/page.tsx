@@ -50,13 +50,13 @@ function PipelinePageBody() {
           <p className="text-sm text-muted-foreground mt-1">{t("pipelineDragHint")}</p>
         </div>
         <div className="w-72">
-          <Label htmlFor="jobFilter" className="text-xs text-muted-foreground">Filter by job</Label>
+          <Label htmlFor="jobFilter" className="text-xs text-muted-foreground">{t("filterByJob")}</Label>
           <Select value={selectedJobId} onValueChange={setSelectedJobId}>
             <SelectTrigger id="jobFilter" className="min-h-11 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All jobs</SelectItem>
+              <SelectItem value="all">{t("allJobsOption")}</SelectItem>
               {jobs.map(j => (
                 <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
               ))}

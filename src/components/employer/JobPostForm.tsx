@@ -199,7 +199,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
                     }}
                   >
                     <SelectTrigger id="tradeId" className="min-h-11 w-full">
-                      <SelectValue placeholder="Choose trade" />
+                      <SelectValue placeholder={t("chooseTrade")} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(grouped).map(([cat, list]) => (
@@ -256,7 +256,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={onCityChange}>
                     <SelectTrigger id="city" className="min-h-11 w-full">
-                      <SelectValue placeholder="Choose city" />
+                      <SelectValue placeholder={t("chooseCity")} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.keys(CITIES).map(c => (
@@ -342,9 +342,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
                         onClick={(e) => { e.stopPropagation(); toggleRequired(s.id); }}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleRequired(s.id); } }}
                         className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${sel.required ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}
-                        title="Toggle required"
+                        title={t("toggleRequired")}
                       >
-                        {sel.required ? "Required" : "Optional"}
+                        {sel.required ? t("skillRequired") : t("skillOptional")}
                       </span>
                     )}
                   </button>
