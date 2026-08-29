@@ -53,14 +53,14 @@ export function NotificationsBell() {
       const Icon = iconForType(n.type);
       toast(text, {
         duration: 5000,
-        action: { label: "View", onClick: () => gotoItem(n) },
+        action: { label: t("notifView"), onClick: () => gotoItem(n) },
         icon: <Icon className="size-4 text-accent-foreground" />,
       });
     });
   }, [onIncoming, open, t]);
 
   const connected = connection === "connected";
-  const stateLabel = connected ? "Live" : connection === "connecting" ? "Connecting" : "Polling";
+  const stateLabel = connected ? t("notifStateLive") : connection === "connecting" ? t("notifStateConnecting") : t("notifStatePolling");
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -87,7 +87,7 @@ export function NotificationsBell() {
             {/* Real-time connection indicator */}
             <span
               className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"
-              title={connected ? "Real-time connected" : "Polling fallback (15s)"}
+              title={connected ? t("notifWsConnectedTip") : t("notifWsPollingTip")}
             >
               <span className="relative flex size-1.5" aria-hidden>
                 {connected && (
@@ -109,7 +109,7 @@ export function NotificationsBell() {
                 onClick={() => { void markAllRead(); }}
               >
                 <CheckCheck className="size-3" />
-                Mark all read
+                {t("notifMarkAllRead")}
               </Button>
             )}
           </div>

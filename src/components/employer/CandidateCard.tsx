@@ -105,7 +105,7 @@ export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
               >
                 <RatingStars value={ratingAvg} size="sm" readOnly className="shrink-0" />
                 <span className="font-semibold text-amber-700 dark:text-amber-400 tabular-nums">{ratingAvg.toFixed(1)}</span>
-                <span className="text-muted-foreground">· {t("ratingSummaryCount", { count: ratingCount, s: ratingCount === 1 ? "" : "s" })}</span>
+                <span className="text-muted-foreground">· {ratingCount === 1 ? t("ratingCountOne") : t("ratingCountMany", { count: ratingCount })}</span>
                 {ratingCount >= 3 && ratingAvg >= 4.5 && (
                   <Star className="size-3 fill-amber-400 text-amber-500 ml-0.5" aria-hidden />
                 )}

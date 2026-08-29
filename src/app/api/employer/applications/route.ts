@@ -12,6 +12,9 @@ export async function GET(req: Request) {
 
     const applications = await db.application.findMany({
       where: {
+        // Round 12: withdrawn applications are excluded — the worker removed
+        // themselves from consideration, so they no longer belong on the board.
+        status: { not: "withdrawn" },
         ...(jobId ? { jobId } : {}),
         job: { employerId: profile.id },
       },

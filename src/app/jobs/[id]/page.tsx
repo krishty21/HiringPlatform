@@ -90,7 +90,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const tradeName = job.trade
       ? (lang === "hi" ? job.trade.nameHi : lang === "te" ? job.trade.nameTe : job.trade.nameEn)
       : job.title;
-    const text = `🛠️ ${job.title}\n${tradeName} · ${job.city}\n₹${job.wageMin}-${job.wageMax}${t("perDay")} · ${job.shift} ${t("jobShift")}\n${t("feedVerifiedEmployer")}: ${job.employer?.companyName ?? ""}`;
+    const text = `🛠️ ${job.title}\n${tradeName} · ${job.city}\n₹${job.wageMin}-${job.wageMax}${t("perDay")} · ${t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")} ${t("jobShift")}\n${t("feedVerifiedEmployer")}: ${job.employer?.companyName ?? ""}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
@@ -194,7 +194,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t("jobShift")}</p>
-                  <Badge variant="outline" className="mt-1 uppercase">{job.shift}</Badge>
+                  <Badge variant="outline" className="mt-1 uppercase">{t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")}</Badge>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t("jobLocation")}</p>
@@ -268,7 +268,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                           >
                             <RatingStars value={employerRating.avg} size="sm" readOnly />
                             <span className="font-semibold text-amber-700 dark:text-amber-400 tabular-nums">{employerRating.avg.toFixed(1)}</span>
-                            <span className="text-muted-foreground">· {t("ratingSummaryCount", { count: employerRating.count, s: employerRating.count === 1 ? "" : "s" })}</span>
+                            <span className="text-muted-foreground">· {employerRating.count === 1 ? t("ratingCountOne") : t("ratingCountMany", { count: employerRating.count })}</span>
                             {highlyRatedEmployer && (
                               <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
                                 <Star className="size-3 fill-amber-400 text-amber-500" aria-hidden />

@@ -176,7 +176,7 @@ export default function WorkerProfilePage() {
         body: JSON.stringify({ availableToday: checked }),
       });
       if (!res.ok) throw new Error("save-failed");
-      toast.success(checked ? "Available today on" : "Available today off");
+      toast.success(checked ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff"));
       await load();
     } catch {
       setEdit(e => ({ ...e, availableToday: !checked }));
@@ -324,7 +324,7 @@ export default function WorkerProfilePage() {
                   </Badge>
                   <Badge variant="outline" className="text-xs gap-1">
                     <Eye className="size-3" />
-                    {profile.profileViews} views
+                    {t("viewsCount", { count: profile.profileViews })}
                   </Badge>
                 </div>
               </div>
@@ -437,9 +437,9 @@ export default function WorkerProfilePage() {
                 >
                   <SelectTrigger id="shift" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="any">Any</SelectItem>
-                    <SelectItem value="day">Day</SelectItem>
-                    <SelectItem value="night">Night</SelectItem>
+                    <SelectItem value="any">{t("shiftAny")}</SelectItem>
+                    <SelectItem value="day">{t("shiftDay")}</SelectItem>
+                    <SelectItem value="night">{t("shiftNight")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -546,7 +546,7 @@ export default function WorkerProfilePage() {
                             <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300">{t("feedVerifiedEmployer")}</Badge>
                           )}
                         </div>
-                        <p className="text-sm mt-1">{e.comment || `"Skilled in ${e.skillName}."`}</p>
+                        <p className="text-sm mt-1">{e.comment || t("endorsementFallback", { skill: e.skillName })}</p>
                         <p className="text-[10px] text-muted-foreground mt-1">
                           {new Date(e.createdAt).toLocaleDateString()}
                         </p>

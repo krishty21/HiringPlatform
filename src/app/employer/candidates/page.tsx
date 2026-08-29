@@ -85,16 +85,16 @@ function CandidatesPageBody() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("candidatesTitle")}</h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-            Ranked by match score
+            {t("candidatesRankedBy")}
             {urgentJobId && (
               <span className="inline-flex items-center gap-1 text-rose-700 text-xs font-medium">
                 <Zap className="size-3" />
-                Urgent job — available-today workers first
+                {t("candidatesUrgentBoost")}
               </span>
             )}
             {results && results.length > 0 && (
               <span className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium tabular-nums">
-                {total} {total === 1 ? "candidate" : "candidates"}
+                {total === 1 ? t("candidatesCountOne") : t("candidatesCountMany", { count: total })}
               </span>
             )}
           </p>
@@ -135,7 +135,7 @@ function CandidatesPageBody() {
             <EmptyState
               icon={Search}
               title={t("candidatesEmpty")}
-              description={filters.topRated ? t("candidatesTopRatedEmpty") : "Try widening the distance or removing the experience filter."}
+              description={filters.topRated ? t("candidatesTopRatedEmpty") : t("candidatesEmptyHint")}
             />
           )}
 

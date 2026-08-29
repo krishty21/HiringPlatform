@@ -17,12 +17,47 @@ export async function POST(req: Request) {
     const { jobId } = body as { jobId?: string };
     if (!jobId) return errorResponse(new Error("VALIDATION"));
 
-    // Prevent double-apply
+    // Prevent double-apply — but a WITHDRAWN application may be re-submitted
+    // (round 12): reset the row to a fresh "applied" state and re-notify.
     const existing = await db.application.findUnique({
       where: { jobId_workerId: { jobId, workerId: profile.id } },
     });
     if (existing) {
-      return NextResponse.json({ id: existing.id, status: existing.status, alreadyApplied: true });
+      if (existing.status !== "withdrawn") {
+        return NextResponse.json({ id: existing.id, status: existing.status, alreadyApplied: true });
+      }
+      const reapplied = await db.application.update({
+        where: { id: existing.id },
+        data: {
+          status: "applied",
+          appliedAt: new Date(),
+          shortlistedAt: null,
+          interviewAt: null,
+          offerAt: null,
+          hiredAt: null,
+          rejectedAt: null,
+        },
+      });
+      const jobForNotify = await db.job.findUnique({
+        where: { id: jobId },
+        select: { employer: { select: { userId: true, companyName: true } }, title: true },
+      });
+      if (jobForNotify) {
+        await db.notification.create({
+          data: {
+            userId: jobForNotify.employer.userId,
+            type: "application_status",
+            payloadJson: JSON.stringify({
+              applicationId: reapplied.id,
+              jobId,
+              jobTitle: jobForNotify.title,
+              stage: "applied",
+              workerId: profile.id,
+            }),
+          },
+        });
+      }
+      return NextResponse.json({ id: reapplied.id, status: "applied", reapplied: true }, { status: 201 });
     }
 
     const app = await db.application.create({

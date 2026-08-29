@@ -19,17 +19,17 @@ export function TimeToHireHeadline({ hours }: { hours: number | null }) {
           <>
             <p className="text-5xl font-bold tabular-nums leading-none mt-1">—</p>
             <p className="text-xs text-muted-foreground mt-2">
-              Hire your first candidate to see this metric
+              {t("dashTimeToHireEmpty")}
             </p>
           </>
         ) : (
           <>
             <p className="text-5xl font-bold tabular-nums leading-none mt-1">
               {hours.toFixed(1)}
-              <span className="text-2xl font-semibold text-muted-foreground ml-2">hrs</span>
+              <span className="text-2xl font-semibold text-muted-foreground ml-2">{t("unitHours")}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-2">
-              Average applied → hired across your jobs
+              {t("dashTimeToHireHint")}
             </p>
           </>
         )}

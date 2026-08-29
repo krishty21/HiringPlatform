@@ -113,7 +113,10 @@ export function RatingSummary({
             <div className="flex flex-col gap-1">
               <RatingStars value={summary.avg} readOnly size="sm" />
               <p className="text-xs text-muted-foreground tabular-nums">
-                {t("ratingSummaryCount", { count: summary.count })}
+                {/* Round 12: proper plural keys — old ratingSummaryCount leaked a literal {s} here. */}
+                {summary.count === 1
+                  ? t("ratingCountOne")
+                  : t("ratingCountMany", { count: summary.count })}
               </p>
             </div>
           </div>

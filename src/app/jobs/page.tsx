@@ -129,13 +129,16 @@ function JobBoard() {
     }
   }, [profileExists, status, session, router]);
 
-  // Applied jobs (mark cards so the Apply button doesn't double-submit)
+  // Applied jobs (mark cards so the Apply button doesn't double-submit).
+  // Round 12: withdrawn applications DON'T mark the card — the worker may re-apply.
   useEffect(() => {
     if (status !== "authenticated") return;
     fetch("/api/applications/mine", { cache: "no-store" })
       .then(r => (r.ok ? r.json() : { items: [] }))
-      .then((d: { items: { jobId: string }[] }) => {
-        setAppliedIds(new Set((d.items ?? []).map(a => a.jobId)));
+      .then((d: { items: { jobId: string; status: string }[] }) => {
+        setAppliedIds(new Set(
+          (d.items ?? []).filter(a => a.status !== "withdrawn").map(a => a.jobId),
+        ));
       })
       .catch(() => {});
   }, [status]);
@@ -267,7 +270,7 @@ function JobBoard() {
     if (query.trim()) out.push({ key: "q", label: `“${query.trim()}”`, clear: () => setQuery("") });
     if (tradeName) out.push({ key: "trade", label: tradeName, clear: () => setTradeId("") });
     if (city) out.push({ key: "city", label: city, clear: () => setCity("") });
-    if (shift !== "any") out.push({ key: "shift", label: shift === "day" ? "Day" : "Night", clear: () => setShift("any") });
+    if (shift !== "any") out.push({ key: "shift", label: t(shift === "day" ? "shiftDay" : "shiftNight"), clear: () => setShift("any") });
     if (urgentOnly) out.push({ key: "urgent", label: t("feedUrgent"), clear: () => setUrgentOnly(false) });
     if (savedOnly) out.push({ key: "saved", label: t("boardSavedOnly"), clear: () => setSavedOnly(false) });
     if (topEmployersOnly) out.push({ key: "top", label: t("boardTopEmployers"), clear: () => setTopEmployersOnly(false) });
@@ -435,9 +438,9 @@ function JobBoard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="any">{t("feedFilterShift")}: any</SelectItem>
-                <SelectItem value="day">Day</SelectItem>
-                <SelectItem value="night">Night</SelectItem>
+                <SelectItem value="any">{t("feedFilterShift")}: {t("shiftAny").toLowerCase()}</SelectItem>
+                <SelectItem value="day">{t("shiftDay")}</SelectItem>
+                <SelectItem value="night">{t("shiftNight")}</SelectItem>
               </SelectContent>
             </Select>
 

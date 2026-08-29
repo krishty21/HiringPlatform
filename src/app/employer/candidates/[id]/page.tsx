@@ -96,7 +96,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
 
   async function shortlist() {
     if (!shortlistJobId) {
-      toast.error("Pick a job to shortlist for.");
+      toast.error(t("shortlistPickJobToast"));
       return;
     }
     setShortlisting(true);
@@ -107,9 +107,9 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
         body: JSON.stringify({ workerId: id, jobId: shortlistJobId }),
       });
       if (!res.ok) throw new Error("FAILED");
-      toast.success("Shortlisted ✓ Worker notified.");
+      toast.success(t("shortlistSuccessToast"));
     } catch {
-      toast.error("Could not shortlist. Try again.");
+      toast.error(t("shortlistFailedToast"));
     } finally {
       setShortlisting(false);
     }
@@ -174,7 +174,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                     )}
                     <Badge variant="outline" className="text-xs gap-1">
                       <Eye className="size-3" />
-                      {candidate.profileViews} views
+                      {t("viewsCount", { count: candidate.profileViews })}
                     </Badge>
                   </div>
                 </div>
@@ -186,10 +186,10 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                 <div>
                   <p className="text-xs text-muted-foreground">{t("passportWage")}</p>
                   <WageDisplay min={candidate.wageMin} max={candidate.wageMax} size="md" />
-                  <p className="text-xs text-muted-foreground mt-2">Preferred shift: <span className="font-medium">{candidate.shiftPref}</span></p>
+                  <p className="text-xs text-muted-foreground mt-2">{t("preferredShift")}: <span className="font-medium">{t(candidate.shiftPref === "day" ? "shiftDay" : candidate.shiftPref === "night" ? "shiftNight" : "shiftAny")}</span></p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Languages className="size-3" />Languages</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Languages className="size-3" />{t("languagesLabel")}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {candidate.languages.map(l => (
                       <Badge key={l} variant="secondary" className="text-xs uppercase">{l}</Badge>
@@ -208,7 +208,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                   {candidate.skills.map(s => (
                     <div key={s.skillId} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card/50 px-3 py-2">
                       <span className="text-sm font-medium">{s.nameEn}</span>
-                      <div className="flex items-center gap-1" aria-label={`Proficiency ${s.proficiency} of 5`}>
+                      <div className="flex items-center gap-1" aria-label={t("proficiencyAria", { level: s.proficiency })}>
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
@@ -225,7 +225,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                 <>
                   <Separator />
                   <div>
-                    <h3 className="font-semibold text-sm mb-1">About</h3>
+                    <h3 className="font-semibold text-sm mb-1">{t("aboutLabel")}</h3>
                     <p className="text-sm text-muted-foreground">{candidate.bio}</p>
                   </div>
                 </>
@@ -247,10 +247,10 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-semibold">{e.companyName}</span>
                             {e.employerVerified && (
-                              <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300">Verified</Badge>
+                              <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300">{t("verifiedChip")}</Badge>
                             )}
                           </div>
-                          <p className="text-sm mt-1">{e.comment || `"Skilled in ${e.skillName}."`}</p>
+                          <p className="text-sm mt-1">{e.comment || t("endorsementFallback", { skill: e.skillName })}</p>
                           <p className="text-[10px] text-muted-foreground mt-1">
                             {new Date(e.createdAt).toLocaleDateString()}
                           </p>
@@ -285,7 +285,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                   </Select>
                 </div>
                 <Button onClick={shortlist} disabled={shortlisting} className="min-h-11 gap-2">
-                  {shortlisting ? "Shortlisting…" : `Shortlist → ${t("trackerStageShortlisted")}`}
+                  {shortlisting ? t("shortlistSubmitting") : `${t("shortlistCta")} →`}
                 </Button>
               </CardContent>
             </Card>

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 interface TopRatedBadgeProps {
   workerProfileId: string;
@@ -32,6 +33,8 @@ export function TopRatedBadge({
   summary: prefetched,
 }: TopRatedBadgeProps) {
   const [fetched, setFetched] = useState<{ avg: number; count: number } | null>(null);
+  // Round 12: localized badge text (was hardcoded "Top Rated").
+  const { t } = useLanguage();
 
   const load = useCallback(async () => {
     // Prefetched summary wins — no network needed.
@@ -66,10 +69,10 @@ export function TopRatedBadge({
         size === "sm" ? "text-[10px]" : "text-xs",
         className,
       )}
-      title={`Top rated · ${summary.avg.toFixed(1)} avg from ${summary.count} ratings`}
+      title={t("topRatedTooltip", { avg: summary.avg.toFixed(1), count: summary.count })}
     >
       <Star className="size-3 fill-amber-400 text-amber-500" />
-      Top Rated
+      {t("topRatedBadge")}
     </Badge>
   );
 }

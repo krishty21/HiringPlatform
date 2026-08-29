@@ -1,0 +1,619 @@
+     1→     1→"use client";
+     2→     2→import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+     3→     3→import { useRouter, useSearchParams } from "next/navigation";
+     4→     4→import { AppShell } from "@/components/shared/AppShell";
+     5→     5→import { EmptyState } from "@/components/shared/EmptyState";
+     6→     6→import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+     7→     7→import { JobCard, type WorkerJobCardData } from "@/components/worker/JobCard";
+     8→     8→import { Card, CardContent } from "@/components/ui/card";
+     9→     9→import { Button } from "@/components/ui/button";
+    10→    10→import { Input } from "@/components/ui/input";
+    11→    11→import { Label } from "@/components/ui/label";
+    12→    12→import { Badge } from "@/components/ui/badge";
+    13→    13→import { Switch } from "@/components/ui/switch";
+    14→    14→import {
+    15→    15→  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+    16→    16→} from "@/components/ui/select";
+    17→    17→import { useLanguage } from "@/lib/i18n/LanguageProvider";
+    18→    18→import { useSavedJobs } from "@/hooks/use-saved-jobs";
+    19→    19→import { useSession } from "next-auth/react";
+    20→    20→import { motion } from "framer-motion";
+    21→    21→import {
+    22→    22→  Search, X, Zap, Bookmark, ArrowDownWideNarrow, MapPin, Briefcase,
+    23→    23→  ChevronDown, Loader2, Compass, SlidersHorizontal, Star, Radio,
+    24→    24→} from "lucide-react";
+    25→    25→import type { Skill } from "@/lib/schemas";
+    26→    26→import { toast } from "sonner";
+    27→    27→
+    28→    28→const TRADE_NAMES = new Set(["Electrician", "Plumber", "Welder", "CNC Operator", "Fitter", "Delivery Executive", "Carpenter", "Mason"]);
+    29→    29→
+    30→    30→interface FeedResponse {
+    31→    31→  items: WorkerJobCardData[];
+    32→    32→  total: number;
+    33→    33→  page: number;
+    34→    34→  pageSize: number;
+    35→    35→  hasNext: boolean;
+    36→    36→}
+    37→    37→
+    38→    38→type SortKey = "match" | "wage" | "newest" | "nearest";
+    39→    39→
+    40→    40→const PAGE_SIZE = 9;
+    41→    41→
+    42→    42→function JobBoard() {
+    43→    43→  const { t } = useLanguage();
+    44→    44→  const router = useRouter();
+    45→    45→  const search = useSearchParams();
+    46→    46→  const { data: session, status } = useSession();
+    47→    47→  const { savedIds, savedCount } = useSavedJobs();
+    48→    48→
+    49→    49→  // ---- URL-synced state (shareable deep links: /jobs?q=welder&city=...&sort=wage) ----
+    50→    50→  const [query, setQuery] = useState(search.get("q") ?? "");
+    51→    51→  const [tradeId, setTradeId] = useState(search.get("trade") ?? "");
+    52→    52→  const [city, setCity] = useState(search.get("city") ?? "");
+    53→    53→  const [shift, setShift] = useState<"day" | "night" | "any">((search.get("shift") as any) ?? "any");
+    54→    54→  const [sort, setSort] = useState<SortKey>((search.get("sort") as SortKey) ?? "match");
+    55→    55→  const [urgentOnly, setUrgentOnly] = useState(search.get("urgent") === "1");
+    56→    56→  const [savedOnly, setSavedOnly] = useState(search.get("saved") === "1");
+    57→    57→  const [topEmployersOnly, setTopEmployersOnly] = useState(search.get("top") === "1");
+    58→    58→
+    59→    59→  // ---- data ----
+    60→    60→  const [skills, setSkills] = useState<Skill[]>([]);
+    61→    61→  const [jobs, setJobs] = useState<WorkerJobCardData[] | null>(null);
+    62→    62→  const [hasNext, setHasNext] = useState(false);
+    63→    63→  const [loadingMore, setLoadingMore] = useState(false);
+    64→    64→  const [profileExists, setProfileExists] = useState<boolean | null>(null);
+    65→    65→  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+    66→    66→
+    67→    67→  // ---- worker "Available today" quick-toggle (round 11) ----
+    68→    68→  // Visible only to logged-in workers. Mirrors the toggle on /home but lets
+    69→    69→  // a worker flip their availability while browsing the board.
+    70→    70→  const [availableToday, setAvailableToday] = useState<boolean | null>(null);
+    71→    71→  const [availableSaving, setAvailableSaving] = useState(false);
+    72→    72→
+    73→    73→  // Skills taxonomy (for trade filter)
+    74→    74→  useEffect(() => {
+    75→    75→    fetch("/api/skills")
+    76→    76→      .then(r => r.json())
+    77→    77→      .then((d: { items: Skill[] }) => setSkills(d.items ?? []))
+    78→    78→      .catch(() => setSkills([]));
+    79→    79→  }, []);
+    80→    80→
+    81→    81→  // Worker profile existence (redirect to onboarding when missing).
+    82→    82→  // Non-workers (employer/admin) can browse the board too — no profile needed.
+    83→    83→  useEffect(() => {
+    84→    84→    if (status !== "authenticated") return;
+    85→    85→    const role = (session?.user as { role?: string } | undefined)?.role;
+    86→    86→    if (role && role !== "worker") { setProfileExists(true); return; }
+    87→    87→    fetch("/api/worker/profile", { cache: "no-store" })
+    88→    88→      .then(r => {
+    89→    89→        if (r.status === 403 || r.status === 404) { setProfileExists(false); return null; }
+    90→    90→        if (!r.ok) return null;
+    91→    91→        return r.json();
+    92→    92→      })
+    93→    93→      .then(data => {
+    94→    94→        if (data === null) return;
+    95→    95→        setProfileExists(true);
+    96→    96→        // Round 11: seed the quick-toggle from the worker's stored flag.
+    97→    97→        if (typeof data.availableToday === "boolean") {
+    98→    98→          setAvailableToday(data.availableToday);
+    99→    99→        }
+   100→   100→      })
+   101→   101→      .catch(() => setProfileExists(false));
+   102→   102→  }, [status, session]);
+   103→   103→
+   104→   104→  // Round 11: workers can flip availability directly from the board header.
+   105→   105→  async function toggleAvailableToday(checked: boolean) {
+   106→   106→    if (availableToday === null) return;
+   107→   107→    setAvailableToday(checked);
+   108→   108→    setAvailableSaving(true);
+   109→   109→    try {
+   110→   110→      const res = await fetch("/api/worker/profile", {
+   111→   111→        method: "PATCH",
+   112→   112→        headers: { "content-type": "application/json" },
+   113→   113→        body: JSON.stringify({ availableToday: checked }),
+   114→   114→      });
+   115→   115→      if (!res.ok) throw new Error("patch-failed");
+   116→   116→      toast.success(checked ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff"));
+   117→   117→    } catch {
+   118→   118→      setAvailableToday(!checked); // rollback
+   119→   119→      toast.error(t("errGeneric"));
+   120→   120→    } finally {
+   121→   121→      setAvailableSaving(false);
+   122→   122→    }
+   123→   123→  }
+   124→   124→
+   125→   125→  useEffect(() => {
+   126→   126→    if (profileExists === false && status === "authenticated") {
+   127→   127→      const role = (session?.user as any)?.role;
+   128→   128→      if (role === "worker") router.replace("/onboarding/worker");
+   129→   129→    }
+   130→   130→  }, [profileExists, status, session, router]);
+   131→   131→
+   132→   132→  // Applied jobs (mark cards so the Apply button doesn't double-submit)
+   133→   133→  useEffect(() => {
+   134→   134→    if (status !== "authenticated") return;
+   135→   135→    fetch("/api/applications/mine", { cache: "no-store" })
+   136→   136→      .then(r => (r.ok ? r.json() : { items: [] }))
+   137→   137→      .then((d: { items: { jobId: string }[] }) => {
+   138→   138→        setAppliedIds(new Set((d.items ?? []).map(a => a.jobId)));
+   139→   139→      })
+   140→   140→      .catch(() => {});
+   141→   141→  }, [status]);
+   142→   142→
+   143→   143→  // Server-side query (trade/shift/urgent). Browse-all: distanceKm=200 overrides
+   144→   144→  // the worker-radius filter so every open job on the platform is reachable here.
+   145→   145→  const serverQuery = useMemo(() => {
+   146→   146→    const p = new URLSearchParams();
+   147→   147→    p.set("pageSize", String(PAGE_SIZE));
+   148→   148→    p.set("distanceKm", "200");
+   149→   149→    if (tradeId) p.set("tradeId", tradeId);
+   150→   150→    if (shift !== "any") p.set("shift", shift);
+   151→   151→    if (urgentOnly) p.set("urgentOnly", "true");
+   152→   152→    return p.toString();
+   153→   153→  }, [tradeId, shift, urgentOnly]);
+   154→   154→
+   155→   155→  // Fetch page 1 (debounced) whenever server-side filters change
+   156→   156→  const loadFirstPage = useCallback(async () => {
+   157→   157→    setJobs(null);
+   158→   158→    try {
+   159→   159→      const res = await fetch(`/api/jobs?${serverQuery}&page=1`, { cache: "no-store" });
+   160→   160→      if (!res.ok) { setJobs([]); setHasNext(false); return; }
+   161→   161→      const data = (await res.json()) as FeedResponse;
+   162→   162→      setJobs(data.items ?? []);
+   163→   163→      setHasNext(!!data.hasNext);
+   164→   164→    } catch {
+   165→   165→      setJobs([]);
+   166→   166→      setHasNext(false);
+   167→   167→    }
+   168→   168→  }, [serverQuery]);
+   169→   169→
+   170→   170→  useEffect(() => {
+   171→   171→    if (!profileExists) return;
+   172→   172→    const id = setTimeout(loadFirstPage, 250);
+   173→   173→    return () => clearTimeout(id);
+   174→   174→  }, [loadFirstPage, profileExists]);
+   175→   175→
+   176→   176→  // Load-more appends the next page
+   177→   177→  const loadMore = useCallback(async () => {
+   178→   178→    if (loadingMore || !jobs) return;
+   179→   179→    setLoadingMore(true);
+   180→   180→    try {
+   181→   181→      // Infer next page from the items we already hold
+   182→   182→      const nextPage = Math.floor(jobs.length / PAGE_SIZE) + 1;
+   183→   183→      const res = await fetch(`/api/jobs?${serverQuery}&page=${nextPage}`, { cache: "no-store" });
+   184→   184→      if (!res.ok) { toast.error(t("errGeneric")); return; }
+   185→   185→      const data = (await res.json()) as FeedResponse;
+   186→   186→      setJobs(prev => {
+   187→   187→        const seen = new Set((prev ?? []).map(j => j.id));
+   188→   188→        const fresh = (data.items ?? []).filter(j => !seen.has(j.id));
+   189→   189→        return [...(prev ?? []), ...fresh];
+   190→   190→      });
+   191→   191→      setHasNext(!!data.hasNext);
+   192→   192→    } catch {
+   193→   193→      toast.error(t("errGeneric"));
+   194→   194→    } finally {
+   195→   195→      setLoadingMore(false);
+   196→   196→    }
+   197→   197→  }, [loadingMore, jobs, serverQuery, t]);
+   198→   198→
+   199→   199→  // ---- URL sync (replace, no scroll jump) ----
+   200→   200→  useEffect(() => {
+   201→   201→    if (typeof window === "undefined") return;
+   202→   202→    const p = new URLSearchParams();
+   203→   203→    if (query.trim()) p.set("q", query.trim());
+   204→   204→    if (tradeId) p.set("trade", tradeId);
+   205→   205→    if (city) p.set("city", city);
+   206→   206→    if (shift !== "any") p.set("shift", shift);
+   207→   207→    if (sort !== "match") p.set("sort", sort);
+   208→   208→    if (urgentOnly) p.set("urgent", "1");
+   209→   209→    if (savedOnly) p.set("saved", "1");
+   210→   210→    if (topEmployersOnly) p.set("top", "1");
+   211→   211→    const qs = p.toString();
+   212→   212→    const target = qs ? `/jobs?${qs}` : "/jobs";
+   213→   213→    if (window.location.pathname + window.location.search !== target) {
+   214→   214→      router.replace(target, { scroll: false });
+   215→   215→    }
+   216→   216→  }, [query, tradeId, city, shift, sort, urgentOnly, savedOnly, topEmployersOnly, router]);
+   217→   217→
+   218→   218→  const tradeSkills = useMemo(() => skills.filter(s => TRADE_NAMES.has(s.nameEn)), [skills]);
+   219→   219→  const tradeName = useMemo(
+   220→   220→    () => tradeSkills.find(s => s.id === tradeId)?.nameEn ?? null,
+   221→   221→    [tradeSkills, tradeId],
+   222→   222→  );
+   223→   223→
+   224→   224→  // Cities derived from loaded jobs (only cities that actually have jobs)
+   225→   225→  const cities = useMemo(() => {
+   226→   226→    if (!jobs) return [];
+   227→   227→    return Array.from(new Set(jobs.map(j => j.city))).sort();
+   228→   228→  }, [jobs]);
+   229→   229→
+   230→   230→  // ---- client-side pipeline: text search → city → saved → top employers → sort ----
+   231→   231→  const visible = useMemo(() => {
+   232→   232→    if (!jobs) return null;
+   233→   233→    const q = query.trim().toLowerCase();
+   234→   234→    let out = jobs.filter(j => {
+   235→   235→      if (q) {
+   236→   236→        const hay = [
+   237→   237→          j.title,
+   238→   238→          j.employer?.companyName ?? "",
+   239→   239→          j.trade?.nameEn ?? "",
+   240→   240→          j.city,
+   241→   241→          ...j.skills.map(s => s.skill?.nameEn ?? ""),
+   242→   242→        ].join(" ").toLowerCase();
+   243→   243→        if (!hay.includes(q)) return false;
+   244→   244→      }
+   245→   245→      if (city && j.city !== city) return false;
+   246→   246→      if (savedOnly && !savedIds.has(j.id)) return false;
+   247→   247→      // Round 8: "Top employers" — jobs from employers rated ≥4.5 by 3+ workers
+   248→   248→      if (topEmployersOnly) {
+   249→   249→        const r = j.employer;
+   250→   250→        if (!r?.ratingAvg || !r.ratingCount || r.ratingAvg < 4.5 || r.ratingCount < 3) return false;
+   251→   251→      }
+   252→   252→      return true;
+   253→   253→    });
+   254→   254→    out = [...out].sort((a, b) => {
+   255→   255→      if (sort === "match") return (b.matchScore ?? -1) - (a.matchScore ?? -1);
+   256→   256→      if (sort === "wage") return b.wageMax - a.wageMax;
+   257→   257→      if (sort === "nearest") return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+   258→   258→      return +new Date(b.createdAt) - +new Date(a.createdAt);
+   259→   259→    });
+   260→   260→    return out;
+   261→   261→  }, [jobs, query, city, savedOnly, savedIds, sort, topEmployersOnly]);
+   262→   262→
+   263→   263→  // ---- active filter chips ----
+   264→   264→  interface Chip { key: string; label: string; clear: () => void }
+   265→   265→  const chips: Chip[] = useMemo(() => {
+   266→   266→    const out: Chip[] = [];
+   267→   267→    if (query.trim()) out.push({ key: "q", label: `“${query.trim()}”`, clear: () => setQuery("") });
+   268→   268→    if (tradeName) out.push({ key: "trade", label: tradeName, clear: () => setTradeId("") });
+   269→   269→    if (city) out.push({ key: "city", label: city, clear: () => setCity("") });
+   270→   270→    if (shift !== "any") out.push({ key: "shift", label: shift === "day" ? "Day" : "Night", clear: () => setShift("any") });
+   271→   271→    if (urgentOnly) out.push({ key: "urgent", label: t("feedUrgent"), clear: () => setUrgentOnly(false) });
+   272→   272→    if (savedOnly) out.push({ key: "saved", label: t("boardSavedOnly"), clear: () => setSavedOnly(false) });
+   273→   273→    if (topEmployersOnly) out.push({ key: "top", label: t("boardTopEmployers"), clear: () => setTopEmployersOnly(false) });
+   274→   274→    return out;
+   275→   275→  }, [query, tradeName, city, shift, urgentOnly, savedOnly, topEmployersOnly, t]);
+   276→   276→
+   277→   277→  function clearAll() {
+   278→   278→    setQuery("");
+   279→   279→    setTradeId("");
+   280→   280→    setCity("");
+   281→   281→    setShift("any");
+   282→   282→    setUrgentOnly(false);
+   283→   283→    setSavedOnly(false);
+   284→   284→    setTopEmployersOnly(false);
+   285→   285→    // keep sort — it's a view preference, not a filter
+   286→   286→  }
+   287→   287→
+   288→   288→  const hasActiveFilters = chips.length > 0;
+   289→   289→  const isWorker = (session?.user as { role?: string } | undefined)?.role === "worker";
+   290→   290→
+   291→   291→  if (status === "loading" || profileExists === null) {
+   292→   292→    return (
+   293→   293→      <AppShell>
+   294→   294→        <LoadingSkeleton count={3} />
+   295→   295→      </AppShell>
+   296→   296→    );
+   297→   297→  }
+   298→   298→
+   299→   299→  return (
+   300→   300→    <AppShell>
+   301→   301→      <div className="flex flex-col gap-4">
+   302→   302→        {/* ---------- Hero / search header ---------- */}
+   303→   303→        <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-4 sm:p-6">
+   304→   304→          {/* decorative bridge arcs */}
+   305→   305→          <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full border-[14px] border-primary/10" />
+   306→   306→          <div aria-hidden className="pointer-events-none absolute -right-4 -top-10 size-28 rounded-full border-[10px] border-accent/15" />
+   307→   307→
+   308→   308→          <div className="relative flex flex-col gap-3">
+   309→   309→            <div className="flex items-start justify-between gap-3 flex-wrap">
+   310→   310→              <div>
+   311→   311→                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+   312→   312→                  <Compass className="size-6 text-primary" />
+   313→   313→                  {t("boardTitle")}
+   314→   314→                </h1>
+   315→   315→                <p className="text-sm text-muted-foreground mt-1">{t("boardSubtitle")}</p>
+   316→   316→              </div>
+   317→   317→              {visible && (
+   318→   318→                <Badge variant="secondary" className="tabular-nums px-3 py-1 text-xs shrink-0">
+   319→   319→                  {t(visible.length === 1 ? "boardResultOne" : "boardResults", { count: visible.length })}
+   320→   320→                </Badge>
+   321→   321→              )}
+   322→   322→            </div>
+   323→   323→
+   324→   324→            {/* Search bar */}
+   325→   325→            <div className="relative">
+   326→   326→              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
+   327→   327→              <Input
+   328→   328→                type="search"
+   329→   329→                value={query}
+   330→   330→                onChange={e => setQuery(e.target.value)}
+   331→   331→                placeholder={t("boardSearchPlaceholder")}
+   332→   332→                aria-label={t("boardSearchPlaceholder")}
+   333→   333→                className="pl-10 pr-10 h-12 text-base rounded-xl bg-card shadow-sm border-border/80 focus-visible:ring-2"
+   334→   334→              />
+   335→   335→              {query && (
+   336→   336→                <button
+   337→   337→                  type="button"
+   338→   338→                  onClick={() => setQuery("")}
+   339→   339→                  aria-label={t("boardClearAll")}
+   340→   340→                  className="absolute right-2.5 top-1/2 -translate-y-1/2 grid place-items-center size-7 rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+   341→   341→                >
+   342→   342→                  <X className="size-4" />
+   343→   343→                </button>
+   344→   344→              )}
+   345→   345→            </div>
+   346→   346→
+   347→   347→            {/* Round 11: worker "Available today" quick toggle */}
+   348→   348→            {isWorker && availableToday !== null && (
+   349→   349→              <motion.button
+   350→   350→                type="button"
+   351→   351→                onClick={() => toggleAvailableToday(!availableToday)}
+   352→   352→                disabled={availableSaving}
+   353→   353→                initial={{ opacity: 0, y: -4 }}
+   354→   354→                animate={{ opacity: 1, y: 0 }}
+   355→   355→                transition={{ duration: 0.25, ease: "easeOut" }}
+   356→   356→                aria-pressed={availableToday}
+   357→   357→                aria-label={t("boardAvailableToday")}
+   358→   358→                className={`group inline-flex items-center gap-3 self-start rounded-xl border px-4 py-2.5 text-left transition-all duration-200 ${
+   359→   359→                  availableToday
+   360→   360→                    ? "border-emerald-400/70 bg-emerald-50 dark:bg-emerald-950/40 shadow-[0_0_0_3px_rgba(16,185,129,0.08)]"
+   361→   361→                    : "border-border bg-card hover:border-emerald-300 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20"
+   362→   362→                }`}
+   363→   363→              >
+   364→   364→                <span
+   365→   365→                  aria-hidden
+   366→   366→                  className={`relative grid size-9 place-items-center rounded-full transition-colors ${
+   367→   367→                    availableToday
+   368→   368→                      ? "bg-emerald-500 text-white"
+   369→   369→                      : "bg-muted text-muted-foreground group-hover:bg-emerald-100 group-hover:text-emerald-700"
+   370→   370→                  }`}
+   371→   371→                >
+   372→   372→                  {availableSaving ? (
+   373→   373→                    <Loader2 className="size-4 animate-spin" />
+   374→   374→                  ) : (
+   375→   375→                    <Radio className={`size-4 ${availableToday ? "animate-pulse" : ""}`} />
+   376→   376→                  )}
+   377→   377→                  {availableToday && (
+   378→   378→                    <span aria-hidden className="absolute inset-0 rounded-full bg-emerald-400 opacity-40 motion-safe:animate-ping" />
+   379→   379→                  )}
+   380→   380→                </span>
+   381→   381→                <span className="flex flex-col gap-0.5 min-w-0">
+   382→   382→                  <span className={`text-sm font-semibold leading-tight ${availableToday ? "text-emerald-800 dark:text-emerald-200" : "text-foreground"}`}>
+   383→   383→                    {availableToday ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff")}
+   384→   384→                  </span>
+   385→   385→                  <span className="text-[11px] text-muted-foreground truncate">
+   386→   386→                    {t("boardAvailableTodayHint")}
+   387→   387→                  </span>
+   388→   388→                </span>
+   389→   389→                <Switch
+   390→   390→                  checked={availableToday}
+   391→   391→                  disabled={availableSaving}
+   392→   392→                  onCheckedChange={toggleAvailableToday}
+   393→   393→                  onClick={e => e.stopPropagation()} // avoid double-trigger from outer button
+   394→   394→                  className="ml-1 data-[state=checked]:bg-emerald-600"
+   395→   395→                  aria-label={t("boardAvailableToday")}
+   396→   396→                />
+   397→   397→              </motion.button>
+   398→   398→            )}
+   399→   399→          </div>
+   400→   400→        </section>
+   401→   401→
+   402→   402→        {/* ---------- Sticky toolbar ---------- */}
+   403→   403→        <div className="sticky top-14 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-b border-border">
+   404→   404→          <div className="flex items-center gap-2 flex-wrap">
+   405→   405→            <SlidersHorizontal className="size-4 text-muted-foreground shrink-0" aria-hidden />
+   406→   406→
+   407→   407→            <Select value={tradeId || "any"} onValueChange={v => setTradeId(v === "any" ? "" : v)}>
+   408→   408→              <SelectTrigger className="h-9 w-auto min-w-28 gap-1 text-xs font-medium" aria-label={t("feedFilterTrade")}>
+   409→   409→                <Briefcase className="size-3.5 text-muted-foreground" />
+   410→   410→                <SelectValue />
+   411→   411→              </SelectTrigger>
+   412→   412→              <SelectContent>
+   413→   413→                <SelectItem value="any">{t("feedFilterTrade")}: any</SelectItem>
+   414→   414→                {tradeSkills.map(s => (
+   415→   415→                  <SelectItem key={s.id} value={s.id}>{s.nameEn}</SelectItem>
+   416→   416→                ))}
+   417→   417→              </SelectContent>
+   418→   418→            </Select>
+   419→   419→
+   420→   420→            <Select value={city || "any"} onValueChange={v => setCity(v === "any" ? "" : v)}>
+   421→   421→              <SelectTrigger className="h-9 w-auto min-w-24 gap-1 text-xs font-medium" aria-label={t("boardCity")}>
+   422→   422→                <MapPin className="size-3.5 text-muted-foreground" />
+   423→   423→                <SelectValue />
+   424→   424→              </SelectTrigger>
+   425→   425→              <SelectContent>
+   426→   426→                <SelectItem value="any">{t("boardAnyCity")}</SelectItem>
+   427→   427→                {cities.map(c => (
+   428→   428→                  <SelectItem key={c} value={c}>{c}</SelectItem>
+   429→   429→                ))}
+   430→   430→              </SelectContent>
+   431→   431→            </Select>
+   432→   432→
+   433→   433→            <Select value={shift} onValueChange={v => setShift(v as typeof shift)}>
+   434→   434→              <SelectTrigger className="h-9 w-auto min-w-24 text-xs font-medium" aria-label={t("feedFilterShift")}>
+   435→   435→                <SelectValue />
+   436→   436→              </SelectTrigger>
+   437→   437→              <SelectContent>
+   438→   438→                <SelectItem value="any">{t("feedFilterShift")}: any</SelectItem>
+   439→   439→                <SelectItem value="day">Day</SelectItem>
+   440→   440→                <SelectItem value="night">Night</SelectItem>
+   441→   441→              </SelectContent>
+   442→   442→            </Select>
+   443→   443→
+   444→   444→            <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
+   445→   445→              <SelectTrigger className="h-9 w-auto min-w-32 gap-1 text-xs font-medium sm:ml-auto" aria-label={t("boardSortLabel")}>
+   446→   446→                <ArrowDownWideNarrow className="size-3.5 text-muted-foreground" />
+   447→   447→                <SelectValue />
+   448→   448→              </SelectTrigger>
+   449→   449→              <SelectContent>
+   450→   450→                <SelectItem value="match">{t("boardSortMatch")}</SelectItem>
+   451→   451→                <SelectItem value="wage">{t("boardSortWage")}</SelectItem>
+   452→   452→                <SelectItem value="nearest">{t("boardSortNearest")}</SelectItem>
+   453→   453→                <SelectItem value="newest">{t("boardSortNewest")}</SelectItem>
+   454→   454→              </SelectContent>
+   455→   455→            </Select>
+   456→   456→          </div>
+   457→   457→
+   458→   458→          {/* Toggle chips row */}
+   459→   459→          <div className="flex items-center gap-2 flex-wrap mt-2">
+   460→   460→            <label
+   461→   461→              className={`inline-flex items-center gap-2 h-9 rounded-full border px-3 cursor-pointer transition-colors ${urgentOnly ? "border-accent bg-accent/15 text-accent-foreground" : "border-border bg-card text-muted-foreground hover:border-accent/50"}`}
+   462→   462→            >
+   463→   463→              <Zap className="size-3.5" />
+   464→   464→              <span className="text-xs font-medium">{t("feedUrgent")}</span>
+   465→   465→              <Switch checked={urgentOnly} onCheckedChange={setUrgentOnly} className="scale-75 data-[state=checked]:bg-accent-foreground" aria-label={t("feedUrgent")} />
+   466→   466→            </label>
+   467→   467→
+   468→   468→            <label
+   469→   469→              className={`inline-flex items-center gap-2 h-9 rounded-full border px-3 cursor-pointer transition-colors ${savedOnly ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/50"}`}
+   470→   470→            >
+   471→   471→              <Bookmark className={`size-3.5 ${savedOnly ? "fill-primary" : ""}`} />
+   472→   472→              <span className="text-xs font-medium">{t("boardSavedOnly")}</span>
+   473→   473→              {savedCount > 0 && (
+   474→   474→                <Badge variant="secondary" className="text-[10px] tabular-nums h-5 px-1.5">{savedCount}</Badge>
+   475→   475→              )}
+   476→   476→              <Switch checked={savedOnly} onCheckedChange={setSavedOnly} className="scale-75" aria-label={t("boardSavedOnly")} />
+   477→   477→            </label>
+   478→   478→
+   479→   479→            <label
+   480→   480→              className={`inline-flex items-center gap-2 h-9 rounded-full border px-3 cursor-pointer transition-colors ${topEmployersOnly ? "border-amber-400 bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300" : "border-border bg-card text-muted-foreground hover:border-amber-400/60"}`}
+   481→   481→            >
+   482→   482→              <Star className={`size-3.5 ${topEmployersOnly ? "fill-amber-500 text-amber-500" : ""}`} />
+   483→   483→              <span className="text-xs font-medium">{t("boardTopEmployers")}</span>
+   484→   484→              <Switch checked={topEmployersOnly} onCheckedChange={setTopEmployersOnly} className="scale-75 data-[state=checked]:bg-amber-500" aria-label={t("boardTopEmployers")} />
+   485→   485→            </label>
+   486→   486→
+   487→   487→            {hasActiveFilters && (
+   488→   488→              <Button
+   489→   489→                type="button"
+   490→   490→                variant="ghost"
+   491→   491→                size="sm"
+   492→   492→                onClick={clearAll}
+   493→   493→                className="h-9 rounded-full text-xs gap-1 ml-auto text-muted-foreground hover:text-foreground"
+   494→   494→              >
+   495→   495→                <X className="size-3.5" />
+   496→   496→                {t("boardClearAll")}
+   497→   497→              </Button>
+   498→   498→            )}
+   499→   499→          </div>
+   500→   500→        </div>
+   501→   501→
+   502→   502→        {/* ---------- Active filter chips ---------- */}
+   503→   503→        {hasActiveFilters && (
+   504→   504→          <div className="flex items-center gap-2 flex-wrap" aria-label={t("boardClearAll")}>
+   505→   505→            {chips.map(c => (
+   506→   506→              <button
+   507→   507→                key={c.key}
+   508→   508→                type="button"
+   509→   509→                onClick={c.clear}
+   510→   510→                className="inline-flex items-center gap-1.5 h-8 rounded-full bg-primary/10 text-primary pl-3 pr-2 text-xs font-medium hover:bg-primary/15 transition-colors group"
+   511→   511→                aria-label={`${c.label} — remove filter`}
+   512→   512→              >
+   513→   513→                {c.label}
+   514→   514→                <X className="size-3.5 opacity-60 group-hover:opacity-100" />
+   515→   515→              </button>
+   516→   516→            ))}
+   517→   517→          </div>
+   518→   518→        )}
+   519→   519→
+   520→   520→        {/* ---------- Results ---------- */}
+   521→   521→        {jobs === null && <LoadingSkeleton count={4} />}
+   522→   522→
+   523→   523→        {jobs !== null && visible !== null && visible.length === 0 && query.trim() !== "" && (
+   524→   524→          <EmptyState
+   525→   525→            icon={Search}
+   526→   526→            title={t("boardSearchEmpty")}
+   527→   527→            description={t("boardSearchEmptyHint")}
+   528→   528→            action={
+   529→   529→              <Button type="button" variant="outline" size="sm" onClick={() => { setQuery(""); setCity(""); }}>
+   530→   530→                {t("boardClearAll")}
+   531→   531→              </Button>
+   532→   532→            }
+   533→   533→          />
+   534→   534→        )}
+   535→   535→
+   536→   536→        {jobs !== null && visible !== null && visible.length === 0 && query.trim() === "" && savedOnly && (
+   537→   537→          <EmptyState
+   538→   538→            icon={Bookmark}
+   539→   539→            title={t("boardNoSaved")}
+   540→   540→            description={t("boardNoSavedHint")}
+   541→   541→            action={
+   542→   542→              <Button type="button" variant="outline" size="sm" onClick={() => setSavedOnly(false)}>
+   543→   543→                {t("boardClearAll")}
+   544→   544→              </Button>
+   545→   545→            }
+   546→   546→          />
+   547→   547→        )}
+   548→   548→
+   549→   549→        {jobs !== null && visible !== null && visible.length === 0 && query.trim() === "" && !savedOnly && (
+   550→   550→          <EmptyState
+   551→   551→            icon={Search}
+   552→   552→            title={t("feedEmpty")}
+   553→   553→            description={t("boardSearchEmptyHint")}
+   554→   554→            action={
+   555→   555→              <Button type="button" variant="outline" size="sm" onClick={clearAll}>
+   556→   556→                {t("boardClearAll")}
+   557→   557→              </Button>
+   558→   558→            }
+   559→   559→          />
+   560→   560→        )}
+   561→   561→
+   562→   562→        {visible !== null && visible.length > 0 && (
+   563→   563→          <>
+   564→   564→            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+   565→   565→              {visible.map((job, i) => (
+   566→   566→                <motion.div
+   567→   567→                  key={job.id}
+   568→   568→                  initial={{ opacity: 0, y: 12 }}
+   569→   569→                  animate={{ opacity: 1, y: 0 }}
+   570→   570→                  transition={{ duration: 0.25, delay: Math.min(i, 6) * 0.05, ease: "easeOut" }}
+   571→   571→                >
+   572→   572→                  <JobCard job={job} applied={appliedIds.has(job.id)} />
+   573→   573→                </motion.div>
+   574→   574→              ))}
+   575→   575→            </div>
+   576→   576→
+   577→   577→            {/* Footer: count + load more / end of list */}
+   578→   578→            <div className="flex flex-col items-center gap-3 mt-2 pb-2">
+   579→   579→              <p className="text-xs text-muted-foreground tabular-nums">
+   580→   580→                {t("boardShowing", { shown: visible.length, total: jobs.length })}
+   581→   581→              </p>
+   582→   582→              {hasNext ? (
+   583→   583→                <Button type="button" variant="outline" onClick={loadMore} disabled={loadingMore} className="gap-2 min-h-11 px-6">
+   584→   584→                  {loadingMore
+   585→   585→                    ? <Loader2 className="size-4 animate-spin" />
+   586→   586→                    : <ChevronDown className="size-4" />}
+   587→   587→                  {t("boardLoadMore")}
+   588→   588→                </Button>
+   589→   589→              ) : (
+   590→   590→                <div className="flex items-center gap-3 w-full max-w-xs text-muted-foreground" aria-hidden>
+   591→   591→                  <span className="h-px flex-1 bg-border" />
+   592→   592→                  <span className="text-[10px] uppercase tracking-widest whitespace-nowrap">{t("boardEndOfList")}</span>
+   593→   593→                  <span className="h-px flex-1 bg-border" />
+   594→   594→                </div>
+   595→   595→              )}
+   596→   596→            </div>
+   597→   597→          </>
+   598→   598→        )}
+   599→   599→
+   600→   600→        {/* Screen-reader summary of current filters */}
+   601→   601→        <Card className="sr-only">
+   602→   602→          <CardContent>
+   603→   603→            {t(visible?.length === 1 ? "boardResultOne" : "boardResults", { count: visible?.length ?? 0 })}
+   604→   604→            {hasActiveFilters ? ` · ${chips.map(c => c.label).join(", ")}` : ""}
+   605→   605→          </CardContent>
+   606→   606→        </Card>
+   607→   607→      </div>
+   608→   608→    </AppShell>
+   609→   609→  );
+   610→   610→}
+   611→   611→
+   612→   612→export default function JobBoardPage() {
+   613→   613→  return (
+   614→   614→    <Suspense fallback={<AppShell><LoadingSkeleton count={3} /></AppShell>}>
+   615→   615→      <JobBoard />
+   616→   616→    </Suspense>
+   617→   617→  );
+   618→   618→}
+   619→   619→

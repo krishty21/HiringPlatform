@@ -148,7 +148,7 @@ export function EmployerReputationCard({ className }: { className?: string }) {
                 <div className="flex flex-col gap-1.5">
                   <RatingStars value={avg} readOnly size="sm" />
                   <p className="text-xs text-muted-foreground tabular-nums">
-                    {t("employerRepCount", { count })}
+                    {count === 1 ? t("workerFromOne") : t("workerFromMany", { count })}
                   </p>
                 </div>
               </div>
@@ -180,9 +180,11 @@ export function EmployerReputationCard({ className }: { className?: string }) {
                   <p className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-200">
                     <TrendingUp className="size-3.5 mt-0.5 shrink-0" />
                     <span>
-                      {t("employerRepNudge", {
-                        needed: Math.max(0, TOP_EMPLOYER_MIN_COUNT - count),
-                      })}
+                      {TOP_EMPLOYER_MIN_COUNT - count === 1
+                        ? t("repNudgeOne")
+                        : t("repNudgeMany", {
+                            needed: Math.max(0, TOP_EMPLOYER_MIN_COUNT - count),
+                          })}
                     </span>
                   </p>
                 </div>

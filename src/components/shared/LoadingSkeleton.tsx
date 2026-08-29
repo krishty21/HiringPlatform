@@ -1,3 +1,9 @@
+"use client";
+// Round 12 fix: `use client` added — round-11 redesign introduced `useLanguage()`
+// (a client-only hook) but server components (e.g. src/app/loading.tsx) render
+// this too, which crashed SSR with "Attempted to call useLanguage() from the
+// server" (500 on every full-page load). Props are all serializable primitives,
+// so marking this a client component is safe for every consumer.
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Briefcase } from "lucide-react";

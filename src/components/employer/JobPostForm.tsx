@@ -279,9 +279,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="any">Any</SelectItem>
-                      <SelectItem value="day">Day</SelectItem>
-                      <SelectItem value="night">Night</SelectItem>
+                      <SelectItem value="any">{t("shiftAny")}</SelectItem>
+                      <SelectItem value="day">{t("shiftDay")}</SelectItem>
+                      <SelectItem value="night">{t("shiftNight")}</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

@@ -268,7 +268,9 @@ function KaamStats({ stats }: { stats: NonNullable<PublicWorkerData["stats"]> })
       value: hasRating ? ratingAvg.toFixed(1) : "—",
       label: t("kaamCardStatsRating"),
       desc: hasRating
-        ? t("kaamCardStatsRatingDesc", { count: ratingCount, s: ratingCount === 1 ? "" : "s" })
+        ? (ratingCount === 1
+            ? t("employerFromOne")
+            : t("employerFromMany", { count: ratingCount }))
         : t("kaamCardStatsNotRated"),
       icon: Star,
       tone: "text-amber-600 dark:text-amber-400",

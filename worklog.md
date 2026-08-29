@@ -1133,3 +1133,70 @@ Recommended next:
 3. R20 WCAG AA audit with axe-core (new docs/accessibility.md) — would catch the new Similar Jobs cards' tab-order / focus-trap nuances.
 4. Per-city landing pages for SEO (round-10 rec #4) — multi-city P3 prep; would unlock Bhimavaram/Vijayawada/Visakhapatnam landing pages with city-scoped job feeds.
 5. Worker "Available today" filter on employer candidate search (mirror of the new worker toggle) — would close the discovery loop (worker marks self available → employer searches "available today" candidates).
+
+---
+Task ID: 12
+Agent: Orchestrator (round 12)
+Task: Assess project status, QA via agent-browser, fix bugs, then advance features + i18n hardening + styling polish.
+
+Work Log:
+- Read worklog.md (round-11 summary + recommendations). Assessed: dev server up but returning 500 on ALL full-page loads.
+- ROOT-CAUSED CRITICAL BUG #1 (regression from round 11): src/components/shared/LoadingSkeleton.tsx redesign added useLanguage() (client-only hook) WITHOUT "use client". Server components (src/app/loading.tsx renders it for every route's loading state) crashed SSR with "Attempted to call useLanguage() from the server" → 500 on /, /login, /c/[slug] and every full-page load. Round-11 QA missed it because agent-browser navigations hit warm client-side renders. FIX: added "use client" directive (props are all serializable primitives — safe for every consumer). Verified: all routes 200. Real log is /tmp/dev-next.log (dev.log is stale from an older server instance).
+- Ran lint (clean) + frozen-contract tests (49/49, 60 expect) before and after every change.
+- QA sweep via agent-browser (25 screenshots qa-r12-01..25): login ×3 roles, worker home/jobs/detail/applications/profile/verify, public Kaam Card (NOTE: slug is the workerProfile.id cuid, NOT a name-slug — /c/ravi-kumar is a 404 by design), employer dashboard/candidates/pipeline/my-jobs/post, admin dashboard/verifications. Dev server reaped by sandbox ~4 times mid-QA — /tmp/ensure-dev.sh restores it each time.
+- Confirmed round-11 rec #5 (availableToday filter on employer candidate search) ALREADY EXISTS (CandidateFilters "केवल आज उपलब्ध" + /api/candidates/search handles it) — no work needed.
+
+BUG FIX #2 (round-11 flagged, round-12 fixed): i18n plural hacks.
+- ratingSummaryCount "{count} rating{s}": RatingSummary.tsx never passed {s} → literal "3 रेटिंग{s}" rendered on worker /profile (visually confirmed). jobs/[id] + CandidateCard passed s → "3 रेटिंगs" (English plural leaking into hi/te).
+- FIX: added proper plural key pairs (additive, old keys kept for contract compat): ratingCountOne/Many, employerFromOne/Many (KaamCard), workerFromOne/Many (EmployerReputationCard), repNudgeOne/Many. Migrated 6 call sites. Verified E2E: /profile now shows "3 रेटिंग"; Kaam Card hi "3 नियोक्ताओं से", te "3 యజమానుల నుండి" (proper plurals).
+
+NEW FEATURE (main round-12 feature): Worker application WITHDRAWAL + re-apply.
+- Gap: a worker who applied by mistake or took other work had to ghost the employer. Now they exit cleanly; employer notified; re-apply resets the same row (unique jobId+workerId).
+- NEW API route src/app/api/applications/[id]/withdraw/route.ts (POST): requireWorker + assertApplicationOwnerForWorker; withdrawable only from applied|shortlisted|interview|offer (409 otherwise); sets status "withdrawn" (free String field — additive, no schema change); pushNotification to employer (type application_status, stage "withdrawn" — same channel the apply flow uses).
+- POST /api/applications re-apply branch: existing withdrawn row → reset to "applied" (appliedAt=now, all stage timestamps cleared) + re-notify employer + 201 {reapplied:true}. Non-withdrawn existing → unchanged alreadyApplied response.
+- GET /api/employer/applications: excludes withdrawn (worker removed themselves → off the pipeline board). Dashboard funnel/PerJobDrilldown unaffected (count specific statuses only).
+- Worker UI /applications list: withdrawn added to STAGE_KEYS/STAGE_TONE (slate), accentBar, terminal set; WithdrawButton (two-step arm→confirm with 4s auto-disarm, stopPropagation inside card Link, destructive tone when armed) on active cards; ReapplyButton (emerald) on withdrawn cards.
+- Worker UI /applications/[id] detail: withdrawn statusTone/banner (Undo2 icon + hint), withdraw button (two-step) + re-apply button, isTerminal stops the ping-dot for withdrawn, "Live · 5s poll" + "Applied {date}" migrated to t() keys (livePollLabel, appliedOn).
+- TrackerTimeline: withdrawn branch (slate card, Undo2, banner hint) parallel to the rejected branch.
+- BUG FIX #3 (found while building): jobs board appliedIds marked withdrawn jobs as applied ("Applied ✓" stuck) — now filters status!=="withdrawn" so re-apply is possible from the board.
+- E2E verified via agent-browser + DB: withdraw from list (arm→confirm→200 POST, status "withdrawn" in DB), withdraw from detail, re-apply (201 POST, status back to "applied", appliedAt=today), employer pipeline no longer shows withdrawn card, employer notification row created (stage "withdrawn"). Demo data restored to seed state afterward.
+- Note: the two-step disarm expires after 4s — intentional safety UX; agent-browser needed rapid clicks to test (first attempts "failed" only because my snapshot commands took >4s between clicks).
+
+i18n HARDENING (round-12 directive scope): full hardcoded-English audit (Explore subagent) → migrated the highest-visibility ~40 strings; dictionaries grew 423→475 keys (+52, all additive ×3 langs, parity verified programmatically after each batch):
+- Plural pairs (above) + unitHours, dashTimeToHireEmpty/Hint (TimeToHireHeadline had 3 hardcoded strings incl. "hrs"→"घंटे"/"గంటలు").
+- Shift labels: shiftAny/Day/Night — replaced raw "Any/Day/Night" SelectItems in 5 files (jobs board, home, profile, onboarding, JobPostForm) + raw {job.shift} badges in job detail + application detail + "{shift} shift" in employer jobs table + both WhatsApp share texts.
+- TopRatedBadge: was the only component with user-visible text and NO useLanguage — now localized (topRatedBadge + topRatedTooltip with {avg}/{count}).
+- Candidate detail page: viewsCount, preferredShift (+localized value), languagesLabel, aboutLabel, verifiedChip, proficiencyAria, shortlist* toasts/Cta/submitting, endorsementFallback ("Skilled in {skill}.").
+- Candidates search page: candidatesRankedBy, candidatesUrgentBoost, candidatesCountOne/Many, candidatesEmptyHint.
+- NotificationsBell: notifView + Live/Connecting/Polling state labels + WS tooltips + notifMarkAllRead.
+- Profile quick-win: availableToday toasts → existing boardAvailableTodayOn/Off keys; viewsCount + endorsementFallback there too.
+- Verified E2E in Hindi: jobs board "शिफ्ट: कोई भी", job detail "दिन" badge, employer dash "26.6 घंटे / आपकी नौकरियों पर आवेदन से हायरिंग तक औसत समय", candidates "मैच स्कोर से क्रमबद्ध 3 उम्मीदवार", employer jobs "दिन शिफ्ट". Telugu: withdraw button "వెనక్కి తీయండి", live label "లైవ్".
+
+STYLING POLISH (directive "more details"):
+- Withdrawn application cards get an "archived" visual treatment: dashed slate border, slate-50/40 tinted bg (dark: slate-950/20), gradient slate left accent bar (vs solid status color), dimmed job title — reads as inactive at a glance while remaining clickable.
+- Two-step withdraw button: neutral outline → destructive tint on armed state with hint text swap; min-h-8 touch target; disabled spinner.
+- Re-apply button: emerald outline theme (mirrors the "apply" semantic) with CornerUpLeft icon.
+- Terminal-state banner on application detail swaps the animated ping dot for a calm RefreshCcw row.
+
+QA VERIFICATION (agent-browser, 25 screenshots qa-r12-01..25 in download/qa-r12/):
+- All 3 demo logins + full worker/employer/admin flows re-verified post-changes.
+- Withdraw/re-apply round-trip verified at API level (curl 401 unauth), UI level (agent-browser clicks), and DB level (bun -e queries).
+- Lint 0 errors; tests 49/49; /tmp/dev-next.log clean of new errors after the LoadingSkeleton fix; all public routes 200.
+
+Stage Summary:
+- CRITICAL: round-11 LoadingSkeleton regression (SSR 500 on every full-page load) FIXED. This alone justified the round.
+- Bugs fixed: 3 (SSR 500, plural {s} literal/leak, withdrawn-marked-as-applied on board).
+- New feature: worker application withdrawal + re-apply (API + 3 UI surfaces + employer pipeline exclusion + notifications + 15 i18n keys ×3).
+- i18n hardening: +52 additive keys ×3 langs (423→475, parity programmatically verified), ~40 hardcoded English strings migrated across 14 files; TopRatedBadge gained useLanguage.
+- Styling: archived-card treatment for withdrawn, two-step destructive button, emerald re-apply affordance.
+- Frozen contracts: prisma/schema.prisma (zero changes — "withdrawn" is a new String value, no migration), schemas/index.ts, ai/provider.ts, auth.ts, authz.ts, matching/*, trust/recompute.ts, globals.css — all untouched. components/shared/*: only LoadingSkeleton.tsx edited (one "use client" line + comment — it already had multiple prior rounds of edits and is not in the frozen list per round-11's interpretation). i18n dicts: additive keys only (established rounds-6..11 pattern).
+- Files touched (19): i18n/{en,hi,te}.ts (+52 keys each), components/shared/LoadingSkeleton.tsx ("use client"), components/ratings/{RatingSummary,TopRatedBadge}.tsx, components/public/KaamCard.tsx, components/employer/{CandidateCard,EmployerReputationCard,JobPostForm}.tsx, components/worker/{TrackerTimeline,NotificationsBell,JobCard}.tsx, components/dashboard/TimeToHireHeadline.tsx, components/jobs/(none), app/applications/page.tsx, app/applications/[id]/page.tsx, app/jobs/page.tsx, app/jobs/[id]/page.tsx, app/home/page.tsx, app/profile/page.tsx, app/onboarding/worker/page.tsx, app/employer/{jobs,candidates,candidates/[id]}/page.tsx, api/applications/route.ts (re-apply branch), api/applications/[id]/withdraw/route.ts (NEW), api/employer/applications/route.ts (exclude withdrawn).
+- Known limitations (unchanged): sandbox reaps dev server + WS mini-service between some Bash calls (ensure-dev.sh restores; WS degrades to 15s polling); ratings don't feed computeTrustScore (frozen contract); no real email/OCR/embeddings (BUILD_PLAN §3).
+- Not done this round (deliberately): remaining ~20 lower-visibility hardcoded strings from the audit (JobPostForm toasts/placeholders, UploadDropzone errors, AdminQueueItem, not-found.tsx/error.tsx, PerJobDrilldownRow labels, PipelineKanban toasts, HeroSection eyebrow, layout.tsx metadata EN-only) — tracked below.
+
+Recommended next:
+1. Finish the i18n audit tail: JobPostForm (6 strings), UploadDropzone (4), AdminQueueItem/VerificationList (4), PipelineKanban (4), not-found.tsx + error.tsx (404/500 pages are high-visibility when hit), PerJobDrilldownRow (5). ~25 keys ×3 langs.
+2. WCAG AA audit (axe-core) — new interactive elements (two-step withdraw) should get focus/order verification; docs/accessibility.md deliverable.
+3. Ratings → trust score coordinated contract change (ratingBonus capped +5, embeddingBonus pattern) — closes the trust loop.
+4. Per-city landing pages for SEO (round-10 rec #4, still open).
+5. Consider making dev.log a symlink to /tmp/dev-next.log or documenting the real log path — dev.log at project root is stale/misleading (writes go to /tmp/dev-next.log when ensure-dev.sh spawns the server).

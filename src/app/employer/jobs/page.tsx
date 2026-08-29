@@ -96,7 +96,7 @@ export default function MyJobsPage() {
                         {j.title}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {j.tradeName ?? "—"} · {t("jobHeadcount")}: {j.headcount} · {j.shift} shift
+                        {j.tradeName ?? "—"} · {t("jobHeadcount")}: {j.headcount} · {t(j.shift === "day" ? "shiftDay" : j.shift === "night" ? "shiftNight" : "shiftAny")} {t("jobShift").toLowerCase()}
                       </span>
                     </div>
                   </TableCell>

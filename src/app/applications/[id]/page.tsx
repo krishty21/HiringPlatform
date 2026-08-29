@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { toast } from "sonner";
 import {
   ArrowLeft, MapPin, Briefcase, Users, Clock, Share2, Building2, RefreshCcw, Zap, Star,
+  Ban, CornerUpLeft, Undo2, Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/ratings/RatingDialog";
@@ -47,6 +49,45 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [notFound, setNotFound] = useState(false);
   const [ratingTick, setRatingTick] = useState(0); // bump to force ApplicationRatingsPanel re-fetch
   const [hasRated, setHasRated] = useState(false);
+  // Round 12: withdraw / re-apply action state.
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const WITHDRAWABLE = new Set(["applied", "shortlisted", "interview", "offer"]);
+
+  async function withdrawApplication() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/applications/${id}/withdraw`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      toast.success(t("withdrawSuccess"));
+      setArmed(false);
+      await load();
+    } catch {
+      toast.error(t("withdrawFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reapply() {
+    if (!app) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: app.job.id }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(t("reapplySuccess"));
+      await load();
+    } catch {
+      toast.error(t("applyFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +145,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const stageKey =
     app.status === "hired" ? "trackerStageHired" :
     app.status === "rejected" ? "trackerStageRejected" :
+    app.status === "withdrawn" ? "trackerStageWithdrawn" :
     app.status === "offer" ? "trackerStageOffer" :
     app.status === "interview" ? "trackerStageInterview" :
     app.status === "shortlisted" ? "trackerStageShortlisted" :
@@ -111,10 +153,12 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const statusTone =
     app.status === "hired" ? "from-emerald-500/15 to-emerald-500/[0.03] border-emerald-500/30 text-emerald-700" :
     app.status === "rejected" ? "from-red-500/10 to-red-500/[0.02] border-red-500/30 text-red-600" :
+    app.status === "withdrawn" ? "from-slate-500/10 to-slate-500/[0.02] border-slate-400/40 text-slate-600 dark:text-slate-300" :
     app.status === "offer" ? "from-accent/20 to-accent/[0.04] border-accent/40 text-accent-foreground" :
     app.status === "interview" ? "from-primary/10 to-primary/[0.03] border-primary/30 text-primary" :
     app.status === "shortlisted" ? "from-primary/10 to-primary/[0.03] border-primary/30 text-primary" :
     "from-muted/40 to-transparent border-border text-muted-foreground";
+  const isTerminal = app.status === "hired" || app.status === "rejected" || app.status === "withdrawn";
 
   return (
     <AppShell>
@@ -134,15 +178,26 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
         >
           <div className="flex items-center gap-2.5">
             {app.job.isUrgent && <Zap className="size-4" aria-hidden />}
+            {app.status === "withdrawn" ? <Undo2 className="size-4" aria-hidden /> : null}
             <span className="text-sm font-bold uppercase tracking-wide">{t(stageKey)}</span>
+            {app.status === "withdrawn" && (
+              <span className="text-xs font-normal">{t("withdrawBannerHint")}</span>
+            )}
           </div>
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
-            <span className="relative flex size-2" aria-hidden>
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-current opacity-60" />
-              <span className="relative inline-flex size-2 rounded-full bg-current" />
+          {isTerminal ? (
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <RefreshCcw className="size-3" />
+              {t("livePollLabel")}
             </span>
-            Live · 5s poll
-          </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+              <span className="relative flex size-2" aria-hidden>
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-current opacity-60" />
+                <span className="relative inline-flex size-2 rounded-full bg-current" />
+              </span>
+              {t("livePollLabel")}
+            </span>
+          )}
         </motion.div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -168,7 +223,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   <span aria-hidden>·</span>
                   <span className="inline-flex items-center gap-1">
                     <Clock className="size-3.5" />
-                    Applied {new Date(app.appliedAt).toLocaleDateString()}
+                    {t("appliedOn", { date: new Date(app.appliedAt).toLocaleDateString() })}
                   </span>
                 </p>
               </div>
@@ -188,7 +243,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t("jobShift")}</p>
-                  <Badge variant="outline" className="mt-1 uppercase">{app.job.shift}</Badge>
+                  <Badge variant="outline" className="mt-1 uppercase">{t(app.job.shift === "day" ? "shiftDay" : app.job.shift === "night" ? "shiftNight" : "shiftAny")}</Badge>
                 </div>
               </div>
 
@@ -228,7 +283,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                 </>
               )}
 
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <Button asChild variant="outline" className="gap-2 min-h-11">
                   <Link href={`/jobs/${app.job.id}`}>
                     <Briefcase className="size-4" />
@@ -239,6 +294,41 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                   <Share2 className="size-4" />
                   {t("feedShare")}
                 </Button>
+                {/* Round 12: withdraw (active stages) / re-apply (withdrawn) */}
+                {WITHDRAWABLE.has(app.status) && (
+                  <Button
+                    type="button"
+                    variant={armed ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      if (!armed) {
+                        setArmed(true);
+                        setTimeout(() => setArmed(false), 4000);
+                      } else {
+                        withdrawApplication();
+                      }
+                    }}
+                    disabled={busy}
+                    className="gap-2 ml-auto"
+                    title={armed ? t("withdrawConfirmHint") : undefined}
+                  >
+                    {busy ? <Loader2 className="size-4 animate-spin" /> : <Ban className="size-4" />}
+                    {armed ? t("withdrawConfirmHint") : t("withdrawAction")}
+                  </Button>
+                )}
+                {app.status === "withdrawn" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={reapply}
+                    disabled={busy}
+                    className="gap-2 ml-auto border-emerald-500/40 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                  >
+                    {busy ? <Loader2 className="size-4 animate-spin" /> : <CornerUpLeft className="size-4" />}
+                    {t("reapplyAction")}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -249,7 +339,7 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <RefreshCcw className="size-3" />
-                Live · 5s poll
+                {t("livePollLabel")}
               </p>
             </div>
             <TrackerTimeline application={app} />

@@ -2,7 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Clock, XCircle, Undo2 } from "lucide-react";
 import type { Application } from "@/lib/schemas";
 
 type StageKey = "applied" | "shortlisted" | "interview" | "offer" | "hired" | "rejected";
@@ -43,6 +43,23 @@ function fmtDateTime(iso: string | null): string {
 
 export function TrackerTimeline({ application }: { application: Application }) {
   const { t } = useLanguage();
+
+  if (application.status === "withdrawn") {
+    // Round 12: worker withdrew — neutral card with the "apply again" hint.
+    return (
+      <Card className="border-slate-300/60 dark:border-slate-700">
+        <CardContent className="p-4 flex items-center gap-3">
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900/60">
+            <Undo2 className="size-4 text-slate-500 dark:text-slate-300" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm">{t("trackerStageWithdrawn")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("withdrawBannerHint")}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (application.status === "rejected") {
     return (
