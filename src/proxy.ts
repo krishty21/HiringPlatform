@@ -11,7 +11,7 @@ export default withAuth(
 
     const isEmployerArea = path.startsWith("/employer");
     const isAdminArea = path.startsWith("/admin");
-    const isWorkerArea = path.startsWith("/home") || path.startsWith("/profile") || path.startsWith("/applications") || path.startsWith("/jobs/") || path.startsWith("/onboarding");
+    const isWorkerArea = path.startsWith("/home") || path.startsWith("/profile") || path.startsWith("/applications") || path === "/jobs" || path.startsWith("/jobs/") || path.startsWith("/onboarding");
 
     if (isEmployerArea && role !== "employer" && role !== "admin") return NextResponse.redirect(new URL("/home", req.url));
     if (isAdminArea && role !== "admin") {

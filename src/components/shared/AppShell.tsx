@@ -42,6 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const workerNav: NavItem[] = [
     { href: "/home", labelKey: "navHome", icon: Home },
+    { href: "/jobs", labelKey: "navBrowse", icon: Search },
     { href: "/applications", labelKey: "navApplications", icon: Briefcase },
     { href: "/profile", labelKey: "navProfile", icon: User },
   ];
@@ -81,7 +82,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-foreground gap-2"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={async () => {
+                // Client-side signout with relative navigation — avoids NextAuth's
+                // absolute-URL redirect (localhost:3000) which breaks behind the
+                // Caddy gateway proxy.
+                await signOut({ redirect: false });
+                router.push("/");
+                router.refresh();
+              }}
               aria-label={t("navLogout")}
             >
               <LogOut className="size-4" />

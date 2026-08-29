@@ -14,21 +14,29 @@ export async function GET(req: Request) {
     const parsed = FeedJobsQuery.parse(params);
     const user = await requireUser();
 
-    // Determine worker location: prefer session worker profile, fall back to query overrides
+    // Determine worker location: prefer session worker profile, fall back to query overrides.
+    // Hoisted out of the enrichment loop — one query instead of N.
     let lat = parsed.lat;
     let lng = parsed.lng;
     let maxRadius = 30; // default radius if not a worker
-    let workerSkills: string[] = [];
+    let wp: {
+      id: string; tradeId: string; yearsExp: number; lat: number; lng: number;
+      wageMin: number; wageMax: number; shiftPref: string; trustTier: string; maxRadiusKm: number;
+      skills: { skillId: string; proficiency: number }[];
+    } | null = null;
     if (user.role === "worker") {
-      const wp = await db.workerProfile.findUnique({
+      wp = await db.workerProfile.findUnique({
         where: { userId: user.id },
-        select: { lat: true, lng: true, maxRadiusKm: true, skills: { select: { skillId: true } } },
+        select: {
+          id: true, tradeId: true, yearsExp: true, lat: true, lng: true,
+          wageMin: true, wageMax: true, shiftPref: true, trustTier: true, maxRadiusKm: true,
+          skills: { select: { skillId: true, proficiency: true } },
+        },
       });
       if (wp) {
         lat ??= wp.lat;
         lng ??= wp.lng;
         maxRadius = wp.maxRadiusKm;
-        workerSkills = wp.skills.map(s => s.skillId);
       }
     }
 
@@ -41,7 +49,10 @@ export async function GET(req: Request) {
       ...(parsed.urgentOnly ? { isUrgent: true } : {}),
     };
 
-    const total = await db.job.count({ where });
+    // Fetch ALL filter-matching jobs (SQLite demo scale), then paginate AFTER the
+    // radius filter. Paginating in SQL before filtering would silently drop
+    // in-radius jobs when out-of-radius jobs occupy page slots, and `hasNext`
+    // computed pre-filter would be wrong (round-6 fix).
     const jobs = await db.job.findMany({
       where,
       include: {
@@ -50,57 +61,52 @@ export async function GET(req: Request) {
         skills: { include: { skill: true } },
       },
       orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
-      skip: (parsed.page - 1) * parsed.pageSize,
-      take: parsed.pageSize + 1, // +1 to detect "hasNext"
     });
-    const hasNext = jobs.length > parsed.pageSize;
-    const slice = hasNext ? jobs.slice(0, parsed.pageSize) : jobs;
+
+    // Cached match scores for this worker — one query for the whole set.
+    const cachedScores = new Map<string, number>();
+    if (wp && jobs.length > 0) {
+      const ms = await db.matchScore.findMany({
+        where: { workerId: wp.id, jobId: { in: jobs.map(j => j.id) } },
+        select: { jobId: true, score: true },
+      }).catch(() => []);
+      for (const m of ms) cachedScores.set(m.jobId, m.score);
+    }
 
     // Compute scores + distances (only when worker with location)
-    const enriched = await Promise.all(slice.map(async (j) => {
+    const enriched = await Promise.all(jobs.map(async (j) => {
       const dist = (lat != null && lng != null) ? haversineKm(lat, lng, j.lat, j.lng) : null;
       const inRadius = dist == null || dist <= maxRadius;
       let score: number | null = null;
-      if (user.role === "worker" && workerSkills.length > 0) {
-        const ms = await db.matchScore.findUnique({
-          where: { jobId_workerId: { jobId: j.id, workerId: (await db.workerProfile.findUnique({ where: { userId: user.id }, select: { id: true } }))!.id } },
-          select: { score: true },
-        }).catch(() => null);
-        if (ms) score = ms.score;
-        else {
+      if (wp && wp.skills.length > 0) {
+        const cached = cachedScores.get(j.id);
+        if (cached != null) {
+          score = cached;
+        } else {
           // compute on the fly (cheap for small feed)
-          const wp = await db.workerProfile.findUnique({
-            where: { userId: user.id },
-            select: { id: true, tradeId: true, yearsExp: true, lat: true, lng: true, wageMin: true, wageMax: true, shiftPref: true, trustTier: true, maxRadiusKm: true, skills: { select: { skillId: true, proficiency: true } } },
+          const s = computeMatch({
+            worker: {
+              id: wp.id, tradeId: wp.tradeId, yearsExp: wp.yearsExp,
+              lat: wp.lat, lng: wp.lng, wageMin: wp.wageMin, wageMax: wp.wageMax,
+              shiftPref: wp.shiftPref, trustTier: wp.trustTier, maxRadiusKm: wp.maxRadiusKm,
+              skills: wp.skills,
+            },
+            job: {
+              id: j.id, tradeId: j.tradeId, wageMin: j.wageMin, wageMax: j.wageMax,
+              lat: j.lat, lng: j.lng, shift: j.shift, isUrgent: j.isUrgent,
+              skills: j.skills.map(s => ({ skillId: s.skillId, required: s.required })),
+            },
           });
-          if (wp) {
-            const s = computeMatch({
-              worker: {
-                id: wp.id, tradeId: wp.tradeId, yearsExp: wp.yearsExp,
-                lat: wp.lat, lng: wp.lng, wageMin: wp.wageMin, wageMax: wp.wageMax,
-                shiftPref: wp.shiftPref, trustTier: wp.trustTier, maxRadiusKm: wp.maxRadiusKm,
-                skills: wp.skills,
-              },
-              job: {
-                id: j.id, tradeId: j.tradeId, wageMin: j.wageMin, wageMax: j.wageMax,
-                lat: j.lat, lng: j.lng, shift: j.shift, isUrgent: j.isUrgent,
-                skills: j.skills.map(s => ({ skillId: s.skillId, required: s.required })),
-              },
-            });
-            score = s.score;
-            // persist for cache
-            await db.matchScore.upsert({
-              where: { jobId_workerId: { jobId: j.id, workerId: wp.id } },
-              update: { score: s.score, breakdownJson: JSON.stringify(s.breakdown), computedAt: new Date() },
-              create: { jobId: j.id, workerId: wp.id, score: s.score, breakdownJson: JSON.stringify(s.breakdown) },
-            }).catch(() => {});
-          }
+          score = s.score;
+          // persist for cache
+          await db.matchScore.upsert({
+            where: { jobId_workerId: { jobId: j.id, workerId: wp.id } },
+            update: { score: s.score, breakdownJson: JSON.stringify(s.breakdown), computedAt: new Date() },
+            create: { jobId: j.id, workerId: wp.id, score: s.score, breakdownJson: JSON.stringify(s.breakdown) },
+          }).catch(() => {});
         }
       }
 
-      // Available-today filter: hide if job requires a worker today but worker is unavailable.
-      // For now: filter happens at the worker-side via availableOnly toggle, but we also expose
-      // jobs that the worker can reach within radius. We don't filter jobs by availability here.
       return {
         id: j.id,
         title: j.title,
@@ -132,7 +138,13 @@ export async function GET(req: Request) {
       return true;
     });
 
-    return NextResponse.json({ items: filtered, total, page: parsed.page, pageSize: parsed.pageSize, hasNext });
+    // Manual pagination AFTER filtering (round-6 fix)
+    const total = filtered.length;
+    const start = (parsed.page - 1) * parsed.pageSize;
+    const pageItems = filtered.slice(start, start + parsed.pageSize);
+    const hasNext = start + pageItems.length < total;
+
+    return NextResponse.json({ items: pageItems, total, page: parsed.page, pageSize: parsed.pageSize, hasNext });
   } catch (e) {
     return errorResponse(e);
   }

@@ -752,3 +752,40 @@ Stage Summary:
 - All frozen contracts untouched.
 - Known sandbox limitation: the dev server (port 3000) and the notifications mini-service (port 3003) are reaped by the sandbox between Bash tool calls. Both auto-restart on next invocation; the WS feature degrades gracefully to 15s polling when the mini-service is down. The cron job (webDevReview, every 15 min) will continue autonomous QA/dev and restart services as needed.
 - Recommended next: (1) seed one pending verification so T7 (upload→approve→badge) can be visually demonstrated end-to-end; (2) i18n dictionary extension via coordinated contract change to replace remaining hardcoded English; (3) production hardening: swap in-memory rate limiter for Upstash/Redis, wire real OCR/embeddings providers.
+
+---
+Task ID: 6 (orchestrator round)
+Agent: Orchestrator (Job Board + logout fix + T7 demo seed + jobs API pagination fix)
+Task: Assess project, QA via agent-browser, then fix found bugs and add new features per round directive.
+
+Work Log:
+- Read worklog.md tail; restarted dev server + notifications-ws mini-service (sandbox had reaped both).
+- Health checks: server 200, gateway 200, WS handshake OK, lint 0 errors, 49/49 tests pass.
+- agent-browser QA sweep: landing, login, worker feed/passport/tracker/verify, employer dashboard/post, admin console + verifications queue, WS "Live" indicator in NotificationsBell. Found 3 issues:
+  1. BUG /jobs (index) → 404 (only /jobs/[id] existed; workers had no browse/search page).
+  2. BUG Logout via AppShell used signOut({callbackUrl:"/"}) → NextAuth issued absolute redirect to http://localhost:3000/ which breaks behind the Caddy gateway (browser landed on an unreachable host).
+  3. BUG /api/jobs GET paginated in SQL BEFORE the radius filter: page slice could silently drop in-radius jobs when out-of-radius jobs occupied page slots, and hasNext was computed pre-filter (observed: 7 of 8 expected jobs shown, Plumber job missing).
+- FIX #2 (AppShell.tsx): client-side signOut — await signOut({redirect:false}) + router.push("/") + router.refresh(). No absolute redirect ever leaves the browser. Verified: logout now lands on gateway-hosted "/".
+- NEW FEATURE: /jobs Job Board page (src/app/jobs/page.tsx, ~500 lines):
+  - Free-text search across title/company/trade/skills/city (client-side).
+  - Server-side filters via existing frozen /api/jobs contract: trade, shift, urgentOnly, distanceKm=200 (browse-all override of worker radius).
+  - Client-side city filter (cities derived from loaded jobs), saved-only filter (localStorage store), sort by best match / highest wage / newest.
+  - URL-synced shareable state (?q=&trade=&city=&shift=&sort=&urgent=1&saved=1) via router.replace — verified reload restores filters from URL.
+  - Active filter chips with individual remove + "Clear all"; result count with singular/plural i18n; "Showing X of Y" + Load-more pagination (pageSize 9, dedupe by id) + end-of-list divider.
+  - Applied-state integration: fetches /api/applications/mine, passes applied=true to JobCards ("You applied" disabled state verified).
+  - Rich styling: gradient hero header with decorative arcs, large search input with clear button, sticky toolbar (top-14) with backdrop-blur, compact selects with icons, urgent/saved toggle chips, staggered framer-motion card entrance, sr-only filter summary for screen readers.
+  - Entry points: "Browse all jobs" pill button in /home header + link in Top-recommended-jobs card + new "Browse" tab in worker bottom nav (4 tabs now) and desktop sidebar.
+- FIX #3 (/api/jobs/route.ts GET, not frozen): fetch ALL filter-matching jobs, enrich, radius-filter, THEN paginate in memory; total = post-filter count (no UI consumers of old total); hoisted workerProfile lookup out of the per-job loop (was 1-2 extra queries per job) and batched matchScore cache reads into one findMany. Verified: board now shows 8/8 in-radius jobs; job detail + /home feed regressions pass.
+- proxy.ts: isWorkerArea now includes exact "/jobs" (was only "/jobs/...") so employers get redirected consistently.
+- i18n coordinated additive extension (worklog-recommended next step #2): +20 keys each in en/hi/te (boardTitle…boardNoSavedHint, navBrowse, boardResultOne). No existing keys changed; all three dicts kept in sync.
+- NEW: T7 demo seed (worklog-recommended next step #1): prisma/seed-pending-verifications.ts — idempotent script that generates two structurally-valid placeholder PDFs (programmatic xref table) into /storage and creates PENDING VerificationDocuments (ID + skill cert) for all "new"-tier seeded workers (Sai Ram, Satish Kumar, Vamsi Krishna — 4 docs).
+- T7 E2E verification: admin queue shows 4 pending docs → Review dialog streams the seeded PDF via signed URL (200 application/pdf) → Approve removes doc from queue → DB confirms Sai Ram trustTier new→id_verified (score 50). 3 pending docs intentionally left in queue for future demos.
+- Final verification: lint 0 errors, 49/49 tests pass, mobile 375px no horizontal overflow (before+after polish), VLM review of board: 8/10 (hierarchy 9/10, color-compliant navy/saffron, no broken elements), mobile VLM: 8/10 (no overflow, readable tabs).
+- Screenshots: qa-r6-01…qa-r6-22 (landing, login, feed, notifications, passport, tracker, verify, admin, employer, board search/urgent/sort/saved flows, mobile, verify queue, review dialog, job detail, final board).
+
+Stage Summary:
+- Bugs fixed: gateway-breaking logout redirect; /jobs 404 (now a full page); /api/jobs pre-filter pagination dropping in-radius jobs.
+- New features: /jobs job board (search/filter/sort/pagination/URL-state/applied-badges/saved-only), Browse nav tab, T7 pending-verification demo seed.
+- Frozen contracts: prisma/schema.prisma, schemas/index.ts, auth.ts, authz.ts, matching/*, trust/*, ai/provider.ts, shared components — all untouched (i18n dicts received additive keys only, per coordinated contract change).
+- Known sandbox limitation (unchanged): dev server + mini-service get reaped between some Bash calls; both restart on demand. WS notifications degrade gracefully to 15s polling.
+- Recommended next: (1) employer-side "Browse workers" board with similar URL-state pattern (candidate search already exists — could add sort/pagination polish); (2) replace remaining hardcoded English strings across worker pages via another coordinated i18n pass; (3) end-to-end employer company-doc verification seed for T7 employer branch (currently only worker docs seeded); (4) swap in-memory rate limiter for a persistent store if this deploys beyond demo.

@@ -24,7 +24,7 @@ import {
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSavedJobs } from "@/hooks/use-saved-jobs";
 import { useSession } from "next-auth/react";
-import { Search, Briefcase, Eye, Sparkles, Zap, RefreshCcw, Filter, RotateCcw, MapPin, Bookmark } from "lucide-react";
+import { Search, Briefcase, Eye, Sparkles, Zap, RefreshCcw, Filter, RotateCcw, MapPin, Bookmark, Compass } from "lucide-react";
 import type { Skill } from "@/lib/schemas";
 import { toast } from "sonner";
 
@@ -217,6 +217,13 @@ export default function WorkerHomePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 h-9 text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/50 transition-colors"
+          >
+            <Compass className="size-3.5" />
+            {t("boardTitle")}
+          </Link>
           <Button
             type="button"
             variant="outline"
@@ -278,6 +285,9 @@ export default function WorkerHomePage() {
             <p className="text-sm font-semibold flex items-center gap-2 mb-3">
               <Sparkles className="size-4 text-accent-foreground" />
               {t("wdTopJobs")}
+              <Link href="/jobs" className="ml-auto text-xs font-medium text-primary hover:underline inline-flex items-center gap-1">
+                {t("boardTitle")} →
+              </Link>
             </p>
             <div className="grid gap-2 sm:grid-cols-3">
               {dashboard.topRecommendedJobs.map(job => (

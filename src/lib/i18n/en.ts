@@ -33,6 +33,7 @@ export const en = {
 
   // ---- nav ----
   navHome: "Home",
+  navBrowse: "Browse",
   navProfile: "Profile",
   navApplications: "Applications",
   navPostJob: "Post Job",
@@ -121,6 +122,28 @@ export const en = {
   feedMatchScore: "Match",
   feedWhy: "Why {score}",
   feedShare: "Share on WhatsApp",
+
+  // ---- job board (/jobs) — round 6 addition ----
+  boardTitle: "Browse all jobs",
+  boardSubtitle: "Every open job across ShramSetu — search, filter, sort.",
+  boardSearchPlaceholder: "Search title, company or skill…",
+  boardSortLabel: "Sort",
+  boardSortMatch: "Best match",
+  boardSortWage: "Highest wage",
+  boardSortNewest: "Newest first",
+  boardCity: "City",
+  boardAnyCity: "Any city",
+  boardResultOne: "{count} job",
+  boardResults: "{count} jobs",
+  boardShowing: "Showing {shown} of {total}",
+  boardLoadMore: "Load more",
+  boardEndOfList: "That's every job for now",
+  boardSavedOnly: "Saved only",
+  boardClearAll: "Clear all",
+  boardSearchEmpty: "Nothing matches",
+  boardSearchEmptyHint: "Try a different word or clear the filters.",
+  boardNoSaved: "No saved jobs yet",
+  boardNoSavedHint: "Tap the bookmark on any job to save it here.",
 
   // ---- job detail ----
   jobApply: "Apply with one tap",
