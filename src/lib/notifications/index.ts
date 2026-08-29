@@ -5,7 +5,7 @@
 import { db } from "@/lib/db";
 import { relayNotification } from "./ws-relay";
 
-export type NotificationType = "application_status" | "new_match" | "endorsement" | "verification";
+export type NotificationType = "application_status" | "new_match" | "endorsement" | "verification" | "rating";
 
 export async function pushNotification(
   userId: string,

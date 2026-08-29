@@ -352,6 +352,16 @@ export const en = {
   ratingRoleOther: "other party",
   ratingDirectionGiven: "given by you",
   ratingDirectionReceived: "received",
+
+  // ---- round 8: Top Rated filter + employer rating chips + rating notifications ----
+  candidatesFilterTopRated: "Top Rated only",
+  candidatesFilterTopRatedHint: "3+ ratings · 4.5★ average",
+  candidatesTopRatedEmpty: "No Top Rated workers match your filters yet. Try widening the distance or clearing other filters.",
+  notifRating: "{name} rated you {score}★",
+  employerRatingAria: "Employer rating: {avg} out of 5 from {count} ratings",
+  employerRatingHighly: "Highly rated employer",
+  boardTopEmployers: "Top employers",
+  candidateRatingAria: "Rated {avg} out of 5 by {count} employers",
 } as const;
 
 export type Dictionary = typeof en;

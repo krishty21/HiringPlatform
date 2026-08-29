@@ -8,7 +8,7 @@ import {
 
 export interface NotificationItem {
   id: string;
-  type: "application_status" | "new_match" | "endorsement" | "verification";
+  type: "application_status" | "new_match" | "endorsement" | "verification" | "rating";
   read: boolean;
   createdAt: string;
   payload: Record<string, unknown>;

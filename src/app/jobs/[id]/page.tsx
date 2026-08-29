@@ -7,6 +7,7 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { WageDisplay } from "@/components/shared/WageDisplay";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
+import { RatingStars } from "@/components/ratings/RatingStars";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
 import {
-  ArrowLeft, MapPin, Briefcase, Users, Share2, Loader2, Check, Zap, Clock, Sparkles,
+  ArrowLeft, MapPin, Briefcase, Users, Share2, Loader2, Check, Zap, Clock, Sparkles, Star,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -30,7 +31,7 @@ interface JobDetail {
   shift: "day" | "night" | "any";
   isUrgent: boolean;
   description: string;
-  employer?: { id: string; companyName: string; city: string; isVerified: boolean };
+  employer?: { id: string; companyName: string; city: string; isVerified: boolean; ratingAvg?: number; ratingCount?: number };
   skills: { skillId: string; required: boolean; skill?: { nameEn: string; nameHi: string; nameTe: string } }[];
   matchScore: number | null;
   distanceKm: number | null;
@@ -105,6 +106,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     ? (lang === "hi" ? job.trade.nameHi : lang === "te" ? job.trade.nameTe : job.trade.nameEn)
     : null;
   const isApplied = applied || !!existingApp;
+  // Round 8: employer reputation
+  const employerRating = job.employer?.ratingCount && job.employer.ratingCount > 0
+    ? { avg: job.employer.ratingAvg ?? 0, count: job.employer.ratingCount }
+    : null;
+  const highlyRatedEmployer = !!employerRating && employerRating.avg >= 4.5 && employerRating.count >= 3;
+  const employerInitials = job.employer?.companyName
+    ?.split(" ").filter(Boolean).map(p => p[0]).slice(0, 2).join("").toUpperCase() ?? "";
 
   return (
     <AppShell>
@@ -233,16 +241,42 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 <>
                   <Separator />
                   <div>
-                    <h2 className="font-semibold text-sm mb-1">{t("jobPostedBy")}</h2>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold">{job.employer.companyName}</p>
-                      {job.employer.isVerified && (
-                        <VerificationBadge status="approved" label={t("feedVerifiedEmployer")} />
-                      )}
-                      <Badge variant="outline" className="text-xs gap-1">
-                        <MapPin className="size-3" />
-                        {job.employer.city}
-                      </Badge>
+                    <h2 className="font-semibold text-sm mb-2">{t("jobPostedBy")}</h2>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span
+                        aria-hidden
+                        className={`size-10 shrink-0 rounded-full grid place-items-center text-xs font-bold ${highlyRatedEmployer ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300" : "bg-primary/10 text-primary"}`}
+                      >
+                        {employerInitials || <Briefcase className="size-4" />}
+                      </span>
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold">{job.employer.companyName}</p>
+                          {job.employer.isVerified && (
+                            <VerificationBadge status="approved" label={t("feedVerifiedEmployer")} />
+                          )}
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <MapPin className="size-3" />
+                            {job.employer.city}
+                          </Badge>
+                        </div>
+                        {employerRating && (
+                          <div
+                            className="flex items-center gap-1.5 text-xs"
+                            aria-label={t("employerRatingAria", { avg: employerRating.avg, count: employerRating.count })}
+                          >
+                            <RatingStars value={employerRating.avg} size="sm" readOnly />
+                            <span className="font-semibold text-amber-700 dark:text-amber-400 tabular-nums">{employerRating.avg.toFixed(1)}</span>
+                            <span className="text-muted-foreground">· {t("ratingSummaryCount", { count: employerRating.count, s: employerRating.count === 1 ? "" : "s" })}</span>
+                            {highlyRatedEmployer && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                <Star className="size-3 fill-amber-400 text-amber-500" aria-hidden />
+                                {t("employerRatingHighly")}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </>

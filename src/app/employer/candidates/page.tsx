@@ -44,6 +44,7 @@ function CandidatesPageBody() {
     if (f.wageMax) p.set("wageMax", f.wageMax);
     if (f.availableToday) p.set("availableToday", "true");
     if (f.language) p.set("language", f.language);
+    if (f.topRated) p.set("topRated", "true");
     if (urgentJobId) p.set("urgentJobId", urgentJobId);
     return p.toString();
   }, [urgentJobId]);
@@ -85,7 +86,7 @@ function CandidatesPageBody() {
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
         <aside className="lg:sticky lg:top-20 lg:self-start">
           <CandidateFilters
             skills={skills}
@@ -101,12 +102,12 @@ function CandidatesPageBody() {
             <EmptyState
               icon={Search}
               title={t("candidatesEmpty")}
-              description="Try widening the distance or removing the experience filter."
+              description={filters.topRated ? t("candidatesTopRatedEmpty") : "Try widening the distance or removing the experience filter."}
             />
           )}
 
           {!loading && results && results.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {results.map(c => <CandidateCard key={c.id} candidate={c} />)}
             </div>
           )}

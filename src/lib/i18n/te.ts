@@ -331,4 +331,14 @@ export const te: Dictionary = {
   ratingRoleOther: "ఇతర పార్టీ",
   ratingDirectionGiven: "మీరు ఇచ్చారు",
   ratingDirectionReceived: "స్వీకరించబడింది",
+
+  // ---- round 8: Top Rated filter + employer rating chips + rating notifications ----
+  candidatesFilterTopRated: "టాప్ రేటెడ్ మాత్రమే",
+  candidatesFilterTopRatedHint: "3+ రేటింగ్‌లు · 4.5★ సగటు",
+  candidatesTopRatedEmpty: "మీ ఫిల్టర్లకు సరిపోయే టాప్ రేటెడ్ వర్కర్‌లు లేరు. దూరాన్ని పెంచండి లేదా ఇతర ఫిల్టర్‌లను తీసివేయండి.",
+  notifRating: "{name} మిమ్మల్ని {score}★ రేట్ చేశారు",
+  employerRatingAria: "యజమాని రేటింగ్: {count} రేటింగ్‌ల నుండి 5లో {avg}",
+  employerRatingHighly: "అధిక రేటింగ్ యజమాని",
+  boardTopEmployers: "టాప్ యజమానులు",
+  candidateRatingAria: "{count} యజమానులచే 5లో {avg} రేట్ చేయబడింది",
 };

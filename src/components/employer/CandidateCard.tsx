@@ -4,9 +4,10 @@ import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
 import { TopRatedBadge } from "@/components/ratings/TopRatedBadge";
+import { RatingStars } from "@/components/ratings/RatingStars";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Zap, Sparkles, ArrowRight } from "lucide-react";
+import { MapPin, Zap, Sparkles, ArrowRight, Star } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
@@ -26,6 +27,9 @@ export interface CandidateCardData {
   topReason: string | null;
   distanceKm: number;
   skills: { skillId: string; proficiency: number; nameEn: string }[];
+  // Round 8: rating from employers (0 / 0 when unrated)
+  ratingAvg?: number;
+  ratingCount?: number;
 }
 
 export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
@@ -34,6 +38,10 @@ export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
     () => candidate.fullName.split(" ").map(p => p[0]).slice(0, 2).join("").toUpperCase(),
     [candidate.fullName],
   );
+  const ratingAvg = candidate.ratingAvg ?? 0;
+  const ratingCount = candidate.ratingCount ?? 0;
+  const hasRating = ratingCount > 0;
+  const prefetchedSummary = hasRating ? { avg: ratingAvg, count: ratingCount } : null;
 
   return (
     <motion.div
@@ -75,7 +83,7 @@ export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
             {/* Trust tier + available today */}
             <div className="flex flex-wrap items-center gap-2">
               <TrustTierBadge tier={candidate.trustTier} score={candidate.trustScore} size="sm" />
-              <TopRatedBadge workerProfileId={candidate.id} />
+              <TopRatedBadge workerProfileId={candidate.id} summary={prefetchedSummary} />
               {candidate.availableToday && (
                 <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 gap-1 text-xs">
                   <Zap className="size-3" />
@@ -87,6 +95,22 @@ export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
                 {candidate.distanceKm.toFixed(1)} {t("km")}
               </Badge>
             </div>
+
+            {/* Worker rating (round 8) — inline stars + avg + count */}
+            {hasRating && (
+              <div
+                className="flex items-center gap-1.5 text-xs"
+                aria-label={t("candidateRatingAria", { avg: ratingAvg, count: ratingCount })}
+                title={t("candidateRatingAria", { avg: ratingAvg, count: ratingCount })}
+              >
+                <RatingStars value={ratingAvg} size="sm" readOnly className="shrink-0" />
+                <span className="font-semibold text-amber-700 dark:text-amber-400 tabular-nums">{ratingAvg.toFixed(1)}</span>
+                <span className="text-muted-foreground">· {t("ratingSummaryCount", { count: ratingCount, s: ratingCount === 1 ? "" : "s" })}</span>
+                {ratingCount >= 3 && ratingAvg >= 4.5 && (
+                  <Star className="size-3 fill-amber-400 text-amber-500 ml-0.5" aria-hidden />
+                )}
+              </div>
+            )}
 
             {/* Skills chips */}
             {candidate.skills.length > 0 && (

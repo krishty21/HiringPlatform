@@ -10,7 +10,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useNotifications, type NotificationItem } from "@/hooks/use-notifications";
-import { Bell, Briefcase, Sparkles, ShieldCheck, FileText, CheckCheck } from "lucide-react";
+import { Bell, Briefcase, Sparkles, ShieldCheck, FileText, CheckCheck, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function NotificationsBell() {
@@ -33,6 +33,12 @@ export function NotificationsBell() {
       router.push(`/applications/${p.applicationId}`);
     } else if (item.type === "new_match" && typeof p.jobId === "string") {
       router.push(`/jobs/${p.jobId}`);
+    } else if (item.type === "rating" && typeof p.candidateId === "string") {
+      // Employer ratee → the rated worker's candidate page
+      router.push(`/employer/candidates/${p.candidateId}`);
+    } else if (item.type === "rating" && typeof p.applicationId === "string") {
+      // Worker ratee → the rated application
+      router.push(`/applications/${p.applicationId}`);
     } else {
       router.push("/applications");
     }
@@ -164,6 +170,8 @@ function notificationText(n: NotificationItem, t: (k: any, v?: Record<string, st
       return t("notifEndorsement", { employer: String(p.companyName ?? ""), skill: String(p.skill ?? "") });
     case "verification":
       return t("notifVerification", { docType: String(p.docType ?? ""), status: String(p.status ?? "") });
+    case "rating":
+      return t("notifRating", { name: String(p.raterName ?? ""), score: Number(p.score ?? 0) });
     default:
       return "—";
   }
@@ -175,6 +183,7 @@ function iconForType(type: NotificationItem["type"]) {
     case "new_match": return Sparkles;
     case "endorsement": return ShieldCheck;
     case "verification": return FileText;
+    case "rating": return Star;
     default: return Bell;
   }
 }

@@ -9,7 +9,7 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Filter, RotateCcw } from "lucide-react";
+import { Filter, RotateCcw, Star } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import type { Skill } from "@/lib/schemas";
 
@@ -23,6 +23,7 @@ export interface CandidateFiltersValue {
   wageMax: string;
   availableToday: boolean;
   language: "" | "en" | "hi" | "te";
+  topRated: boolean;
 }
 
 export const DEFAULT_FILTERS: CandidateFiltersValue = {
@@ -35,6 +36,7 @@ export const DEFAULT_FILTERS: CandidateFiltersValue = {
   wageMax: "",
   availableToday: false,
   language: "",
+  topRated: false,
 };
 
 export function CandidateFilters({
@@ -189,6 +191,23 @@ export function CandidateFilters({
             id="availToday"
             checked={value.availableToday}
             onCheckedChange={(v) => update("availableToday", v)}
+          />
+        </div>
+
+        {/* Top Rated toggle (round 8) — workers with ≥3 ratings and avg ≥4.5 */}
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-300/40 bg-amber-50/70 px-3 py-2.5">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="topRatedOnly" className="text-sm font-medium inline-flex items-center gap-1.5">
+              <Star className="size-3.5 fill-amber-400 text-amber-500" aria-hidden />
+              {t("candidatesFilterTopRated")}
+            </Label>
+            <span className="text-[10px] text-muted-foreground">{t("candidatesFilterTopRatedHint")}</span>
+          </div>
+          <Switch
+            id="topRatedOnly"
+            checked={value.topRated}
+            onCheckedChange={(v) => update("topRated", v)}
+            className="data-[state=checked]:bg-amber-500"
           />
         </div>
       </CardContent>

@@ -10,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser, errorResponse, HTTPError } from "@/lib/authz";
+import { pushNotification } from "@/lib/notifications";
 import {
   CreateRatingBody,
   canRate,
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
       where: { id: applicationId },
       include: {
         job: { select: { employerId: true, employer: { select: { userId: true, companyName: true } } } },
-        worker: { select: { userId: true, fullName: true } },
+        worker: { select: { id: true, userId: true, fullName: true } },
       },
     });
     if (!app) throw new HTTPError(404, "NOT_FOUND");
@@ -86,6 +87,24 @@ export async function POST(req: Request) {
         createdAt: true,
       },
     });
+
+    // Round 8: notify the ratee in-app (+ WS relay when the mini-service is up).
+    // Fire-and-forget — a notification failure must never fail the rating itself.
+    // Payload routing: worker ratee → application detail; employer ratee → candidate page.
+    const raterName = caller.role === "worker"
+      ? app.worker.fullName
+      : app.job.employer.companyName;
+    try {
+      await pushNotification(rateeId, "rating", {
+        raterName,
+        raterRole: caller.role,
+        score,
+        applicationId,
+        ...(caller.role === "worker" ? { candidateId: app.worker.id } : {}),
+      });
+    } catch {
+      // non-critical
+    }
 
     return NextResponse.json({
       ...rating,

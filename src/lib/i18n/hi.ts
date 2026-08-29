@@ -332,4 +332,14 @@ export const hi: Dictionary = {
   ratingRoleOther: "दूसरी पार्टी",
   ratingDirectionGiven: "आपने दी",
   ratingDirectionReceived: "प्राप्त",
+
+  // ---- round 8: Top Rated filter + employer rating chips + rating notifications ----
+  candidatesFilterTopRated: "केवल टॉप रेटेड",
+  candidatesFilterTopRatedHint: "3+ रेटिंग · 4.5★ औसत",
+  candidatesTopRatedEmpty: "आपके फ़िल्टरों से मेल खाता कोई टॉप रेटेड वर्कर नहीं है। दूरी बढ़ाएँ या अन्य फ़िल्टर हटाएँ।",
+  notifRating: "{name} ने आपको {score}★ दिया",
+  employerRatingAria: "नियोक्ता रेटिंग: {count} रेटिंगों से 5 में से {avg}",
+  employerRatingHighly: "उच्च रेटेड नियोक्ता",
+  boardTopEmployers: "टॉप नियोक्ता",
+  candidateRatingAria: "{count} नियोक्ताओं द्वारा 5 में से {avg} रेटेड",
 };

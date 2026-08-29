@@ -12,12 +12,16 @@ interface TopRatedBadgeProps {
   minAvg?: number;
   // Min count to qualify (default 3)
   minCount?: number;
+  // Round 8: prefetched summary (avg + count) from the search API — skips the
+  // lazy fetch entirely and keeps cards in sync with server-side filtering.
+  summary?: { avg: number; count: number } | null;
 }
 
 /**
  * "Top Rated" badge — appears only when a worker has at least `minCount`
  * ratings (default 3) with avg ≥ `minAvg` (default 4.5). Lazy-fetches the
- * worker's rating summary via the public /api/ratings/worker endpoint.
+ * worker's rating summary via the public /api/ratings/worker endpoint unless
+ * a `summary` prop is provided (search results already carry it).
  */
 export function TopRatedBadge({
   workerProfileId,
@@ -25,28 +29,33 @@ export function TopRatedBadge({
   size = "sm",
   minAvg = 4.5,
   minCount = 3,
+  summary: prefetched,
 }: TopRatedBadgeProps) {
-  const [summary, setSummary] = useState<{ avg: number; count: number } | null>(null);
+  const [fetched, setFetched] = useState<{ avg: number; count: number } | null>(null);
 
   const load = useCallback(async () => {
+    // Prefetched summary wins — no network needed.
+    if (prefetched !== undefined) return;
     try {
       const res = await fetch(`/api/ratings/worker?userId=${encodeURIComponent(workerProfileId)}`, { cache: "no-store" });
       if (res.ok) {
         const d = await res.json();
-        setSummary({ avg: d.avg, count: d.count });
+        setFetched({ avg: d.avg, count: d.count });
       } else {
-        setSummary(null);
+        setFetched(null);
       }
     } catch {
-      setSummary(null);
+      setFetched(null);
     }
-  }, [workerProfileId]);
+  }, [workerProfileId, prefetched]);
 
   useEffect(() => {
+    if (prefetched !== undefined) return;
     const id = setTimeout(load, 0);
     return () => clearTimeout(id);
-  }, [load]);
+  }, [load, prefetched]);
 
+  const summary = prefetched !== undefined ? prefetched : fetched;
   if (!summary || summary.count < minCount || summary.avg < minAvg) return null;
 
   return (

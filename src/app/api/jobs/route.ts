@@ -57,11 +57,34 @@ export async function GET(req: Request) {
       where,
       include: {
         trade: true,
-        employer: { select: { id: true, companyName: true, city: true, isVerified: true } },
+        employer: { select: { id: true, userId: true, companyName: true, city: true, isVerified: true } },
         skills: { include: { skill: true } },
       },
       orderBy: [{ isUrgent: "desc" }, { createdAt: "desc" }],
     });
+
+    // Round 8: employer rating summaries (worker→employer ratings, ratee = employer
+    // userId). One query + in-memory grouping — no N+1. Attached to every job's
+    // employer object so JobCards / job detail can render reputation chips.
+    const employerUserIds = Array.from(new Set(jobs.map(j => j.employer.userId)));
+    const employerRatingRows = employerUserIds.length > 0
+      ? await db.rating.findMany({
+          where: { rateeId: { in: employerUserIds } },
+          select: { rateeId: true, score: true },
+        })
+      : [];
+    const employerRatings = new Map<string, { sum: number; count: number }>();
+    for (const r of employerRatingRows) {
+      const agg = employerRatings.get(r.rateeId) ?? { sum: 0, count: 0 };
+      agg.sum += r.score;
+      agg.count += 1;
+      employerRatings.set(r.rateeId, agg);
+    }
+    const employerRatingOf = (userId: string) => {
+      const agg = employerRatings.get(userId);
+      if (!agg || agg.count === 0) return { ratingAvg: 0, ratingCount: 0 };
+      return { ratingAvg: Math.round((agg.sum / agg.count) * 10) / 10, ratingCount: agg.count };
+    };
 
     // Cached match scores for this worker — one query for the whole set.
     const cachedScores = new Map<string, number>();
@@ -122,7 +145,13 @@ export async function GET(req: Request) {
         status: j.status,
         description: j.description,
         viewsCount: j.viewsCount,
-        employer: j.employer,
+        employer: {
+          id: j.employer.id,
+          companyName: j.employer.companyName,
+          city: j.employer.city,
+          isVerified: j.employer.isVerified,
+          ...employerRatingOf(j.employer.userId),
+        },
         skills: j.skills.map(s => ({ skillId: s.skillId, required: s.required, skill: s.skill })),
         matchScore: score,
         distanceKm: dist == null ? null : Math.round(dist * 10) / 10,
@@ -131,10 +160,15 @@ export async function GET(req: Request) {
       };
     }));
 
-    // Filter by radius/distance/availableOnly
+    // Filter by radius/distance/availableOnly.
+    // Round-8 bug fix: the distanceKm filter only applies when the caller actually
+    // has a location context (worker with a profile, or explicit lat/lng query).
+    // Admin/employer callers have no location → job.distanceKm is null for every
+    // row → the old `j.distanceKm == null` clause filtered the board to 0 jobs.
+    const hasLocationCtx = lat != null;
     const filtered = enriched.filter(j => {
-      if (parsed.distanceKm != null && (j.distanceKm == null || j.distanceKm > parsed.distanceKm)) return false;
-      if (!j.inRadius && parsed.distanceKm == null && lat != null) return false;
+      if (parsed.distanceKm != null && hasLocationCtx && (j.distanceKm == null || j.distanceKm > parsed.distanceKm)) return false;
+      if (!j.inRadius && parsed.distanceKm == null && hasLocationCtx) return false;
       return true;
     });
 

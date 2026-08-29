@@ -3,6 +3,9 @@
 //   - filters: trade, experience, distance, trust tier, wage, available-today, language
 //   - results ranked by match score desc
 //   - when urgentJobId is provided, workers available-today are sorted first (EMP-05)
+// Round 8 (additive): `topRated=true` keeps only workers with ≥3 ratings and avg ≥4.5
+// (same thresholds as the TopRatedBadge). Each row is annotated with ratingAvg +
+// ratingCount so cards can render inline stars without N+1 fetches.
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireEmployer, errorResponse } from "@/lib/authz";
@@ -33,6 +36,9 @@ interface WorkerRow {
   topReason: string | null;
   distanceKm: number;
   profileViews: number;
+  // Round 8: worker's rating from employers (0 when unrated)
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export async function GET(req: Request) {
@@ -41,6 +47,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const params = Object.fromEntries(url.searchParams.entries());
     const parsed = SearchCandidatesQuery.parse(params);
+    // Round 8: `topRated` is parsed outside the frozen SearchCandidatesQuery schema
+    // (coordinated additive extension — frozen schemas/index.ts stays untouched).
+    const topRatedOnly = url.searchParams.get("topRated") === "true";
 
     // Employer city — used for distance computation when caller doesn't pass lat/lng
     const employer = await db.employerProfile.findUnique({
@@ -121,6 +130,26 @@ export async function GET(req: Request) {
       take: 100,
     });
 
+    // Round 8: one query for every employer→worker rating, grouped per ratee (worker userId).
+    // Mirrors TopRatedBadge thresholds (minCount 3, minAvg 4.5).
+    const TOP_RATED_MIN_AVG = 4.5;
+    const TOP_RATED_MIN_COUNT = 3;
+    const ratingRows = await db.rating.findMany({
+      select: { rateeId: true, score: true },
+    });
+    const ratingsByRatee = new Map<string, { sum: number; count: number }>();
+    for (const r of ratingRows) {
+      const agg = ratingsByRatee.get(r.rateeId) ?? { sum: 0, count: 0 };
+      agg.sum += r.score;
+      agg.count += 1;
+      ratingsByRatee.set(r.rateeId, agg);
+    }
+    const ratingOf = (userId: string) => {
+      const agg = ratingsByRatee.get(userId);
+      if (!agg || agg.count === 0) return { avg: 0, count: 0 };
+      return { avg: Math.round((agg.sum / agg.count) * 10) / 10, count: agg.count };
+    };
+
     const enriched: WorkerRow[] = workers.map((w) => {
       const dist = haversineKm(w.lat, w.lng, scoringJob!.lat, scoringJob!.lng);
       const skillRows = w.skills.map(s => ({
@@ -151,6 +180,7 @@ export async function GET(req: Request) {
       });
       let languagesArr: string[] = [];
       try { languagesArr = JSON.parse(w.languages) as string[]; } catch {}
+      const rating = ratingOf(w.userId);
       return {
         id: w.id,
         fullName: w.fullName,
@@ -171,12 +201,15 @@ export async function GET(req: Request) {
         topReason: reasons[0] ?? null,
         distanceKm: Math.round(dist * 10) / 10,
         profileViews: w.profileViews,
+        ratingAvg: rating.avg,
+        ratingCount: rating.count,
       };
     });
 
-    // Filter by distance radius when requested
+    // Filter by distance radius when requested + Top Rated (round 8)
     const filtered = enriched.filter(w => {
       if (parsed.distanceKm != null && w.distanceKm > parsed.distanceKm) return false;
+      if (topRatedOnly && !(w.ratingCount >= TOP_RATED_MIN_COUNT && w.ratingAvg >= TOP_RATED_MIN_AVG)) return false;
       return true;
     });
 
@@ -193,6 +226,7 @@ export async function GET(req: Request) {
       items: filtered,
       total: filtered.length,
       urgentJobId: parsed.urgentJobId ?? null,
+      topRated: topRatedOnly,
     });
   } catch (e) {
     return errorResponse(e);

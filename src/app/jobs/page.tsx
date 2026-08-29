@@ -20,7 +20,7 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
   Search, X, Zap, Bookmark, ArrowDownWideNarrow, MapPin, Briefcase,
-  ChevronDown, Loader2, Compass, SlidersHorizontal,
+  ChevronDown, Loader2, Compass, SlidersHorizontal, Star,
 } from "lucide-react";
 import type { Skill } from "@/lib/schemas";
 import { toast } from "sonner";
@@ -54,6 +54,7 @@ function JobBoard() {
   const [sort, setSort] = useState<SortKey>((search.get("sort") as SortKey) ?? "match");
   const [urgentOnly, setUrgentOnly] = useState(search.get("urgent") === "1");
   const [savedOnly, setSavedOnly] = useState(search.get("saved") === "1");
+  const [topEmployersOnly, setTopEmployersOnly] = useState(search.get("top") === "1");
 
   // ---- data ----
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -71,9 +72,12 @@ function JobBoard() {
       .catch(() => setSkills([]));
   }, []);
 
-  // Worker profile existence (redirect to onboarding when missing)
+  // Worker profile existence (redirect to onboarding when missing).
+  // Non-workers (employer/admin) can browse the board too — no profile needed.
   useEffect(() => {
     if (status !== "authenticated") return;
+    const role = (session?.user as { role?: string } | undefined)?.role;
+    if (role && role !== "worker") { setProfileExists(true); return; }
     fetch("/api/worker/profile", { cache: "no-store" })
       .then(r => {
         if (r.status === 403 || r.status === 404) { setProfileExists(false); return null; }
@@ -82,7 +86,7 @@ function JobBoard() {
       })
       .then(data => { if (data !== null) setProfileExists(true); })
       .catch(() => setProfileExists(false));
-  }, [status]);
+  }, [status, session]);
 
   useEffect(() => {
     if (profileExists === false && status === "authenticated") {
@@ -169,12 +173,13 @@ function JobBoard() {
     if (sort !== "match") p.set("sort", sort);
     if (urgentOnly) p.set("urgent", "1");
     if (savedOnly) p.set("saved", "1");
+    if (topEmployersOnly) p.set("top", "1");
     const qs = p.toString();
     const target = qs ? `/jobs?${qs}` : "/jobs";
     if (window.location.pathname + window.location.search !== target) {
       router.replace(target, { scroll: false });
     }
-  }, [query, tradeId, city, shift, sort, urgentOnly, savedOnly, router]);
+  }, [query, tradeId, city, shift, sort, urgentOnly, savedOnly, topEmployersOnly, router]);
 
   const tradeSkills = useMemo(() => skills.filter(s => TRADE_NAMES.has(s.nameEn)), [skills]);
   const tradeName = useMemo(
@@ -188,7 +193,7 @@ function JobBoard() {
     return Array.from(new Set(jobs.map(j => j.city))).sort();
   }, [jobs]);
 
-  // ---- client-side pipeline: text search → city → saved → sort ----
+  // ---- client-side pipeline: text search → city → saved → top employers → sort ----
   const visible = useMemo(() => {
     if (!jobs) return null;
     const q = query.trim().toLowerCase();
@@ -205,6 +210,11 @@ function JobBoard() {
       }
       if (city && j.city !== city) return false;
       if (savedOnly && !savedIds.has(j.id)) return false;
+      // Round 8: "Top employers" — jobs from employers rated ≥4.5 by 3+ workers
+      if (topEmployersOnly) {
+        const r = j.employer;
+        if (!r?.ratingAvg || !r.ratingCount || r.ratingAvg < 4.5 || r.ratingCount < 3) return false;
+      }
       return true;
     });
     out = [...out].sort((a, b) => {
@@ -213,7 +223,7 @@ function JobBoard() {
       return +new Date(b.createdAt) - +new Date(a.createdAt);
     });
     return out;
-  }, [jobs, query, city, savedOnly, savedIds, sort]);
+  }, [jobs, query, city, savedOnly, savedIds, sort, topEmployersOnly]);
 
   // ---- active filter chips ----
   interface Chip { key: string; label: string; clear: () => void }
@@ -225,8 +235,9 @@ function JobBoard() {
     if (shift !== "any") out.push({ key: "shift", label: shift === "day" ? "Day" : "Night", clear: () => setShift("any") });
     if (urgentOnly) out.push({ key: "urgent", label: t("feedUrgent"), clear: () => setUrgentOnly(false) });
     if (savedOnly) out.push({ key: "saved", label: t("boardSavedOnly"), clear: () => setSavedOnly(false) });
+    if (topEmployersOnly) out.push({ key: "top", label: t("boardTopEmployers"), clear: () => setTopEmployersOnly(false) });
     return out;
-  }, [query, tradeName, city, shift, urgentOnly, savedOnly, t]);
+  }, [query, tradeName, city, shift, urgentOnly, savedOnly, topEmployersOnly, t]);
 
   function clearAll() {
     setQuery("");
@@ -235,6 +246,7 @@ function JobBoard() {
     setShift("any");
     setUrgentOnly(false);
     setSavedOnly(false);
+    setTopEmployersOnly(false);
     // keep sort — it's a view preference, not a filter
   }
 
@@ -374,6 +386,14 @@ function JobBoard() {
               <Switch checked={savedOnly} onCheckedChange={setSavedOnly} className="scale-75" aria-label={t("boardSavedOnly")} />
             </label>
 
+            <label
+              className={`inline-flex items-center gap-2 h-9 rounded-full border px-3 cursor-pointer transition-colors ${topEmployersOnly ? "border-amber-400 bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300" : "border-border bg-card text-muted-foreground hover:border-amber-400/60"}`}
+            >
+              <Star className={`size-3.5 ${topEmployersOnly ? "fill-amber-500 text-amber-500" : ""}`} />
+              <span className="text-xs font-medium">{t("boardTopEmployers")}</span>
+              <Switch checked={topEmployersOnly} onCheckedChange={setTopEmployersOnly} className="scale-75 data-[state=checked]:bg-amber-500" aria-label={t("boardTopEmployers")} />
+            </label>
+
             {hasActiveFilters && (
               <Button
                 type="button"
@@ -451,7 +471,7 @@ function JobBoard() {
 
         {visible !== null && visible.length > 0 && (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((job, i) => (
                 <motion.div
                   key={job.id}

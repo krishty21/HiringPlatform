@@ -864,3 +864,64 @@ Known limitations:
 - The dev server + WS mini-service get reaped by the sandbox between Bash tool calls. /tmp/ensure-dev.sh restarts the dev server on demand; the WS feature degrades gracefully to 15s polling when the mini-service is down.
 - Ratings do NOT feed into the trust score (frozen computeTrustScore doesn't include them) — they're displayed as a separate amber-themed signal. Production swap = coordinated contract change to add +5 max ratingBonus to computeTrustScore (similar to embeddingBonus pattern).
 - The Rating schema has no @@unique constraint on (applicationId, raterId). Idempotency is enforced at the API layer via raterHasRated precheck. A schema migration would add `@@unique([applicationId, raterId])` for DB-level protection (left as future work since prisma/schema.prisma is frozen).
+
+---
+Task ID: 8 (orchestrator round)
+Agent: Orchestrator (QA sweep + trust-loop features: employer reputation, Top Rated discovery, rating notifications + bug fixes)
+
+Task: Assess project, QA via agent-browser, then continue development per worklog round-7 recommended next steps: (1) Top Rated filter on employer candidate search, (3) employer avg-rating chips on worker-facing job cards, (4) rating notifications. Plus styling polish and any bugs found.
+
+Work Log:
+- Read worklog + STATUS + ROADMAP tails: rounds 0-7 all done and stable. Round-7 recommended next: Top Rated search filter, employer rating chips on job cards, rating notifications, employer-side browse polish.
+- Health checks: dev3000 200, gateway81 200, ws3003 up, lint 0 errors, 49/49 tests pass.
+- agent-browser QA sweep (11 screenshots qa-r8-01..11): landing, login ×3 roles, worker feed/jobs/applications/passport/verify, employer dashboard/candidates/pipeline, candidate detail (Top Rated badge confirmed on Ravi), admin + verifications. NO bugs found. Mobile 375px sweep: 10 routes clean initially.
+- Console + page errors: none.
+
+NEW FEATURE A — Employer reputation everywhere (round-7 rec #3):
+- `/api/jobs` GET (not frozen): employer select now includes userId; one extra Rating query (rateeId IN employerUserIds) grouped in-memory → every job's employer object carries `ratingAvg` + `ratingCount`. No N+1.
+- `JobCard.tsx` employer row redesigned: company initials avatar (navy; amber when highly rated), company name, ShieldCheck verified icon (was the text VerificationBadge), and an amber rating chip (filled star + avg + (count)) on the right. "Highly rated" = avg ≥4.5 && count ≥3 → stronger amber chip + amber card border + amber top gradient hairline. Card also gained: top gradient hairline (saffron→rose for urgent / amber for highly-rated / navy-subtle otherwise), hover shadow-lg + -translate-y-0.5 lift.
+- `/jobs/[id]` detail "Posted by" section upgraded: 10px avatar, verified + city badges, full RatingStars row + avg + count + "Highly rated employer" pill when qualified.
+- `/jobs` board: new "Top employers" toggle chip (amber, Star icon, ?top=1 URL state) filtering to jobs from employers with avg ≥4.5 && count ≥3; added to chips row + clearAll + URL sync.
+
+NEW FEATURE B — Top Rated worker filter on candidate search (round-7 rec #1):
+- `/api/candidates/search` GET (not frozen): parses `topRated=true` OUTSIDE the frozen SearchCandidatesQuery schema (route-level additive extension); one Rating query grouped per ratee → rows annotated with `ratingAvg`/`ratingCount`; filter keeps only count ≥3 && avg ≥4.5 (same thresholds as TopRatedBadge).
+- `CandidateFilters.tsx`: new amber "Top Rated only" toggle with hint "3+ ratings · 4.5★ average" (below the emerald available-today toggle).
+- `employer/candidates/page.tsx`: passes topRated param; Top-Rated-specific empty state copy when filter yields 0.
+- `CandidateCard.tsx`: inline rating row (RatingStars sm + amber avg + count + star) when ratingCount > 0; prefetched summary passed to TopRatedBadge.
+- `TopRatedBadge.tsx`: optional `summary` prop — when provided (search results), skips the lazy /api/ratings/worker fetch entirely (kills the N+1 per-card fetch); unchanged behavior otherwise.
+
+NEW FEATURE C — Rating notifications (round-7 rec #4):
+- `POST /api/ratings` now fire-and-forgets pushNotification to the ratee with type "rating" + payload {raterName, raterRole, score, applicationId, candidateId?} (candidateId only when rater is a worker → employer ratee deep-links to the candidate page; worker ratee → application detail).
+- `src/lib/notifications/index.ts` (not in frozen list): NotificationType union + "rating".
+- `use-notifications.ts`: NotificationItem type + "rating".
+- `NotificationsBell.tsx`: "rating" case → t("notifRating", {name, score}) ("X rated you 5★") + Star icon + routing via payload (candidateId → /employer/candidates/[id], else /applications/[id]).
+- E2E verified: deleted Priya→Ravi rating in DB → re-POSTed via the real API as Priya (201) → logged in as Ravi → bell shows unread "Sri Venkateswara Manufacturing rated you 5★" with Star icon. WS relay fires via the existing pushNotification path.
+
+SEED — `prisma/seed-employer-ratings.ts` (idempotent):
+- Fills BOTH directions on every HIRED application lacking them (deterministic scores 4/5 by pair hash + templated comments).
+- Result: Priya 4.7 avg / 3 ratings (Highly rated ✓), Krishna Engineering 5.0 / 3 (✓), Coastal Logistics 5.0 / 2; every hired worker has a rating summary.
+
+i18n: 8 additive keys × 3 languages (24 new translations; existing keys untouched): candidatesFilterTopRated, candidatesFilterTopRatedHint, candidatesTopRatedEmpty, notifRating, employerRatingAria, employerRatingHighly, boardTopEmployers, candidateRatingAria.
+
+BUG FIXES (2 real bugs found during QA):
+1. Empty /jobs board for admin/employer (pre-existing since round 6): the board's serverQuery always sends distanceKm=200, but for non-worker callers job.distanceKm is null (no location context) → the `j.distanceKm == null` filter clause dropped every job → 0 jobs. Fixed in /api/jobs GET: distance/radius filters only apply when the caller has location context (lat != null). Also fixed the /jobs page: non-worker roles now short-circuit profileExists=true so the board loads for employer/admin too.
+2. Mobile 375px horizontal overflow from implicit grid auto-tracks (pre-existing latent + aggravated by new chips): grids without explicit mobile columns (`grid gap-3 sm:grid-cols-2 xl:grid-cols-3` etc.) size their single implicit auto track to content max-content → cards could exceed the viewport. Fixed by adding `grid-cols-1` (minmax(0,1fr)) on: /jobs results grid, /home feed grid, /employer/candidates layout grid + results grid. Post-fix mobile sweep: 13 routes ALL 375/375 clean.
+
+QA VERIFICATION (agent-browser, 16 new screenshots qa-r8-12..27):
+- /api/jobs returns employer ratingAvg/ratingCount (verified as Priya + admin): Krishna 5.0/3, Sri Venkateswara 4.7/3, Coastal 5.0/2.
+- /api/candidates/search?topRated=true → exactly Ravi Kumar (5.0/3) of 20; topRated=true&distanceKm=200 → 1; at default 50km Ravi (93.4km away) correctly excluded with Top-Rated-specific empty state; slider End-key to 200km → Ravi visible with Top Rated badge + "5.0 · 3 ratings" inline stars.
+- /jobs?top=1 → 8 jobs, all from highly-rated employers; active chip + Clear all work.
+- Job detail (Krishna job): "Posted by" shows KE avatar, Verified employer, Bhimavaram, "5.0 · 3 ratings", "Highly rated employer" pill.
+- Rating notification flow E2E (see Feature C).
+- Mobile sweeps before/after fixes; final: /, /home, /jobs, /applications, /profile, /verify, /employer/dashboard, /employer/candidates, /employer/pipeline, /employer/post, /employer/candidates/[id], /admin, /admin/verifications → all 375/375.
+- Dev server got reaped twice (known sandbox limitation); /tmp/ensure-dev.sh restarted it both times.
+
+Stage Summary:
+- Features: employer rating chips on ALL worker-facing job surfaces (feed, board, detail) + "Top employers" board filter + Top Rated candidate search filter (server-side) + inline candidate rating stars + prefetched TopRatedBadge (no N+1) + rating notifications with Star icon + deep links + employer-ratings seed.
+- Bugs fixed: empty /jobs board for admin/employer (API distance filter + page profileExists gate); mobile grid-track overflows on /jobs, /home, /employer/candidates (grid-cols-1 fixes).
+- Files touched (17): api/candidates/search/route.ts, api/jobs/route.ts, api/ratings/route.ts, employer/candidates/page.tsx, home/page.tsx, jobs/[id]/page.tsx, jobs/page.tsx, components/employer/CandidateCard.tsx, components/employer/CandidateFilters.tsx, components/ratings/TopRatedBadge.tsx, components/worker/JobCard.tsx, components/worker/NotificationsBell.tsx, hooks/use-notifications.ts, lib/notifications/index.ts, lib/i18n/{en,hi,te}.ts (additive keys only), + new prisma/seed-employer-ratings.ts.
+- Frozen contracts: prisma/schema.prisma, schemas/index.ts, auth.ts, authz.ts, matching/*, trust/recompute.ts, ai/provider.ts, components/shared/*, globals.css — all untouched (git diff verified). i18n dictionaries received 8 additive keys per language (established rounds-6/7 coordinated pattern); "rating" added to the non-frozen NotificationType union; the DB `type` column is a plain string so no schema change.
+- Lint: 0 errors. Tests: 49/49 (60 expect). Mobile: 13 routes clean.
+- Evidence: download/qa-r8-01..27 (27 screenshots).
+- Known limitations (unchanged): dev server + WS mini-service reaped between some Bash calls (ensure-dev.sh restarts; WS degrades to 15s polling). Ratings still don't feed computeTrustScore (frozen) — displayed as a separate signal.
+- Recommended next: (1) show avg-rating column + filter in employer pipeline Kanban or candidate detail is done — next: surface employer rating summary on the employer dashboard ("Your reputation: 4.7★ from workers") with a nudge to collect more ratings; (2) i18n completion pass for ~30 hardcoded legacy strings (R14) — the only P0 roadmap item left; (3) employer company-doc verification seed for T7 employer branch; (4) persist rate limiter (Upstash) beyond demo; (5) optional: rating-based sort option on candidate search ("Highest rated first").
