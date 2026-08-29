@@ -52,3 +52,20 @@ prompt
 server.log
 # Skills directory
 /skills/
+# Database files
+/db/*.db
+/db/*.db-journal
+
+# Archives
+*.tar
+
+# Unrequired project files
+*.md
+.zscripts/
+agent-ctx/
+examples/
+docs/screenshots/
+download/
+tool-results/
+upload/
+
