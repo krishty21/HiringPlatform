@@ -7,7 +7,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireEmployer, errorResponse } from "@/lib/authz";
 
-// SQLite has no julianday in Prisma client; use queryRaw for time-to-hire AVG.
 type TTHRow = { h: number | null };
 
 export async function GET() {
@@ -15,18 +14,16 @@ export async function GET() {
     const { profile } = await requireEmployer();
 
     // ---- 1. Time-to-hire (avg hours from appliedAt → hiredAt over hired apps for caller's jobs)
-    // Prisma + SQLite stores DateTime as INTEGER milliseconds (Unix epoch ms).
-    // Direct subtraction (hiredAt - appliedAt) / 3600000.0 yields hours.
-    // Use Prisma's tagged-template $queryRaw so the parameter is bound safely.
+    // PostgreSQL: use EXTRACT(EPOCH ...) to convert interval to seconds, divide by 3600 for hours.
     const tthRows = await db.$queryRaw<TTHRow[]>`
-      SELECT AVG((hiredAt - appliedAt) / 3600000.0) AS h
-      FROM Application
+      SELECT AVG(EXTRACT(EPOCH FROM ("hiredAt" - "appliedAt")) / 3600.0) AS h
+      FROM "Application"
       WHERE status = 'hired'
-        AND jobId IN (SELECT id FROM Job WHERE employerId = ${profile.id})`;
+        AND "jobId" IN (SELECT id FROM "Job" WHERE "employerId" = ${profile.id})`;
     const rawH = tthRows[0]?.h;
     const timeToHireHours =
-      typeof rawH === "number" && Number.isFinite(rawH)
-        ? Math.round(rawH * 10) / 10 // 1 decimal place
+      rawH != null && Number.isFinite(Number(rawH))
+        ? Math.round(Number(rawH) * 10) / 10
         : null;
 
     // ---- 2. Active jobs (status=open AND owned by caller)
