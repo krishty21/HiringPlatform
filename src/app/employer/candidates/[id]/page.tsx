@@ -1,4 +1,15 @@
 "use client";
+// /employer/candidates/[id] — Master Prompt §29: candidate profile as PROFESSIONAL DOSSIER.
+// Primary hierarchy: 1. Identity 2. Verification 3. Skills 4. Experience
+//   5. Availability 6. Wage expectation 7. Location 8. Match explanation
+//   9. Reputation 10. Actions.
+// Employer should answer "Should I shortlist this person?" in seconds.
+//
+// Slop removed: motion entrance on main + side rail, amber Star proficiency chips,
+//   emerald available-today Badge, emerald/rose endorsements card backgrounds,
+//   gradient amber rating-prompt card.
+// Added: passport-card with passport-stamp (verified worker), border-t sectioned dl
+//   dossier layout, status-dot primitives, surface-inset for side-rail panels.
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/shared/AppShell";
@@ -7,24 +18,24 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
 import { EndorsementModal } from "@/components/employer/EndorsementModal";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Briefcase, Star, Languages, Eye, Zap } from "lucide-react";
+import {
+  ArrowLeft, MapPin, Briefcase, Eye, Clock, IndianRupee, Award,
+  ShieldCheck, FileText, ChevronRight, ArrowRight,
+} from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { RatingDialog } from "@/components/ratings/RatingDialog";
 import { ApplicationRatingsPanel } from "@/components/ratings/ApplicationRatingsPanel";
 import { RatingSummary } from "@/components/ratings/RatingSummary";
 import { TopRatedBadge } from "@/components/ratings/TopRatedBadge";
 import type { Skill } from "@/lib/schemas";
+import { cn } from "@/lib/utils";
 
 interface CandidateDetail {
   id: string;
@@ -124,186 +135,277 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const initials = candidate.fullName.split(" ").map(p => p[0]).slice(0, 2).join("").toUpperCase();
+  const isVerified = candidate.trustTier === "skill_verified" || candidate.trustTier === "top_pro";
 
   return (
     <AppShell>
-      <div className="flex flex-col gap-4">
-        <Link href="/employer/candidates" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
-          <ArrowLeft className="size-4" />
-          {t("back")}
+      <main className="flex flex-col gap-4">
+        <Link
+          href="/employer/candidates"
+          className="inline-flex items-center gap-1 text-meta text-ink-subtle hover:text-ink w-fit"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          {t("candidatesBack")}
         </Link>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          {/* Skill Passport — left/main */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="h-full"
-          >
-          <Card className="passport-card h-full">
-            <CardContent className="p-6 flex flex-col gap-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="size-16 border-2 border-primary/30">
-                  <AvatarFallback className="text-lg font-bold bg-primary/5 text-primary">{initials}</AvatarFallback>
+          {/* DOSSIER — left/main */}
+          <article className="passport-card rounded-md h-full" aria-label={t("candidatesDossierAria")}>
+            <div className="p-6 flex flex-col gap-0">
+              {/* 1. Identity — border-b sectioned */}
+              <header className="flex items-start gap-4 border-b border-border pb-4">
+                <Avatar className="size-16 border border-border">
+                  <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <div>
-                      <h2 className="text-xl font-bold tracking-tight">{candidate.fullName}</h2>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                        <Briefcase className="size-3.5" />
-                        {candidate.tradeName ?? "—"} · {candidate.yearsExp} {t("passportYears")}
-                      </p>
-                    </div>
-                    <TrustTierBadge tier={candidate.trustTier} score={candidate.trustScore} size="lg" />
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-meta uppercase tracking-wide text-ink-subtle">
+                    {t("candidatesIdentity")}
+                  </p>
+                  <h1 className="text-xl font-semibold tracking-tight text-ink mt-0.5">
+                    {candidate.fullName}
+                  </h1>
+                  <p className="text-sm text-ink-muted flex items-center gap-1.5 mt-1">
+                    <Briefcase className="size-3.5 text-ink-subtle" aria-hidden />
+                    {candidate.tradeName ?? "—"} · {candidate.yearsExp} {t("passportYears")}
+                  </p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <TrustTierBadge tier={candidate.trustTier} score={candidate.trustScore} size="lg" />
                     <TopRatedBadge workerProfileId={id} size="md" />
                     {candidate.availableToday && (
-                      <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 gap-1 text-xs">
-                        <Zap className="size-3" />
+                      <span className="inline-flex items-center gap-1 text-xs text-positive">
+                        <span className="status-dot is-positive" aria-hidden />
                         {t("today")}
-                      </Badge>
+                      </span>
                     )}
                     {candidate.distanceKm != null && (
-                      <Badge variant="outline" className="text-xs gap-1">
-                        <MapPin className="size-3" />
+                      <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
+                        <MapPin className="size-3 text-ink-subtle" aria-hidden />
                         {candidate.distanceKm.toFixed(1)} {t("km")}
-                      </Badge>
+                      </span>
                     )}
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Eye className="size-3" />
+                    <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
+                      <Eye className="size-3 text-ink-subtle" aria-hidden />
                       {t("viewsCount", { count: candidate.profileViews })}
-                    </Badge>
+                    </span>
                   </div>
                 </div>
-              </div>
+                {isVerified && (
+                  <span className="passport-stamp inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold">
+                    <ShieldCheck className="size-3.5" aria-hidden />
+                    {t("passportTierVerified")}
+                  </span>
+                )}
+              </header>
 
-              <Separator />
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("passportWage")}</p>
-                  <WageDisplay min={candidate.wageMin} max={candidate.wageMax} size="md" />
-                  <p className="text-xs text-muted-foreground mt-2">{t("preferredShift")}: <span className="font-medium">{t(candidate.shiftPref === "day" ? "shiftDay" : candidate.shiftPref === "night" ? "shiftNight" : "shiftAny")}</span></p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Languages className="size-3" />{t("languagesLabel")}</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {candidate.languages.map(l => (
-                      <Badge key={l} variant="secondary" className="text-xs uppercase">{l}</Badge>
-                    ))}
+              {/* 2. Verification — border-b sectioned dl */}
+              <section className="border-b border-border py-4">
+                <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-2">
+                  {t("verifyStatusId")}
+                </h2>
+                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <dt className="text-ink-subtle">{t("verifyStatusId")}</dt>
+                    <dd className="flex items-center gap-1.5 text-ink">
+                      {isVerified ? (
+                        <>
+                          <span className="status-dot is-positive" aria-hidden />
+                          {t("passportTierVerified")}
+                        </>
+                      ) : (
+                        <>
+                          <span className="status-dot is-warning" aria-hidden />
+                          {t("passportTierPending")}
+                        </>
+                      )}
+                    </dd>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">{t("passportCity")}: <span className="font-medium">{candidate.city}</span></p>
-                </div>
-              </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <dt className="text-ink-subtle">{t("verifyStatusSkills")}</dt>
+                    <dd className="flex items-center gap-1.5 text-ink">
+                      <span className={`status-dot ${candidate.skills.length > 0 ? "is-positive" : "is-neutral"}`} aria-hidden />
+                      {candidate.skills.length} {t("passportSkills").toLowerCase()}
+                    </dd>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <dt className="text-ink-subtle">{t("passportTrustScore")}</dt>
+                    <dd className="text-ink tabular-nums">{candidate.trustScore}</dd>
+                  </div>
+                </dl>
+              </section>
 
-              <Separator />
-
-              {/* Skills */}
-              <div>
-                <h3 className="font-semibold text-sm mb-2">{t("passportSkills")}</h3>
-                <div className="grid gap-2 sm:grid-cols-2">
+              {/* 3. Skills — border-b sectioned dl */}
+              <section className="border-b border-border py-4">
+                <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-2">
+                  {t("passportSkills")}
+                </h2>
+                <dl className="grid gap-2 sm:grid-cols-2">
+                  {candidate.skills.length === 0 && (
+                    <p className="text-sm text-ink-subtle">{t("candidatesNoSkills")}</p>
+                  )}
                   {candidate.skills.map(s => (
-                    <div key={s.skillId} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card/50 px-3 py-2">
-                      <span className="text-sm font-medium">{s.nameEn}</span>
-                      <div className="flex items-center gap-1" aria-label={t("proficiencyAria", { level: s.proficiency })}>
+                    <div key={s.skillId} className="flex items-center justify-between gap-2 text-sm">
+                      <dt className="text-ink truncate">{s.nameEn}</dt>
+                      <dd
+                        className="flex items-center gap-0.5 shrink-0"
+                        aria-label={t("proficiencyAria", { level: s.proficiency })}
+                      >
                         {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
+                          <span
                             key={i}
-                            className={`size-3 ${i < s.proficiency ? "fill-accent text-accent-foreground" : "text-muted-foreground/30"}`}
+                            className={cn(
+                              "size-1.5 rounded-full",
+                              i < s.proficiency ? "bg-accent" : "bg-border",
+                            )}
+                            aria-hidden
                           />
                         ))}
-                      </div>
+                      </dd>
                     </div>
                   ))}
-                </div>
-              </div>
+                </dl>
+              </section>
 
-              {candidate.bio && (
-                <>
-                  <Separator />
+              {/* 4. Experience / 5. Availability / 6. Wage / 7. Location — border-b sectioned dl grid */}
+              <section className="border-b border-border py-4">
+                <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-2">
+                  {t("candidatesExperienceAvail")}
+                </h2>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
-                    <h3 className="font-semibold text-sm mb-1">{t("aboutLabel")}</h3>
-                    <p className="text-sm text-muted-foreground">{candidate.bio}</p>
+                    <dt className="text-meta text-ink-subtle">{t("passportExperience")}</dt>
+                    <dd className="text-sm text-ink mt-0.5 tabular-nums">
+                      {candidate.yearsExp} {t("passportYears")}
+                    </dd>
                   </div>
-                </>
+                  <div>
+                    <dt className="text-meta text-ink-subtle">{t("preferredShift")}</dt>
+                    <dd className="text-sm text-ink mt-0.5">
+                      {t(candidate.shiftPref === "day" ? "shiftDay" : candidate.shiftPref === "night" ? "shiftNight" : "shiftAny")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-meta text-ink-subtle flex items-center gap-1">
+                      <Clock className="size-3" aria-hidden />
+                      {t("candidatesAvailable")}
+                    </dt>
+                    <dd className="text-sm text-ink mt-0.5 flex items-center gap-1.5">
+                      <span className={`status-dot ${candidate.availableToday ? "is-positive" : "is-neutral"}`} aria-hidden />
+                      {candidate.availableToday ? t("today") : t("candidatesNotToday")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-meta text-ink-subtle flex items-center gap-1">
+                      <MapPin className="size-3" aria-hidden />
+                      {t("passportCity")}
+                    </dt>
+                    <dd className="text-sm text-ink mt-0.5">{candidate.city}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              {/* 6. Wage expectation — border-b sectioned */}
+              <section className="border-b border-border py-4">
+                <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-2">
+                  {t("passportWage")}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <IndianRupee className="size-4 text-ink-subtle" aria-hidden />
+                  <WageDisplay min={candidate.wageMin} max={candidate.wageMax} size="md" />
+                </div>
+              </section>
+
+              {/* 8. Match explanation — border-b sectioned (skipped if no distance/wage data) */}
+              {candidate.distanceKm != null && (
+                <section className="border-b border-border py-4">
+                  <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-2">
+                    {t("matchHeading")}
+                  </h2>
+                  <p className="text-sm text-ink-muted flex items-start gap-1.5">
+                    <ChevronRight className="size-3 mt-0.5 shrink-0 text-ink-subtle" aria-hidden />
+                    {t("candidatesMatchExplainer", { distance: candidate.distanceKm.toFixed(1), years: candidate.yearsExp })}
+                  </p>
+                </section>
               )}
 
-              {/* Endorsements */}
+              {/* 9. Reputation — endorsements */}
               {candidate.endorsements.length > 0 && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <Star className="size-4 text-accent-foreground" />
-                      {t("passportEndorsements")}
-                      <Badge variant="outline" className="text-xs">{candidate.endorsements.length}</Badge>
-                    </h3>
-                    <div className="grid gap-2">
-                      {candidate.endorsements.map(e => (
-                        <div key={e.id} className="rounded-md border border-accent/30 bg-accent/5 p-3">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-semibold">{e.companyName}</span>
-                            {e.employerVerified && (
-                              <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300">{t("verifiedChip")}</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm mt-1">{e.comment || t("endorsementFallback", { skill: e.skillName })}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            {new Date(e.createdAt).toLocaleDateString()}
-                          </p>
+                <section className="border-b border-border py-4">
+                  <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-2 flex items-center gap-2">
+                    <Award className="size-3.5 text-ink-subtle" aria-hidden />
+                    {t("passportEndorsements")}
+                    <span className="text-ink-muted tabular-nums">{candidate.endorsements.length}</span>
+                  </h2>
+                  <ul className="flex flex-col gap-2">
+                    {candidate.endorsements.map(e => (
+                      <li key={e.id} className="surface-inset rounded-md p-3">
+                        <div className="flex items-center justify-between text-meta">
+                          <span className="font-semibold text-ink">{e.companyName}</span>
+                          {e.employerVerified && (
+                            <span className="trust-pill is-verified text-[10px]">
+                              <ShieldCheck className="size-3" aria-hidden />
+                              {t("verifiedChip")}
+                            </span>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
+                        <p className="text-sm mt-1 text-ink-muted">{e.comment || t("endorsementFallback", { skill: e.skillName })}</p>
+                        <p className="text-[10px] text-ink-subtle mt-1">
+                          {new Date(e.createdAt).toLocaleDateString()}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               )}
-            </CardContent>
-          </Card>
-          </motion.div>
 
-          {/* Side rail — actions */}
-          <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("shortlistForJob")}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="jobId">{t("pickJob")}</Label>
-                  <Select value={shortlistJobId} onValueChange={setShortlistJobId}>
-                    <SelectTrigger id="jobId" className="min-h-11 w-full">
-                      <SelectValue placeholder={t("chooseJob")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {jobs.map(j => (
-                        <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={shortlist} disabled={shortlisting} className="min-h-11 gap-2">
-                  {shortlisting ? t("shortlistSubmitting") : `${t("shortlistCta")} →`}
-                </Button>
-              </CardContent>
-            </Card>
+              {/* Bio (if any) */}
+              {candidate.bio && (
+                <section className="py-4">
+                  <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-2">
+                    {t("aboutLabel")}
+                  </h2>
+                  <p className="text-sm text-ink-muted">{candidate.bio}</p>
+                </section>
+              )}
+            </div>
+          </article>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Star className="size-4 text-accent-foreground" />
-                  {t("pipelineEndorse")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={() => setEndorsementOpen(true)} variant="outline" className="min-h-11 w-full gap-2">
-                  <Star className="size-4" />
-                  {t("pipelineEndorsePrompt")}
-                </Button>
-              </CardContent>
-            </Card>
+          {/* SIDE RAIL — 10. Actions */}
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start" aria-label={t("candidatesActionsAria")}>
+            <div className="surface-raised shadow-raise rounded-md p-4 flex flex-col gap-3">
+              <h2 className="text-base font-semibold text-ink">{t("shortlistForJob")}</h2>
+              <div className="grid gap-2">
+                <Label htmlFor="jobId" className="text-meta uppercase tracking-wide text-ink-subtle">
+                  {t("pickJob")}
+                </Label>
+                <Select value={shortlistJobId} onValueChange={setShortlistJobId}>
+                  <SelectTrigger id="jobId" className="min-h-11 w-full">
+                    <SelectValue placeholder={t("chooseJob")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobs.map(j => (
+                      <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={shortlist} disabled={shortlisting} className="min-h-11 gap-2">
+                {shortlisting ? t("shortlistSubmitting") : t("shortlistCta")}
+                <ArrowRight className="size-4" aria-hidden />
+              </Button>
+            </div>
+
+            <div className="surface-raised shadow-raise rounded-md p-4">
+              <h2 className="text-base font-semibold text-ink flex items-center gap-2 mb-3">
+                <Award className="size-4 text-ink-subtle" aria-hidden />
+                {t("pipelineEndorse")}
+              </h2>
+              <Button onClick={() => setEndorsementOpen(true)} variant="outline" className="min-h-11 w-full gap-2">
+                <FileText className="size-4" aria-hidden />
+                {t("pipelineEndorsePrompt")}
+              </Button>
+            </div>
 
             {/* Worker rating summary — avg received from all employers */}
             <RatingSummary
@@ -319,28 +421,25 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
               const eligible = elapsed >= cooldownMs;
               const hoursLeft = Math.max(0, Math.ceil((cooldownMs - elapsed) / (60 * 60 * 1000)));
               return (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                  className={`rounded-xl border p-4 ${
+                <div
+                  className={`rounded-md border p-4 ${
                     eligible
-                      ? "border-amber-500/30 bg-gradient-to-br from-amber-50/60 via-card to-card dark:from-amber-950/15"
-                      : "border-dashed border-border bg-muted/30"
+                      ? "border-accent/40 bg-accent/5"
+                      : "border-dashed border-border bg-surface-sunken"
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
-                      <Star className="size-4 text-amber-500 fill-amber-400" />
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-ink-subtle" aria-hidden>
+                      <Award className="size-4" />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold">{t("ratingPromptEmployerTitle")}</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <h3 className="text-sm font-semibold text-ink">{t("ratingPromptEmployerTitle")}</h3>
+                      <p className="text-meta text-ink-subtle mt-0.5">
                         {eligible
                           ? t("ratingPromptEmployerBody", { name: candidate?.fullName ?? "" })
                           : t("ratingPromptCooldown", { hours: hoursLeft })}
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-1 italic">
+                      <p className="text-[10px] text-ink-subtle mt-1 italic">
                         {t("ratingPromptJobContext", { title: hiredApp.jobTitle })}
                       </p>
                       {eligible && candidate && (
@@ -358,7 +457,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                       )}
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })()}
 
@@ -384,7 +483,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
             skills={skills}
           />
         )}
-      </div>
+      </main>
     </AppShell>
   );
 }

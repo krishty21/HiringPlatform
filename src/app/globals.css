@@ -37,6 +37,18 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-positive: var(--positive);
+  --color-positive-foreground: var(--positive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -44,111 +56,253 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  /* ── ShramSetu Design System (per Master Prompt §10–§15) ──────────────
+   * Navy + ivory + industrial orange + professional green.
+   * Restrained radius, restrained shadows, borders over glows.
+   */
+  --radius: 0.5rem;                 /* 8px — moderate, not pill-everywhere */
 
-  /* ShramSetu brand palette — deep blue primary + saffron/amber accent */
-  /* per directive §13: strong, trustworthy, high-contrast */
-  --background: oklch(0.99 0.004 250);
-  --foreground: oklch(0.18 0.02 250);
+  /* Surfaces */
+  --background: oklch(0.975 0.008 75);     /* warm ivory ~#F7F5F0 */
+  --foreground: oklch(0.22 0.022 250);     /* dark ink ~#17212B */
+  --surface: oklch(1 0 0);                 /* white */
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.955 0.008 75); /* slightly deeper ivory */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 250);
+  --card-foreground: oklch(0.22 0.022 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 250);
-  --primary: oklch(0.36 0.13 256);              /* deep navy-blue */
-  --primary-foreground: oklch(0.985 0.01 250);
-  --secondary: oklch(0.96 0.012 75);             /* warm off-white */
-  --secondary-foreground: oklch(0.20 0.03 60);   /* amber-brown ink */
-  --muted: oklch(0.96 0.005 250);
-  --muted-foreground: oklch(0.45 0.02 250);
-  --accent: oklch(0.72 0.16 65);                  /* saffron/amber */
-  --accent-foreground: oklch(0.20 0.05 50);       /* dark amber ink */
-  --destructive: oklch(0.58 0.21 25);
-  --border: oklch(0.91 0.008 250);
-  --input: oklch(0.94 0.008 250);
-  --ring: oklch(0.72 0.16 65);
+  --popover-foreground: oklch(0.22 0.022 250);
 
-  /* Tier badges */
-  --tier-new: oklch(0.65 0.01 250);
-  --tier-id: oklch(0.55 0.10 250);
-  --tier-skill: oklch(0.55 0.15 165);             /* emerald */
-  --tier-top: oklch(0.55 0.18 65);                 /* gold */
+  /* Ink hierarchy (three explicit text tones) */
+  --ink: oklch(0.22 0.022 250);           /* primary text */
+  --ink-muted: oklch(0.42 0.020 250);     /* secondary text */
+  --ink-subtle: oklch(0.55 0.018 250);    /* tertiary / metadata */
 
-  --chart-1: oklch(0.36 0.13 256);                /* navy */
-  --chart-2: oklch(0.72 0.16 65);                  /* saffron */
-  --chart-3: oklch(0.55 0.15 165);                  /* emerald */
-  --chart-4: oklch(0.55 0.18 0);                   /* red */
-  --chart-5: oklch(0.70 0.15 290);                  /* violet */
-  --sidebar: oklch(0.985 0.005 250);
-  --sidebar-foreground: oklch(0.18 0.02 250);
-  --sidebar-primary: oklch(0.36 0.13 256);
-  --sidebar-primary-foreground: oklch(0.985 0.01 250);
-  --sidebar-accent: oklch(0.96 0.012 75);
-  --sidebar-accent-foreground: oklch(0.20 0.03 60);
-  --sidebar-border: oklch(0.91 0.008 250);
-  --sidebar-ring: oklch(0.72 0.16 65);
+  /* Brand — deep navy */
+  --primary: oklch(0.34 0.10 255);        /* ~#12355B workforce blue */
+  --primary-foreground: oklch(0.985 0.008 75);
+
+  /* Neutral secondary */
+  --secondary: oklch(0.95 0.008 75);
+  --secondary-foreground: oklch(0.28 0.022 250);
+
+  /* Muted (for backgrounds of disabled / subtle UI) */
+  --muted: oklch(0.95 0.008 75);
+  --muted-foreground: oklch(0.45 0.018 250);
+
+  /* Action accent — industrial orange, INTENTIONAL, used for key CTAs only */
+  --accent: oklch(0.66 0.16 50);          /* ~#D97732 */
+  --accent-foreground: oklch(0.99 0.008 75);
+
+  /* Status colors — all combine color + text + shape, never color alone */
+  --positive: oklch(0.50 0.13 165);       /* ~#238B67 verified / hired / available */
+  --positive-foreground: oklch(0.99 0.008 75);
+  --warning: oklch(0.62 0.13 75);         /* ~#C98A1A pending / urgent */
+  --warning-foreground: oklch(0.20 0.04 75);
+  --destructive: oklch(0.55 0.18 25);     /* ~#C94A4A error / rejected */
+  --info: oklch(0.40 0.10 250);           /* navy info — same family as primary */
+  --info-foreground: oklch(0.99 0.008 75);
+
+  /* Trust tier ladder — kept green for verified steps */
+  --tier-new: oklch(0.60 0.012 250);
+  --tier-id: oklch(0.45 0.10 250);
+  --tier-skill: oklch(0.50 0.13 165);
+  --tier-top: oklch(0.55 0.16 50);         /* orange-gold for Top Pro */
+
+  --border: oklch(0.90 0.010 75);         /* warm hairline */
+  --input: oklch(0.94 0.008 75);
+  --ring: oklch(0.34 0.10 255);           /* navy focus ring */
+
+  --chart-1: oklch(0.34 0.10 255);
+  --chart-2: oklch(0.50 0.13 165);
+  --chart-3: oklch(0.66 0.16 50);
+  --chart-4: oklch(0.55 0.18 25);
+  --chart-5: oklch(0.62 0.13 75);
+
+  --sidebar: oklch(0.97 0.008 75);
+  --sidebar-foreground: oklch(0.22 0.022 250);
+  --sidebar-primary: oklch(0.34 0.10 255);
+  --sidebar-primary-foreground: oklch(0.985 0.008 75);
+  --sidebar-accent: oklch(0.93 0.012 75);
+  --sidebar-accent-foreground: oklch(0.28 0.022 250);
+  --sidebar-border: oklch(0.90 0.010 75);
+  --sidebar-ring: oklch(0.34 0.10 255);
 }
 
 .dark {
-  --background: oklch(0.14 0.02 256);
-  --foreground: oklch(0.97 0.01 250);
-  --card: oklch(0.19 0.03 256);
-  --card-foreground: oklch(0.97 0.01 250);
-  --popover: oklch(0.19 0.03 256);
-  --popover-foreground: oklch(0.97 0.01 250);
-  --primary: oklch(0.55 0.14 256);
-  --primary-foreground: oklch(0.14 0.02 256);
-  --secondary: oklch(0.27 0.04 256);
-  --secondary-foreground: oklch(0.97 0.01 250);
-  --muted: oklch(0.27 0.02 256);
-  --muted-foreground: oklch(0.70 0.02 250);
-  --accent: oklch(0.72 0.16 65);
-  --accent-foreground: oklch(0.20 0.05 50);
-  --destructive: oklch(0.70 0.19 22);
+  --background: oklch(0.16 0.02 255);
+  --foreground: oklch(0.96 0.008 75);
+  --surface: oklch(0.20 0.022 255);
+  --surface-raised: oklch(0.23 0.024 255);
+  --surface-sunken: oklch(0.13 0.018 255);
+  --card: oklch(0.20 0.022 255);
+  --card-foreground: oklch(0.96 0.008 75);
+  --popover: oklch(0.20 0.022 255);
+  --popover-foreground: oklch(0.96 0.008 75);
+  --ink: oklch(0.96 0.008 75);
+  --ink-muted: oklch(0.75 0.012 255);
+  --ink-subtle: oklch(0.60 0.015 255);
+  --primary: oklch(0.62 0.12 255);
+  --primary-foreground: oklch(0.16 0.02 255);
+  --secondary: oklch(0.28 0.024 255);
+  --secondary-foreground: oklch(0.96 0.008 75);
+  --muted: oklch(0.26 0.020 255);
+  --muted-foreground: oklch(0.72 0.014 255);
+  --accent: oklch(0.70 0.16 50);
+  --accent-foreground: oklch(0.16 0.02 255);
+  --positive: oklch(0.62 0.13 165);
+  --positive-foreground: oklch(0.16 0.02 255);
+  --warning: oklch(0.70 0.13 75);
+  --warning-foreground: oklch(0.16 0.02 255);
+  --destructive: oklch(0.68 0.18 25);
+  --info: oklch(0.65 0.10 255);
+  --info-foreground: oklch(0.16 0.02 255);
+  --tier-new: oklch(0.62 0.012 255);
+  --tier-id: oklch(0.55 0.10 255);
+  --tier-skill: oklch(0.62 0.13 165);
+  --tier-top: oklch(0.70 0.16 50);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.16 65);
-  --tier-new: oklch(0.65 0.01 250);
-  --tier-id: oklch(0.55 0.10 250);
-  --tier-skill: oklch(0.55 0.15 165);
-  --tier-top: oklch(0.72 0.18 65);
-  --chart-1: oklch(0.55 0.14 256);
-  --chart-2: oklch(0.72 0.16 65);
-  --chart-3: oklch(0.55 0.15 165);
-  --chart-4: oklch(0.65 0.18 0);
-  --chart-5: oklch(0.70 0.15 290);
-  --sidebar: oklch(0.19 0.03 256);
-  --sidebar-foreground: oklch(0.97 0.01 250);
-  --sidebar-primary: oklch(0.55 0.14 256);
-  --sidebar-primary-foreground: oklch(0.14 0.02 256);
-  --sidebar-accent: oklch(0.27 0.04 256);
-  --sidebar-accent-foreground: oklch(0.97 0.01 250);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.62 0.12 255);
+  --chart-1: oklch(0.62 0.12 255);
+  --chart-2: oklch(0.62 0.13 165);
+  --chart-3: oklch(0.70 0.16 50);
+  --chart-4: oklch(0.68 0.18 25);
+  --chart-5: oklch(0.70 0.13 75);
+  --sidebar: oklch(0.20 0.022 255);
+  --sidebar-foreground: oklch(0.96 0.008 75);
+  --sidebar-primary: oklch(0.62 0.12 255);
+  --sidebar-primary-foreground: oklch(0.16 0.02 255);
+  --sidebar-accent: oklch(0.28 0.024 255);
+  --sidebar-accent-foreground: oklch(0.96 0.008 75);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.72 0.16 65);
+  --sidebar-ring: oklch(0.62 0.12 255);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "tnum" 1;  /* tabular numerals for ₹/day */
+    font-feature-settings: "tnum" 1, "cv01" 1;   /* tabular numerals for ₹/day */
+    /* base body type — 15–17px per Master Prompt §12 */
+    font-size: 16px;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
   }
+
+  /* ── Typographic hierarchy (Master Prompt §12) ───────────────────────
+   * Use size + weight + spacing, NOT just bold-everything.
+   */
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  h1 { font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.75rem); line-height: 1.15; font-weight: 600; }
+  h2 { font-size: clamp(1.5rem, 1.25rem + 1.1vw, 2.125rem); line-height: 1.2; font-weight: 600; }
+  h3 { font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem); line-height: 1.25; font-weight: 600; }
+  h4 { font-size: 1.125rem; line-height: 1.35; font-weight: 600; }
+  h5 { font-size: 1rem; line-height: 1.4; font-weight: 600; }
+  h6 { font-size: 0.875rem; line-height: 1.4; font-weight: 600; letter-spacing: 0; text-transform: none; }
+
+  /* metadata text utility */
+  .text-meta {
+    font-size: 0.8125rem; line-height: 1.4; color: var(--ink-subtle);
+    letter-spacing: 0.005em;
+  }
+  .text-body { font-size: 1rem; line-height: 1.55; color: var(--ink); }
+  .text-lead { font-size: 1.125rem; line-height: 1.5; color: var(--ink-muted); }
+
   /* touch-target floor — directive §13 + I18N-03 */
   button, [role="button"], a, [role="tab"] {
     min-height: 44px;
     min-width: 44px;
   }
-  /* premium focus ring */
+  /* exception: deliberately tiny inline links still keep 44px tap area via padding */
+
+  /* premium focus ring — visible, never color-only */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+    border-radius: calc(var(--radius) - 4px);
+  }
+
+  /* reduce motion respect */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-/* premium package-tracking timeline classes */
+/* ── Restrained shadow system (Master Prompt §15) ──────────────────────
+ * Prefer borders + surface contrast over big shadows.
+ */
+.shadow-raise    { box-shadow: 0 1px 2px 0 rgb(23 33 43 / 0.04), 0 1px 1px 0 rgb(23 33 43 / 0.03); }
+.shadow-raise-md { box-shadow: 0 2px 4px -1px rgb(23 33 43 / 0.05), 0 1px 2px 0 rgb(23 33 43 / 0.03); }
+.shadow-raise-lg { box-shadow: 0 4px 8px -2px rgb(23 33 43 / 0.06), 0 2px 4px -1px rgb(23 33 43 / 0.04); }
+.shadow-inset    { box-shadow: inset 0 1px 0 0 rgb(23 33 43 / 0.04); }
+
+/* ── Surface primitives (Master Prompt §16) ────────────────────────────
+ * Not everything is a card. These give intentional surface hierarchy.
+ */
+.surface-flat     { background: var(--surface-sunken); }
+.surface-raised   { background: var(--surface-raised); border: 1px solid var(--border); }
+.surface-inset    { background: var(--surface-sunken); border: 1px solid var(--border); }
+
+/* ── Status dot — combine color + shape (Master Prompt §11) ──────────── */
+.status-dot {
+  display: inline-block;
+  width: 0.5rem; height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.status-dot.is-positive { background: var(--positive); }
+.status-dot.is-warning  { background: var(--warning); }
+.status-dot.is-error    { background: var(--destructive); }
+.status-dot.is-info     { background: var(--info); }
+.status-dot.is-neutral  { background: var(--ink-subtle); }
+
+/* ── Trust primitives (Master Prompt §66) ────────────────────────────── */
+.trust-pill {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.8125rem; font-weight: 500;
+  border: 1px solid transparent;
+}
+.trust-pill.is-verified {
+  background: color-mix(in oklch, var(--positive) 10%, transparent);
+  border-color: color-mix(in oklch, var(--positive) 30%, transparent);
+  color: var(--positive);
+}
+.trust-pill.is-pending {
+  background: color-mix(in oklch, var(--warning) 10%, transparent);
+  border-color: color-mix(in oklch, var(--warning) 35%, transparent);
+  color: var(--warning-foreground);
+}
+.trust-pill.is-employer {
+  background: color-mix(in oklch, var(--info) 8%, transparent);
+  border-color: color-mix(in oklch, var(--info) 25%, transparent);
+  color: var(--info);
+}
+
+/* ── Tracker timeline (parcel-style, kept from prior rounds) ─────────── */
 .tracker-line {
-  background: linear-gradient(to bottom, var(--primary) 0%, var(--accent) 100%);
+  background: var(--border);
+}
+.tracker-line .is-done {
+  background: var(--primary);
 }
 .tracker-step-done {
   background: var(--primary);
@@ -157,44 +311,60 @@
 .tracker-step-current {
   background: var(--accent);
   color: var(--accent-foreground);
-  box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 30%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 22%, transparent);
 }
 .tracker-step-todo {
   background: var(--muted);
   color: var(--muted-foreground);
+  border: 1px solid var(--border);
 }
 
-/* kaam card credential look (bordered, stamped) */
+/* ── Passport — credential / stamped feel, NO glow (Master Prompt §15) ─ */
 .passport-card {
-  background:
-    linear-gradient(135deg, color-mix(in oklch, var(--primary) 4%, var(--card)) 0%, var(--card) 50%),
-    var(--card);
-  border: 1.5px solid color-mix(in oklch, var(--primary) 20%, var(--border));
-  box-shadow:
-    inset 0 0 0 4px color-mix(in oklch, var(--primary) 4%, transparent),
-    0 8px 32px -12px color-mix(in oklch, var(--primary) 30%, transparent);
+  background: var(--surface);
+  border: 1px solid color-mix(in oklch, var(--primary) 18%, var(--border));
+  /* subtle paper grain via layered gradient (not a glow) */
+  background-image:
+    linear-gradient(135deg, color-mix(in oklch, var(--primary) 3%, transparent) 0%, transparent 50%),
+    linear-gradient(0deg, var(--surface), var(--surface));
+  box-shadow: var(--shadow-raise-md, 0 2px 4px -1px rgb(23 33 43 / 0.05));
 }
 .passport-stamp {
-  border: 2px dashed var(--accent);
-  color: var(--accent-foreground);
-  transform: rotate(-6deg);
+  border: 1.5px dashed var(--accent);
+  color: var(--accent);
+  transform: rotate(-4deg);
+  background: color-mix(in oklch, var(--accent) 6%, transparent);
 }
 
-/* fade-in helper for premium feel */
+/* ── Calm fade-in (used for status transitions / match-score reveal) ──── */
 @keyframes shramsetu-fade-in {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in { animation: shramsetu-fade-in 0.25s ease-out; }
+.animate-fade-in { animation: shramsetu-fade-in 0.2s ease-out; }
 
-/* custom scrollbar for long lists */
-.shramsetu-scroll::-webkit-scrollbar {
-  width: 8px; height: 8px;
+/* match-score reveal — number + bar, no sparkle */
+@keyframes shramsetu-bar-reveal {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
+.animate-bar-reveal {
+  transform-origin: left center;
+  animation: shramsetu-bar-reveal 0.4s ease-out;
+}
+
+/* custom scrollbar for long lists (kept, restrained) */
+.shramsetu-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
 .shramsetu-scroll::-webkit-scrollbar-thumb {
-  background: color-mix(in oklch, var(--muted-foreground) 30%, transparent);
+  background: color-mix(in oklch, var(--ink-subtle) 30%, transparent);
   border-radius: 4px;
 }
-.shramsetu-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
+.shramsetu-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* utility: clamp long lines safely on mobile */
+.text-balance { text-wrap: balance; }
+.text-pretty  { text-wrap: pretty; }
+
+/* utility: hide scrollbar but allow scroll (chips row) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

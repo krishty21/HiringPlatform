@@ -4,9 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import {
-  Loader2, ShieldCheck, IdCard, Award, Trophy, Sparkles, ArrowRight, Check, Clock,
+  Loader2, ShieldCheck, IdCard, Award, Trophy, ArrowRight, Check, Clock,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -23,17 +22,19 @@ interface TrustHistory {
 }
 
 const TIER_ICON: Record<TimelineEvent["tier"], React.ComponentType<{ className?: string }>> = {
-  new: Sparkles,
+  new: Clock,
   id_verified: IdCard,
   skill_verified: Award,
   top_pro: Trophy,
 };
 
-const TIER_COLOR: Record<TimelineEvent["tier"], string> = {
-  new: "text-muted-foreground border-muted bg-muted/30",
-  id_verified: "text-sky-700 border-sky-300/60 bg-sky-50/60 dark:text-sky-300 dark:border-sky-700/40 dark:bg-sky-950/20",
-  skill_verified: "text-emerald-700 border-emerald-300/60 bg-emerald-50/60 dark:text-emerald-300 dark:border-emerald-700/40 dark:bg-emerald-950/20",
-  top_pro: "text-amber-700 border-amber-300/60 bg-amber-50/70 dark:text-amber-300 dark:border-amber-700/40 dark:bg-amber-950/20",
+// Use the new tier token colors via inline styles, not sky-50/emerald-50/amber-50.
+// .is-positive / .is-info / .is-warning / .is-neutral map to the new palette.
+const TIER_DOT: Record<TimelineEvent["tier"], string> = {
+  new: "is-neutral",
+  id_verified: "is-info",
+  skill_verified: "is-positive",
+  top_pro: "is-warning",
 };
 
 export function TrustTimeline({ className }: { className?: string }) {
@@ -61,28 +62,31 @@ export function TrustTimeline({ className }: { className?: string }) {
   if (loading) {
     return (
       <Card className={cn(className)}>
-        <CardContent className="p-5 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
+        <CardContent className="p-5 flex items-center gap-2 text-sm text-ink-muted">
+          <Loader2 className="size-4 animate-spin" aria-hidden />
           {t("loading")}
         </CardContent>
       </Card>
     );
   }
 
-  if (!history || history.events.length <= 1 && history.currentTier === "new") {
-    // Edge case: brand-new worker with no events at all. Show empty state with CTA.
+  if (!history || (history.events.length <= 1 && history.currentTier === "new")) {
+    // Edge case: brand-new worker with no events. Show empty state with CTA.
     return (
       <Card className={cn("border-dashed", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Clock className="size-4 text-primary" />
+            <Clock className="size-4 text-ink-muted" aria-hidden />
             {t("trustTimelineTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">{t("trustTimelineEmpty")}</p>
+          <p className="text-sm text-ink-muted">{t("trustTimelineEmpty")}</p>
           <Button asChild variant="outline" size="sm" className="mt-3 gap-1.5 min-h-11">
-            <Link href="/verify">{t("trustTimelineViewVerify")}<ArrowRight className="size-3.5" /></Link>
+            <Link href="/verify">
+              {t("trustTimelineViewVerify")}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
           </Button>
         </CardContent>
       </Card>
@@ -94,21 +98,18 @@ export function TrustTimeline({ className }: { className?: string }) {
 
   return (
     <Card className={cn("relative overflow-hidden", className)}>
-      {/* Subtle hairline gradient */}
-      <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/30 via-accent/40 to-primary/30" />
-
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Clock className="size-4 text-primary" />
+          <Clock className="size-4 text-ink-muted" aria-hidden />
           {t("trustTimelineTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ol className="relative flex flex-col gap-0 ml-3">
-          {/* Vertical rail */}
-          <div
+        <ol className="relative flex flex-col gap-5 ml-3">
+          {/* vertical rail */}
+          <span
             aria-hidden
-            className="absolute left-[7px] top-3 bottom-3 w-px bg-gradient-to-b from-primary/40 via-border to-transparent"
+            className="absolute left-[7px] top-2 bottom-2 w-px bg-border"
           />
 
           {events.map((ev, idx) => {
@@ -116,76 +117,69 @@ export function TrustTimeline({ className }: { className?: string }) {
             const isLast = idx === events.length - 1;
             const isCurrent = ev.tier === history.currentTier && !isLast ? false : isLast && history.currentTier === ev.tier;
             return (
-              <motion.li
+              <li
                 key={`${ev.type}-${idx}`}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.35, delay: idx * 0.08, ease: "easeOut" }}
-                className="relative pl-6 pb-5 last:pb-0"
+                className="relative pl-6 last:pb-0"
               >
                 <span
                   className={cn(
-                    "absolute left-0 top-0 size-3.5 rounded-full border-2 grid place-items-center",
-                    TIER_COLOR[ev.tier],
+                    "absolute left-0 top-0.5 size-3.5 rounded-full border-2 grid place-items-center bg-surface",
+                    isCurrent ? "border-accent" : "border-border",
                   )}
+                  aria-hidden
                 >
-                  <span className="size-1.5 rounded-full bg-current" />
+                  <span className={`size-1.5 rounded-full status-dot ${TIER_DOT[ev.tier]}`} />
                 </span>
                 <div className="flex flex-col gap-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <Icon className={cn("size-3.5", TIER_COLOR[ev.tier].split(" ")[0])} />
-                    <span className="text-sm font-semibold">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Icon className="size-3.5 text-ink-muted" aria-hidden />
+                    <span className="text-sm font-semibold text-ink">
                       {ev.type === "start" ? t("trustTimelineStart")
                         : ev.tier === "id_verified" ? t("trustTimelineIdVerified")
                         : ev.tier === "skill_verified" ? t("trustTimelineSkillVerified")
                         : t("trustTimelineTopPro")}
                     </span>
                     {isCurrent && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-primary">
-                        <Check className="size-2.5" />
+                      <span className="trust-pill is-verified">
+                        <Check className="size-3" aria-hidden />
                         {t("trustTimelineNow")}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-meta text-ink-muted">
                     {ev.type === "start" ? t("trustTimelineStartDesc")
                       : ev.tier === "id_verified" ? t("trustTimelineIdVerifiedDesc")
                       : ev.tier === "skill_verified" ? t("trustTimelineSkillVerifiedDesc")
                       : t("trustTimelineTopProDesc")}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/70 tabular-nums mt-0.5">
-                    {formatDate(ev.at, isCurrent)}
+                  <p className="text-meta text-ink-subtle tabular-nums mt-0.5">
+                    {formatDate(ev.at)}
                   </p>
                 </div>
-              </motion.li>
+              </li>
             );
           })}
 
-          {/* Up-next card */}
+          {/* Up-next card — dashed, neutral */}
           {upNext && (
-            <motion.li
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.35, delay: events.length * 0.08, ease: "easeOut" }}
-              className="relative pl-6"
-            >
+            <li className="relative pl-6">
               <span
                 aria-hidden
-                className="absolute left-0 top-1 size-3.5 rounded-full border-2 border-dashed border-muted-foreground/40 grid place-items-center"
+                className="absolute left-0 top-1 size-3.5 rounded-full border-2 border-dashed border-ink-subtle/40 grid place-items-center"
               >
-                <span className="size-1.5 rounded-full bg-muted-foreground/40" />
+                <span className="size-1.5 rounded-full bg-ink-subtle/40" />
               </span>
-              <div className="mt-1 rounded-lg border border-dashed border-border bg-muted/20 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="mt-1 surface-inset rounded-md p-3">
+                <p className="text-meta font-semibold uppercase tracking-wide text-ink-subtle">
                   {t("trustTimelineUpnext")}
                 </p>
-                <p className="text-sm font-semibold mt-1 flex items-center gap-1.5">
-                  <ShieldCheck className="size-3.5 text-primary" />
+                <p className="text-sm font-semibold text-ink mt-1 flex items-center gap-1.5">
+                  <ShieldCheck className="size-3.5 text-ink-muted" aria-hidden />
                   {upNext === "id_verified" ? t("trustTimelineUpnextId")
                     : upNext === "skill_verified" ? t("trustTimelineUpnextSkill")
                     : t("trustTimelineUpnextTop")}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-meta text-ink-muted mt-0.5">
                   {upNext === "id_verified" ? t("trustTimelineUpnextIdDesc")
                     : upNext === "skill_verified" ? t("trustTimelineUpnextSkillDesc")
                     : t("trustTimelineUpnextTopDesc")}
@@ -194,12 +188,12 @@ export function TrustTimeline({ className }: { className?: string }) {
                   <Button asChild variant="outline" size="sm" className="mt-2 gap-1.5 min-h-9 text-xs">
                     <Link href="/verify">
                       {t("trustTimelineViewVerify")}
-                      <ArrowRight className="size-3" />
+                      <ArrowRight className="size-3" aria-hidden />
                     </Link>
                   </Button>
                 )}
               </div>
-            </motion.li>
+            </li>
           )}
         </ol>
       </CardContent>
@@ -207,7 +201,7 @@ export function TrustTimeline({ className }: { className?: string }) {
   );
 }
 
-function formatDate(iso: string, isCurrent: boolean): string {
+function formatDate(iso: string): string {
   try {
     const d = new Date(iso);
     return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });

@@ -1,0 +1,2289 @@
+# MASTER PROMPT — SHRAMSETU COMPLETE PRODUCT REDESIGN & ANTI-AI-SLOP TRANSFORMATION
+
+## ROLE
+
+You are the Principal Product Designer, Staff Frontend Engineer, UX Architect, Design-System Engineer, Accessibility Specialist, and Hackathon Technical Lead responsible for transforming the attached local repository into the strongest possible version of **ShramSetu** for the **Blue Workforce Connect '26** hackathon.
+
+You have previously been given the broader ShramSetu context, including the product strategy, SRD, implementation discussions, and prior z.ai build history.
+
+### CRITICAL CHANGE IN THIS TASK
+
+The attached ZIP is the **CURRENT LOCAL SOURCE OF TRUTH**.
+
+The local ZIP may differ from the previous z.ai workspace because I have made local modifications for my own environment.
+
+Therefore:
+
+> NEVER assume that the previous workspace, file tree, dependencies, APIs, authentication mechanism, database, environment variables, routes, or implementation details are still identical.
+
+The attached local repository is authoritative for the actual implementation.
+
+Previous ShramSetu/SRD/build context should be used to understand:
+
+* the product purpose
+* the hackathon requirements
+* intended workflows
+* existing feature intent
+* the trust-first positioning
+* worker/employer use cases
+* matching/verification concepts
+
+But the local repository is authoritative for:
+
+* actual code
+* actual routes
+* actual dependencies
+* actual data layer
+* actual authentication
+* actual APIs
+* actual components
+* actual deployment assumptions
+* actual local modifications
+
+Do NOT blindly restore or overwrite anything from the previous environment.
+
+---
+
+# 1. PRIMARY OBJECTIVE
+
+Perform a **massive professional-grade redesign of the entire ShramSetu product** while preserving and improving all existing functional capabilities.
+
+This is NOT a cosmetic color change.
+
+This is NOT a rewrite from scratch.
+
+This is NOT permission to replace the working backend unnecessarily.
+
+This is a controlled **Product UX + Visual Design + Design System + Frontend Architecture Refactor**.
+
+The finished application must feel like:
+
+> A credible, launch-ready Indian workforce technology product.
+
+It must NOT feel like:
+
+> an AI-generated hackathon dashboard, generic SaaS template, or heavily customized shadcn demo.
+
+The target quality bar is a polished commercial product comparable in design discipline to a serious startup/product company.
+
+---
+
+# 2. THE CORE PRODUCT POSITIONING
+
+The entire product should communicate:
+
+> **ShramSetu is a trusted digital workforce identity and hiring network for India's skilled workforce.**
+
+Do NOT make the product feel like merely another job board.
+
+The fundamental product story is:
+
+### Workers
+
+Build a credible digital work identity → verify skills → discover suitable work → apply quickly → build reputation.
+
+### Employers
+
+Describe hiring needs → discover relevant workers → understand why they match → verify their credibility → manage pipeline → hire faster.
+
+### Platform
+
+Creates trust between both sides.
+
+The most important concept visually is therefore:
+
+# TRUST
+
+Trust must be represented consistently throughout the product.
+
+---
+
+# 3. IMPORTANT PRODUCT DESIGN THESIS
+
+Do not design:
+
+> "LinkedIn for blue-collar workers."
+
+Design:
+
+> **A professional digital workforce identity system that enables hiring.**
+
+This distinction must influence the visual hierarchy, navigation, profiles, candidate discovery, verification, and overall branding.
+
+---
+
+# 4. FIRST STEP — DEEP LOCAL REPOSITORY AUDIT
+
+Before modifying any files:
+
+### Analyze the attached local repository deeply.
+
+Inspect:
+
+* package.json
+* lockfile
+* framework/version
+* app structure
+* routes
+* components
+* CSS
+* Tailwind configuration
+* theme tokens
+* fonts
+* icons
+* animations
+* design system
+* authentication
+* database
+* API routes
+* server/client boundaries
+* state management
+* i18n
+* PWA
+* image assets
+* dashboard components
+* worker workflows
+* employer workflows
+* admin workflows
+* verification
+* matching
+* notifications
+* public profiles
+* responsive behavior
+* tests
+* environment variables
+* local modifications
+* deployment assumptions
+
+Also inspect the current application visually through the available browser/preview tooling.
+
+### Before coding, produce an internal assessment containing:
+
+1. Current architecture
+2. Current visual language
+3. Current component system
+4. Major UX weaknesses
+5. AI-slop indicators
+6. Reusable pieces worth preserving
+7. Components requiring redesign
+8. Routes requiring redesign
+9. Functional risks
+10. Responsive/mobile problems
+11. Accessibility problems
+12. Security concerns that are visible from the frontend
+13. Technical debt relevant to this redesign
+14. Exact files likely to be affected
+
+Do NOT immediately start rewriting everything.
+
+---
+
+# 5. NON-NEGOTIABLE PRESERVATION RULE
+
+The current implementation already has significant functionality.
+
+Therefore:
+
+> Preserve working functionality unless there is a concrete UX, architectural, security, or correctness reason to change it.
+
+The redesign must NOT accidentally remove or break:
+
+* worker onboarding
+* worker profile
+* Skill Passport
+* job feed
+* search/filtering
+* one-tap application
+* application tracking
+* saved jobs
+* availability
+* employer job posting
+* candidate discovery
+* match scoring
+* explainable matching
+* candidate profiles
+* hiring pipeline
+* bulk hiring/shortlisting where currently implemented
+* verification
+* trust tiers
+* ratings/endorsements
+* dashboards
+* notifications
+* admin
+* public Kaam Card
+* multilingual functionality
+* PWA behavior
+* existing local environment compatibility
+
+Before changing any shared component or route, identify all consumers.
+
+---
+
+# 6. DO NOT TRUST THE OLD ARCHITECTURE BLINDLY
+
+The earlier SRD described one architecture, while the current repository may implement another.
+
+Do NOT force the old architecture onto the local repository merely because it appeared in previous instructions.
+
+For example:
+
+* Do not migrate databases solely for this redesign.
+* Do not replace authentication solely for this redesign.
+* Do not introduce Supabase merely because the previous SRD referenced it.
+* Do not install large new dependencies unless genuinely necessary.
+* Do not rewrite APIs that already work.
+* Do not rename the whole project structure without reason.
+
+Any architectural change must be:
+
+1. justified,
+2. compatible with the local repository,
+3. low-risk,
+4. documented,
+5. beneficial to the final product.
+
+---
+
+# 7. DESIGN TRANSFORMATION — CORE GOAL
+
+The redesign should remove the visual characteristics commonly associated with low-quality AI-generated interfaces.
+
+## Explicitly reduce or eliminate:
+
+### Overuse of:
+
+* gradients
+* glows
+* decorative blobs
+* glassmorphism
+* excessive shadows
+* excessive rounded containers
+* giant pills
+* tiny chips
+* excessive badges
+* floating decorative elements
+* generic AI/star icons
+* unnecessary animations
+* "premium" visual effects
+* repetitive card-with-card-with-card layouts
+* visual noise
+* excessive borders
+* ornamental dashboard elements
+
+### Especially eliminate the generic AI pattern:
+
+```text
+✨ AI
+✨ Smart
+✨ Magic
+✨ AI-powered
+✨ Intelligent
+```
+
+appearing everywhere simply to signal sophistication.
+
+AI functionality should feel like a natural product capability, not a gimmick.
+
+---
+
+# 8. SPARKLES / GENERIC AI ICON POLICY
+
+The existing application appears to overuse Sparkles-style iconography.
+
+Aggressively reduce inappropriate usage.
+
+Do NOT use Sparkles as the default icon for:
+
+* verification
+* matching
+* recommendations
+* profiles
+* notifications
+* hiring
+* trust
+* general page decoration
+
+Use semantic iconography instead.
+
+Examples:
+
+| Concept               | Preferred visual language        |
+| --------------------- | -------------------------------- |
+| Identity verification | shield/check                     |
+| Skill verification    | certificate/check                |
+| Reliability           | clock/check/calendar             |
+| Work availability     | calendar/status                  |
+| Hiring                | users/user-plus                  |
+| Skills                | relevant trade/tool icon         |
+| Matching              | score/ranking/data visualization |
+| Voice                 | microphone                       |
+| Location              | pin                              |
+| Wage                  | currency                         |
+| Application           | document/check                   |
+| Pipeline              | workflow/stages                  |
+
+In many cases, use NO icon.
+
+Professional design does not require every element to have an icon.
+
+---
+
+# 9. NEW VISUAL PERSONALITY
+
+The application should feel:
+
+* Human
+* Trusted
+* Practical
+* Industrial
+* Professional
+* Modern
+* Indian
+* Calm
+* Confident
+* Accessible
+
+It should NOT feel:
+
+* futuristic
+* cyberpunk
+* gaming-oriented
+* overly luxurious
+* overly glassy
+* AI-magical
+* generic startup-template
+* government-portal-like
+
+---
+
+# 10. COLOR PALETTE REDESIGN
+
+Create a coherent product-wide color system.
+
+Do NOT simply recolor existing components one by one.
+
+Create a proper semantic design token system.
+
+Recommended visual direction:
+
+### Primary
+
+Deep navy / workforce blue
+
+Approximate direction:
+
+`#12355B`
+
+### Core text
+
+Dark ink
+
+`#17212B`
+
+### Main page background
+
+Warm neutral / ivory
+
+`#F7F5F0`
+
+### Surface
+
+White
+
+`#FFFFFF`
+
+### Action accent
+
+Industrial orange
+
+`#D97732`
+
+### Positive / verification
+
+Professional green
+
+`#238B67`
+
+### Warning
+
+Muted amber
+
+`#C98A1A`
+
+### Error
+
+Muted red
+
+`#C94A4A`
+
+These are direction references, not mandatory exact values.
+
+Use the actual visual system that best fits the product.
+
+## IMPORTANT:
+
+Orange must NOT become the second primary everywhere.
+
+Use it intentionally for:
+
+* important actions
+* urgency
+* active highlights
+* key CTAs
+
+Use green for:
+
+* verified
+* available
+* completed
+* hired
+
+Use neutral tones for most of the UI.
+
+The interface should breathe.
+
+---
+
+# 11. COLOR ACCESSIBILITY
+
+All colors must pass practical contrast requirements.
+
+Never rely solely on color to communicate:
+
+* status
+* verification
+* errors
+* availability
+* application stage
+
+Every important status should combine:
+
+* color
+* text
+* shape/icon where appropriate
+
+---
+
+# 12. TYPOGRAPHY REDESIGN
+
+Create an intentional typography scale.
+
+Do not make the application depend on:
+
+```text
+text-xs
+text-sm
+font-semibold
+```
+
+for everything.
+
+Build clear hierarchy.
+
+Suggested hierarchy:
+
+### Display
+
+48–64px where appropriate
+
+### Section heading
+
+28–36px
+
+### Page heading
+
+24–32px
+
+### Card/section heading
+
+18–22px
+
+### Body
+
+15–17px
+
+### Metadata
+
+13–14px
+
+Do not overuse bold.
+
+Use:
+
+* size
+* weight
+* spacing
+* whitespace
+* alignment
+
+to establish hierarchy.
+
+---
+
+# 13. SPACING AND LAYOUT
+
+Create a consistent spacing system.
+
+Favor:
+
+* whitespace
+* alignment
+* predictable grids
+* clear sections
+* structured information hierarchy
+
+over visual decoration.
+
+Every page should feel deliberately composed.
+
+---
+
+# 14. BORDER/RADIUS SYSTEM
+
+Reduce excessive rounding.
+
+Not everything should be a rounded rectangle.
+
+Use a small, consistent radius scale.
+
+For example:
+
+* small controls: subtle radius
+* cards: moderate radius
+* large surfaces: moderate radius
+* buttons: consistent product radius
+* pills: only when semantically appropriate
+
+A badge can be a pill.
+
+A full-page information panel does not need to be.
+
+---
+
+# 15. SHADOW SYSTEM
+
+Use very restrained shadows.
+
+Prefer:
+
+* borders
+* surface contrast
+* spacing
+
+over:
+
+* huge shadows
+* floating shadows
+* glowing shadows
+
+The product should feel grounded.
+
+---
+
+# 16. REDESIGN THE CARD PHILOSOPHY
+
+One of the biggest problems to solve:
+
+> Not everything should be a card.
+
+Replace unnecessary nested card structures with:
+
+* sections
+* panels
+* dividers
+* grouped fields
+* tables
+* structured lists
+* side panels
+* drawers
+* inline metadata
+* timeline structures
+
+Cards should only be used when the content represents a coherent unit.
+
+---
+
+# 17. TWO-PERSONALITY DESIGN SYSTEM
+
+ShramSetu must have ONE brand but TWO optimized experiences.
+
+## WORKER EXPERIENCE
+
+Mobile-first.
+
+Design characteristics:
+
+* simpler
+* warmer
+* larger
+* visual
+* low cognitive load
+* thumb-friendly
+* fewer choices per screen
+* strong primary actions
+* plain language
+* icon + text
+* accessible
+
+The worker should immediately understand:
+
+> "What work is available to me today?"
+
+---
+
+## EMPLOYER EXPERIENCE
+
+Desktop-first but responsive.
+
+Design characteristics:
+
+* professional
+* information-dense
+* operational
+* efficient
+* filter-heavy
+* comparison-oriented
+* keyboard-friendly
+* data-driven
+
+The employer should immediately understand:
+
+> "Who should I hire and why?"
+
+Do NOT force identical visual density between worker and employer interfaces.
+
+---
+
+# 18. WORKER NAVIGATION
+
+Where the current structure allows it, create a clear worker navigation hierarchy similar to:
+
+```text
+Home
+Find Work
+Applications
+Passport
+Profile
+```
+
+Use mobile bottom navigation where appropriate.
+
+The navigation must answer the worker's primary jobs:
+
+1. Find work
+2. Track work
+3. Build trust
+4. Manage identity
+
+---
+
+# 19. EMPLOYER NAVIGATION
+
+Create a professional hiring workspace hierarchy similar to:
+
+```text
+Dashboard
+Jobs
+Candidates
+Pipeline
+Talent Pool
+Reports
+Company
+```
+
+Use the actual existing routes and capabilities rather than inventing broken navigation.
+
+---
+
+# 20. WORKER HOME REDESIGN
+
+The worker home screen should answer:
+
+### What work is relevant to me?
+
+### What should I do next?
+
+### How strong is my profile?
+
+Prioritize:
+
+* available work
+* recommended jobs
+* match quality
+* distance
+* wage
+* availability
+* employer verification
+* application status
+
+Avoid turning this page into a generic analytics dashboard.
+
+The worker should see useful action immediately.
+
+---
+
+# 21. JOB DISCOVERY REDESIGN
+
+The job feed should become one of the best screens in the application.
+
+Every job should clearly show:
+
+* role/trade
+* location
+* distance
+* wage/day
+* shift
+* start date
+* number of openings where relevant
+* employer verification
+* urgency
+* match score
+* primary apply action
+
+Use hierarchy rather than lots of decorative badges.
+
+Example mental structure:
+
+```text
+Electrician
+ABC Industries · Vijayawada
+
+₹900–1,100/day
+3.4 km away
+Day shift
+
+94% match
+
+5/5 required skills
+Verified employer
+
+[Apply]
+```
+
+---
+
+# 22. "WHY THIS MATCH?" MUST BECOME A PREMIUM PRODUCT EXPERIENCE
+
+The existing transparent matching concept is one of the strongest technical/product elements.
+
+Turn it into a visually excellent explainability component.
+
+Do NOT display merely:
+
+```text
+AI Match: 94%
+```
+
+Instead:
+
+```text
+94 MATCH
+
+Why?
+
+Skills             35/35
+Location           24/25
+Experience         14/15
+Wage               14/15
+Trust               7/10
+```
+
+Then show three human-readable reasons:
+
+```text
+✓ All required skills match
+✓ You're within the employer's preferred radius
+✓ Your expected wage fits the role
+```
+
+The match engine should feel like an actual product feature.
+
+---
+
+# 23. WORKER PASSPORT — MAJOR REDESIGN
+
+Make the Skill Passport the signature visual component of ShramSetu.
+
+Rename/reframe visually as:
+
+# Workforce Passport
+
+or retain "Skill Passport" if that terminology already exists strongly in the application.
+
+It should communicate:
+
+### Who is this person?
+
+### What can they do?
+
+### Can I trust their claims?
+
+### What work have they completed?
+
+Possible structure:
+
+```text
+Ravi Kumar
+Electrician
+Vijayawada
+
+SKILL VERIFIED
+
+8 years experience
+
+IDENTITY
+✓ Verified
+
+SKILLS
+✓ Verified
+
+RELIABILITY
+96%
+
+JOBS COMPLETED
+27
+
+EMPLOYER RATING
+4.8 / 5
+```
+
+Do not fabricate metrics if the underlying system doesn't actually support them.
+
+Use only real/current data.
+
+---
+
+# 24. TRUST MODEL
+
+Where technically appropriate, visually separate:
+
+## Identity
+
+Who are you?
+
+## Skills
+
+What can you do?
+
+## Reliability
+
+Can an employer depend on you?
+
+The existing Trust Score may remain as the underlying model, but avoid presenting a single mysterious score as if it explains everything.
+
+Trust should be understandable.
+
+---
+
+# 25. TRUST PROGRESSION
+
+If the existing tier system exists:
+
+```text
+New
+ID Verified
+Skill Verified
+Top Pro
+```
+
+turn it into a meaningful progression UI.
+
+Example:
+
+```text
+TRUST PROGRESS
+
+✓ Basic Profile
+✓ Identity Verified
+● Skills Verified
+○ Top Pro
+```
+
+The worker should understand how to move forward.
+
+This is much better than a decorative badge.
+
+---
+
+# 26. ADD / IMPROVE EMPLOYMENT HISTORY PRESENTATION
+
+Where current data supports it, present work history as a professional timeline.
+
+Example:
+
+```text
+ABC Construction
+Electrician
+Jan 2026 – Apr 2026
+
+27 shifts completed
+4.8 employer rating
+Verified employer
+```
+
+Do not invent employment history.
+
+If the data model doesn't support it properly yet, design a visual structure that can use the existing application/hire records.
+
+---
+
+# 27. RELIABILITY — HIGH-VALUE PRODUCT IMPROVEMENT
+
+Where feasible without destabilizing the product, expose reliability-related signals separately from certification trust.
+
+Potential signals:
+
+* completed hires
+* successful job completion
+* employer ratings
+* availability consistency
+
+Do NOT fabricate this data.
+
+If there is insufficient underlying data, keep this as a carefully framed roadmap capability rather than fake implementation.
+
+---
+
+# 28. EMPLOYER CANDIDATE DISCOVERY — MAJOR REDESIGN
+
+This is one of the employer's most important workflows.
+
+It should feel more like a professional ATS/talent search product than a social network.
+
+Example:
+
+```text
+Candidates for Electrician — Vijayawada
+
+12 candidates
+
+Filters
+
+94  Ravi Kumar       Skill Verified
+91  Suresh Reddy     Skill Verified
+88  Anand Kumar      ID Verified
+```
+
+Candidate rows/cards should make comparison easy.
+
+---
+
+# 29. CANDIDATE PROFILE REDESIGN
+
+A candidate profile must behave like a professional dossier.
+
+Primary hierarchy:
+
+1. Identity
+2. Verification
+3. Skills
+4. Experience
+5. Availability
+6. Wage expectation
+7. Location
+8. Match explanation
+9. Reputation
+10. Actions
+
+The employer should be able to answer:
+
+> "Should I shortlist this person?"
+
+within seconds.
+
+---
+
+# 30. EMPLOYER PIPELINE REDESIGN
+
+The pipeline should feel operational.
+
+Current stages should remain compatible with the existing implementation.
+
+Use:
+
+```text
+Applied
+Shortlisted
+Interview
+Offer
+Hired
+Rejected
+```
+
+But improve:
+
+* clarity
+* density
+* drag/drop affordance
+* keyboard actions
+* card hierarchy
+* stage counts
+* filtering
+* bulk actions
+
+Important:
+
+### Do NOT rely only on drag-and-drop.
+
+Always provide accessible actions.
+
+---
+
+# 31. EMPLOYER DASHBOARD REDESIGN
+
+The employer dashboard should answer:
+
+### How is hiring going?
+
+### Where are candidates getting stuck?
+
+### How quickly are we hiring?
+
+### Which jobs need attention?
+
+Prioritize:
+
+* active roles
+* applicants
+* shortlist rate
+* hiring funnel
+* time-to-hire
+* open positions
+* urgent hiring
+* jobs requiring action
+
+Avoid decorative analytics that do not support decisions.
+
+---
+
+# 32. DASHBOARD VISUALIZATION RULE
+
+Do not overuse charts.
+
+Use a chart only when it communicates information better than:
+
+* a number
+* table
+* progress bar
+* funnel
+* timeline
+
+Keep analytics restrained and legible.
+
+---
+
+# 33. VERIFICATION UX REDESIGN
+
+Verification should look credible and professional.
+
+Worker view:
+
+```text
+YOUR VERIFICATION
+
+Identity       Verified
+Skills         2 verified
+Documents      1 pending
+```
+
+Employer/admin view:
+
+```text
+Pending Verification
+
+Ravi Kumar
+Electrician certificate
+
+Uploaded:
+PDF
+Status:
+Pending review
+
+[Approve] [Reject]
+```
+
+Do not make verification feel like a gaming/badge system.
+
+It should feel like credential infrastructure.
+
+---
+
+# 34. PUBLIC KAAM CARD REDESIGN
+
+This should be treated as a signature feature.
+
+It is effectively the worker's shareable professional identity.
+
+Make it look credible on WhatsApp and mobile web.
+
+Structure:
+
+```text
+Ravi Kumar
+Verified Electrician
+
+Vijayawada, Andhra Pradesh
+
+8 years experience
+
+₹900–1,100/day
+
+SKILL VERIFIED
+
+Electrical Wiring
+Industrial Maintenance
+Panel Installation
+
+Verified by ShramSetu
+```
+
+Respect privacy rules already implemented.
+
+Never expose PII that the current application intentionally protects.
+
+---
+
+# 35. LANDING PAGE — COMPLETE RECONSTRUCTION
+
+The landing page should not feel like a generic SaaS hero.
+
+It should tell a story.
+
+## Section 1 — Human problem
+
+Core idea:
+
+> Skill should speak louder than a résumé.
+
+Then explain the workforce trust problem.
+
+## Section 2 — Two-sided solution
+
+Worker:
+
+```text
+Build your professional identity
+Verify your skills
+Find suitable work
+```
+
+Employer:
+
+```text
+Describe your requirement
+Discover verified talent
+Hire with confidence
+```
+
+## Section 3 — Product proof
+
+Actual screenshots/product previews.
+
+## Section 4 — Trust system
+
+Show the passport concept.
+
+## Section 5 — Matching
+
+Explain why matching is transparent.
+
+## Section 6 — Hiring
+
+Show the employer pipeline.
+
+## Section 7 — Impact
+
+Explain why this matters for India.
+
+Avoid excessive decorative hero effects.
+
+---
+
+# 36. LANDING PAGE COPY
+
+Remove generic startup clichés such as:
+
+* "revolutionize"
+* "next-generation"
+* "seamless ecosystem"
+* "AI-powered future"
+* "unlock potential"
+* "redefine hiring"
+
+Prefer direct, human language.
+
+The product is serving real workers and employers.
+
+Copy should feel grounded.
+
+---
+
+# 37. AI FEATURES — HUMANIZE THEM
+
+Keep actual AI capabilities.
+
+But remove "AI theatre."
+
+### Voice onboarding
+
+Say:
+
+> Tell us about your work
+
+rather than:
+
+> ✨ AI Profile Generator
+
+### Job description
+
+Say:
+
+> Generate description
+
+rather than:
+
+> ✨ AI Magic
+
+### Matching
+
+Say:
+
+> Why this match?
+
+rather than:
+
+> AI MATCH™ 97%
+
+AI should be infrastructure.
+
+It should not dominate the brand.
+
+---
+
+# 38. ANIMATION POLICY
+
+Keep animations only when they improve understanding.
+
+Good uses:
+
+* onboarding progression
+* status transition
+* successful application
+* match-score reveal
+* trust progression
+* pipeline interaction
+* meaningful feedback
+
+Remove animations used solely for decoration.
+
+Avoid:
+
+* excessive floating elements
+* unnecessary entrance animations everywhere
+* constant pulsing
+* looping decorative motion
+
+The UI should feel calm.
+
+---
+
+# 39. MOBILE EXPERIENCE
+
+Worker experience must be excellent at:
+
+* 375px
+* 390px
+* 412px
+
+Test every major worker route at these widths.
+
+Pay particular attention to:
+
+* bottom navigation
+* filters
+* job cards
+* profile sections
+* application timeline
+* verification upload
+* dialogs
+* buttons
+* language controls
+* notifications
+* long names
+* long Telugu/Hindi strings
+
+No horizontal overflow.
+
+No tiny text.
+
+No microscopic buttons.
+
+No controls that require precision tapping.
+
+---
+
+# 40. EMPLOYER RESPONSIVENESS
+
+Employer UX can prioritize desktop.
+
+But it MUST remain usable at:
+
+* tablet
+* smaller laptop
+* mobile where relevant
+
+For dense desktop surfaces, use:
+
+* horizontal scrolling where justified
+* responsive tables
+* collapsible panels
+* drawers
+* stacked layouts
+
+Do not squeeze a desktop table into unreadable mobile columns.
+
+---
+
+# 41. ACCESSIBILITY
+
+Maintain strong accessibility throughout.
+
+Minimum expectations:
+
+* visible focus states
+* semantic headings
+* keyboard navigation
+* proper labels
+* screen-reader-friendly controls
+* aria labels where necessary
+* icon + text
+* sufficient contrast
+* large touch targets
+* no color-only status
+* modal focus handling
+* accessible drag/drop alternatives
+* accessible toast behavior
+
+Target approximately 44–48px interactive targets where practical.
+
+---
+
+# 42. INTERNATIONALIZATION
+
+The existing EN/HI/TE system must continue working.
+
+Do not hardcode visible strings.
+
+Every redesigned screen must use the existing i18n architecture.
+
+Pay special attention to layout expansion caused by:
+
+* Hindi
+* Telugu
+* translated buttons
+* longer labels
+* accessibility text
+
+Do not design only for English and assume translation will fit.
+
+---
+
+# 43. COMPONENT ARCHITECTURE
+
+Do NOT solve the redesign by adding huge quantities of page-specific Tailwind classes.
+
+Create reusable design primitives.
+
+Potential system:
+
+```text
+Design Tokens
+Typography
+Button
+Input
+Select
+Badge
+Status
+Section
+Panel
+DataRow
+Metric
+Tabs
+Drawer
+Dialog
+Timeline
+Progress
+Avatar
+ProfileHeader
+TrustIndicator
+VerificationStatus
+MatchExplanation
+JobCard
+CandidateRow
+PipelineCard
+EmptyState
+LoadingState
+ErrorState
+```
+
+Use semantic components.
+
+---
+
+# 44. SHARED DESIGN SYSTEM
+
+Centralize:
+
+* colors
+* spacing
+* radius
+* typography
+* shadows
+* status colors
+* component variants
+
+Do not create five slightly different versions of:
+
+```text
+Button
+Badge
+Card
+Status
+```
+
+---
+
+# 45. CONSISTENCY RULE
+
+Every page must feel like it belongs to the same company.
+
+Do not let redesign workstream-by-workstream create visual inconsistencies.
+
+Before finalizing, perform a global sweep for:
+
+* button styles
+* spacing
+* headings
+* colors
+* icon sizes
+* card treatment
+* borders
+* shadows
+* badges
+* status colors
+* empty states
+* loading states
+* navigation
+* responsive behavior
+
+---
+
+# 46. DO NOT ADD FEATURES JUST FOR THE SAKE OF FEATURES
+
+The goal is not:
+
+> more features.
+
+The goal is:
+
+> better product.
+
+Only add a new functional feature when it materially improves:
+
+* trust
+* speed
+* usability
+* hiring quality
+* accessibility
+* real-world adoption
+
+Do not introduce speculative complexity during the visual redesign.
+
+---
+
+# 47. HIGH-VALUE PRODUCT ENHANCEMENTS
+
+Evaluate whether the current architecture can support these with low risk:
+
+### A. Work history / digital work ledger
+
+Turn completed work into credible professional history.
+
+### B. Reliability indicators
+
+Separate reliability signals from generic certification.
+
+### C. Better availability presentation
+
+Make "available today" and work readiness more visible.
+
+### D. Hiring requirement / bulk demand workflows
+
+Where current data structures support it, make employer needs clearer for multi-worker hiring.
+
+### E. More powerful candidate comparison
+
+Make it easier to compare verified workers.
+
+These are secondary to the core redesign.
+
+Do NOT sacrifice existing functionality to implement them.
+
+---
+
+# 48. PRODUCT RULE: REAL DATA ONLY
+
+Never create fake UI metrics purely to make screenshots prettier.
+
+If a number is shown, it must come from:
+
+* existing real application data
+* deterministic seed data already in the application
+* a legitimate calculation
+
+Never invent:
+
+* ratings
+* jobs
+* hires
+* reliability
+* salaries
+* verification states
+
+unless they already exist as legitimate seed data.
+
+---
+
+# 49. NO PLACEHOLDER UX
+
+Eliminate:
+
+* lorem ipsum
+* TODO interfaces
+* dummy buttons
+* fake navigation
+* empty decorative analytics
+* "Coming soon" elements presented as finished product
+* dead interactions
+
+Every visible interaction should either:
+
+1. work,
+2. intentionally be disabled with an explanation,
+3. or not exist.
+
+---
+
+# 50. ERROR / LOADING / EMPTY STATES
+
+Redesign these deliberately.
+
+Every important list/detail view must have:
+
+### Loading
+
+Useful skeleton preserving layout.
+
+### Empty
+
+Explain what happened and what to do next.
+
+### Error
+
+Explain the problem and provide recovery.
+
+Do not treat these as afterthoughts.
+
+---
+
+# 51. SECURITY / FUNCTIONAL PRESERVATION
+
+Do not weaken existing authorization while redesigning the frontend.
+
+Verify that:
+
+* worker-only pages remain protected
+* employer-only pages remain protected
+* admin routes remain protected
+* candidate privacy remains intact
+* public Kaam Card remains privacy-safe
+* verification documents remain protected
+* client does not receive sensitive secrets
+* forms continue using existing validation
+
+Do not move sensitive operations into insecure client-only logic.
+
+---
+
+# 52. PERFORMANCE
+
+The redesign must not significantly degrade performance.
+
+Avoid:
+
+* unnecessary new heavy dependencies
+* enormous image assets
+* excessive JS
+* unnecessary client rendering
+* unnecessary animation libraries
+* giant icon bundles
+* duplicated component logic
+
+Prefer existing project dependencies.
+
+Before adding a dependency, ask:
+
+> Can this be solved cleanly with what already exists?
+
+If yes, do not add it.
+
+---
+
+# 53. CODE QUALITY
+
+The final code must be:
+
+* typed
+* modular
+* understandable
+* reusable
+* documented where necessary
+* free of dead code
+* free of obvious hacks
+* free of console errors
+* free of arbitrary duplication
+
+Do not replace working code with AI-generated complexity merely because it "looks cleaner."
+
+---
+
+# 54. HARD RULE — NO MASSIVE DESTRUCTIVE REWRITE
+
+Do not delete large sections of the application unless they are demonstrably obsolete.
+
+Do not rebuild the entire app from scratch.
+
+Do not migrate backend architecture for aesthetic reasons.
+
+Do not alter database structures casually.
+
+Do not replace stable APIs merely to fit a new component.
+
+This is a production-preserving redesign.
+
+---
+
+# 55. DESIGN REVIEW STANDARD
+
+For every major redesigned screen, evaluate:
+
+### Hierarchy
+
+Can I understand the page within 2–3 seconds?
+
+### Purpose
+
+Is the primary user action obvious?
+
+### Density
+
+Is the amount of information appropriate for the role?
+
+### Trust
+
+Does the screen reinforce credibility?
+
+### Accessibility
+
+Can it be used by people with lower digital literacy?
+
+### Brand
+
+Does it look unmistakably like ShramSetu?
+
+### Real-world quality
+
+Would this look credible in a startup product demo?
+
+### Anti-AI-slop
+
+Could someone mistake this for a generic AI-generated SaaS template?
+
+If yes to the final question, redesign it.
+
+---
+
+# 56. PAGE-BY-PAGE PRIORITY
+
+Redesign in this order:
+
+## PHASE 1 — DESIGN FOUNDATION
+
+1. Design tokens
+2. Global CSS
+3. Typography
+4. Buttons
+5. Forms
+6. Navigation
+7. Status system
+8. Shared surfaces
+9. Responsive primitives
+10. Accessibility primitives
+
+## PHASE 2 — BRAND EXPERIENCE
+
+11. Landing page
+12. Login/auth
+13. Global shells/navigation
+
+## PHASE 3 — WORKER
+
+14. Worker home
+15. Job feed
+16. Job details
+17. Applications
+18. Application detail/tracker
+19. Workforce/Skill Passport
+20. Profile editing
+21. Verification
+22. Saved jobs
+23. Notifications
+
+## PHASE 4 — EMPLOYER
+
+24. Employer dashboard
+25. Jobs
+26. Job posting
+27. Candidate search
+28. Candidate profile
+29. Pipeline
+30. Employer verification
+31. Reports/analytics
+
+## PHASE 5 — TRUST/PUBLIC
+
+32. Admin
+33. Verification queue
+34. Public Kaam Card
+35. Share experience
+
+## PHASE 6 — FINAL POLISH
+
+36. Mobile
+37. Accessibility
+38. i18n
+39. Loading/empty/error states
+40. Visual consistency audit
+41. Cross-browser sanity check
+42. Console/error audit
+43. Performance audit
+
+---
+
+# 57. GOLDEN USER JOURNEYS
+
+After redesign, verify these complete flows.
+
+## Worker
+
+```text
+Landing
+↓
+Login
+↓
+Worker onboarding
+↓
+Profile
+↓
+Passport
+↓
+Job discovery
+↓
+Match explanation
+↓
+Apply
+↓
+Application tracker
+↓
+Notification
+```
+
+## Employer
+
+```text
+Landing
+↓
+Login
+↓
+Employer dashboard
+↓
+Create job
+↓
+Candidate search
+↓
+Explain match
+↓
+Candidate Passport
+↓
+Shortlist
+↓
+Pipeline
+↓
+Hire
+↓
+Dashboard update
+```
+
+## Trust
+
+```text
+Worker
+↓
+Upload verification
+↓
+Review
+↓
+Approve
+↓
+Trust update
+↓
+Passport update
+↓
+Employer sees verification
+```
+
+## Public identity
+
+```text
+Worker Passport
+↓
+Public Kaam Card
+↓
+Share
+↓
+Mobile web profile
+```
+
+---
+
+# 58. DO NOT BREAK THE HACKATHON GOLDEN PATH
+
+The application must remain demonstrable end-to-end.
+
+The final design must support an excellent demo where the audience can see:
+
+1. worker identity
+2. skill verification
+3. job recommendation
+4. transparent matching
+5. one-tap application
+6. employer candidate discovery
+7. shortlist
+8. hiring pipeline
+9. successful hire
+10. dashboard impact
+11. public professional identity
+
+---
+
+# 59. DEMO-FIRST DESIGN
+
+Every major screen should look good in a recorded 1080p demo.
+
+Avoid:
+
+* tiny text
+* overly dense layouts in places where judges need comprehension
+* hidden primary actions
+* excessive scrolling for simple flows
+* modal chains
+* distracting animations
+
+Design the key journey for live demonstration.
+
+---
+
+# 60. LOCAL REPOSITORY SAFETY
+
+Because this repository has been modified locally:
+
+Before major changes:
+
+1. Identify current git status.
+2. Identify local-only files/configuration.
+3. Identify environment expectations.
+4. Record important local differences mentally/in a decision file if one already exists.
+5. Preserve the local setup.
+6. Do not overwrite local configuration blindly.
+
+Never assume the previous workspace's `.env`, ports, deployment settings, or services still apply.
+
+---
+
+# 61. WORK ITERATIVELY
+
+Do NOT make thousands of blind modifications in one pass.
+
+Use controlled phases.
+
+After each major phase:
+
+* run the application
+* inspect affected pages
+* check console
+* verify functionality
+* check mobile
+* fix regressions
+* continue
+
+Prefer:
+
+```text
+Audit
+→ Design foundation
+→ Worker redesign
+→ Verify
+→ Employer redesign
+→ Verify
+→ Public/admin redesign
+→ Global QA
+```
+
+rather than one enormous unverified rewrite.
+
+---
+
+# 62. VISUAL QA
+
+Use browser/preview tooling aggressively.
+
+For important screens inspect at minimum:
+
+* desktop
+* 375px
+* 390px
+* 412px
+
+Check:
+
+* overflow
+* alignment
+* text wrapping
+* interaction states
+* dialogs
+* tables
+* scrolling
+* navigation
+* status visibility
+* localized content
+
+---
+
+# 63. INTERACTION STATES
+
+Every major control needs coherent states:
+
+* default
+* hover
+* focus
+* active
+* disabled
+* loading
+* success
+* error
+
+Do not rely solely on animation.
+
+---
+
+# 64. FORM UX
+
+Forms should be dramatically more professional.
+
+Use:
+
+* clear labels
+* useful descriptions
+* grouped fields
+* logical progression
+* good error messages
+* preservation of entered information
+* appropriate defaults
+* mobile-friendly controls
+
+Avoid:
+
+* giant walls of inputs
+* unexplained dropdowns
+* unnecessary fields
+* tiny controls
+
+---
+
+# 65. LANGUAGE AND COPY STYLE
+
+Use:
+
+* concise
+* respectful
+* human
+* direct
+
+Avoid:
+
+* jargon
+* marketing fluff
+* unnecessary technical language
+* exaggerated claims
+
+Example:
+
+Instead of:
+
+> "Your AI-powered intelligent profile optimization is ready"
+
+say:
+
+> "Your profile is ready."
+
+Instead of:
+
+> "Unlock your next opportunity"
+
+say:
+
+> "Find work that fits your skills."
+
+---
+
+# 66. VISUAL REPRESENTATION OF TRUST
+
+Trust should be a system, not a collection of decorative badges.
+
+Develop a consistent set of visual primitives:
+
+```text
+Identity Verified
+Skill Verified
+Employer Verified
+Available Today
+Completed Work
+Reliability
+Match Quality
+```
+
+They should look related without all becoming colorful pills.
+
+---
+
+# 67. DESIGN THE SYSTEM AROUND INFORMATION
+
+Professional interfaces should prioritize:
+
+### Worker
+
+"What can I do?"
+
+### Employer
+
+"Who should I hire?"
+
+### Platform
+
+"Why should I trust this?"
+
+Use visual design to answer those questions.
+
+---
+
+# 68. WHAT SUCCESS LOOKS LIKE
+
+At completion, someone unfamiliar with the project should be able to open the site and immediately understand:
+
+> "This is a professional platform for skilled workers and employers in India."
+
+They should NOT think:
+
+> "This looks like something ChatGPT generated."
+
+And they should NOT need the hackathon explanation to understand the interface.
+
+---
+
+# 69. FINAL ANTI-AI-SLOP CHECKLIST
+
+Before declaring the redesign complete, aggressively inspect for:
+
+* excessive Sparkles icons
+* repetitive gradients
+* glowing borders
+* floating blobs
+* generic SaaS copy
+* excessive pills
+* excessive cards
+* unnecessary shadows
+* repetitive rounded rectangles
+* decorative charts
+* decorative metrics
+* redundant badges
+* gratuitous animation
+* AI labels everywhere
+* excessive purple/blue "AI" aesthetics
+* generic template-looking dashboards
+* meaningless icons
+* repetitive section patterns
+
+Remove them.
+
+---
+
+# 70. FINAL PRODUCT QUALITY BAR
+
+The output should look like a product that a real company could launch.
+
+It must feel:
+
+> deliberate
+
+rather than:
+
+> generated.
+
+It must feel:
+
+> useful
+
+rather than:
+
+> visually impressive for its own sake.
+
+It must feel:
+
+> trustworthy
+
+rather than:
+
+> futuristic.
+
+It must feel:
+
+> human
+
+rather than:
+
+> algorithmic.
+
+---
+
+# 71. IMPLEMENTATION DISCIPLINE
+
+When making changes:
+
+* inspect before modifying
+* reuse existing functionality
+* reuse working APIs
+* preserve existing data
+* preserve local environment
+* preserve authentication
+* preserve authorization
+* preserve i18n
+* keep types clean
+* avoid unnecessary dependencies
+* test after major modifications
+* fix regressions immediately
+
+Never leave the repository in a visibly broken state.
+
+---
+
+# 72. DOCUMENT IMPORTANT DESIGN DECISIONS
+
+If the project already contains documentation such as:
+
+* DECISIONS.md
+* STATUS.md
+* README
+* FINAL_REPORT
+* architecture docs
+
+update the appropriate files when a significant architectural/design choice is made.
+
+Do not create excessive documentation for trivial CSS changes.
+
+---
+
+# 73. FINAL VERIFICATION
+
+Before declaring completion, run:
+
+* production build
+* type checking
+* lint
+* existing tests
+* application startup
+* primary worker journey
+* primary employer journey
+* verification flow
+* matching flow
+* application flow
+* pipeline flow
+* public Kaam Card
+* mobile checks
+* language checks
+* console-error sweep
+
+Do not report success unless these have actually been checked.
+
+---
+
+# 74. FINAL RESPONSE FROM YOU
+
+At the end of the work, provide a concise implementation report containing:
+
+### 1. What changed
+
+### 2. Design system changes
+
+### 3. Worker UX changes
+
+### 4. Employer UX changes
+
+### 5. Trust/verification improvements
+
+### 6. Anti-AI-slop changes
+
+### 7. Responsive/accessibility improvements
+
+### 8. Functional changes, if any
+
+### 9. Files/areas significantly modified
+
+### 10. Tests/checks performed
+
+### 11. Remaining issues
+
+### 12. Recommended final hackathon polish
+
+Do NOT falsely claim anything was tested or verified if it was not.
+
+---
+
+# 75. MOST IMPORTANT FINAL INSTRUCTION
+
+You are NOT trying to maximize the number of visual effects.
+
+You are trying to maximize:
+
+**clarity + trust + usability + professionalism + differentiation + demo quality.**
+
+The final application should visually communicate the central ShramSetu thesis:
+
+> **A worker's skill should be discoverable, verifiable, and trusted.**
+
+And the employer experience should communicate:
+
+> **Find the right person faster, and understand why you can trust them.**
+
+Treat this as a serious commercial product redesign under hackathon time constraints.
+
+Make the result exceptional.

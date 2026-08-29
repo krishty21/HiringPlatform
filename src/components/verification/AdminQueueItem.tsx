@@ -135,41 +135,41 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
         </SheetHeader>
 
         {/* Extracted fields (VER-05) */}
-        <section className="rounded-lg border border-border bg-secondary/30 p-3">
-          <p className="text-xs font-medium text-muted-foreground mb-1">
+        <section className="surface-inset rounded-md p-3">
+          <p className="text-meta uppercase tracking-wide text-ink-subtle mb-1">
             {t("adminExtract")}
           </p>
           {extracted ? (
             <dl className="text-sm space-y-1">
               {Object.entries(extracted).map(([k, v]) => (
                 <div key={k} className="flex gap-2">
-                  <dt className="font-medium capitalize">{k}:</dt>
-                  <dd className="text-muted-foreground">{String(v)}</dd>
+                  <dt className="font-medium capitalize text-ink">{k}:</dt>
+                  <dd className="text-ink-muted">{String(v)}</dd>
                 </div>
               ))}
             </dl>
           ) : (
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <AlertCircle className="size-4" />
+            <p className="text-sm text-ink-subtle flex items-center gap-2">
+              <AlertCircle className="size-4" aria-hidden />
               {t("adminManualReview")}
             </p>
           )}
         </section>
 
         {/* Doc preview */}
-        <section className="flex-1 min-h-0 rounded-lg border border-border bg-muted/30 overflow-hidden">
+        <section className="flex-1 min-h-0 surface-inset rounded-md overflow-hidden">
           {tokenError ? (
-            <div className="p-6 text-sm text-rose-600">{tokenError}</div>
+            <div className="p-6 text-sm text-destructive">{tokenError}</div>
           ) : !src ? (
-            <div className="p-6 text-sm text-muted-foreground flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin" /> {t("loading")}
+            <div className="p-6 text-sm text-ink-subtle flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" aria-hidden /> {t("loading")}
             </div>
           ) : isPdf ? (
             <iframe src={src} title={item.maskedLabel} className="w-full h-[55vh] border-0" />
           ) : isImage ? (
             <img src={src} alt={item.maskedLabel} className="w-full h-[55vh] object-contain" />
           ) : (
-            <div className="p-6 text-sm text-muted-foreground">
+            <div className="p-6 text-sm text-ink-subtle">
               {t("adminUnsupportedPreview")}{" "}
               <a href={src} className="text-primary underline" download>{t("adminDownload")}</a>
             </div>
@@ -178,7 +178,7 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
 
         {/* Reviewer note */}
         <section>
-          <label className="text-xs font-medium text-muted-foreground block mb-1">
+          <label className="text-meta uppercase tracking-wide text-ink-subtle block mb-1">
             {t("adminReviewNote")}
           </label>
           <Textarea
@@ -198,16 +198,16 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
             disabled={busy}
             className="min-h-11 gap-2"
           >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
+            {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <XCircle className="size-4" aria-hidden />}
             {t("adminReject")}
           </Button>
           <Button
             type="button"
             onClick={() => submit("approved")}
             disabled={busy}
-            className="min-h-11 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="min-h-11 gap-2"
           >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+            {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ShieldCheck className="size-4" aria-hidden />}
             {t("adminApprove")}
           </Button>
         </SheetFooter>

@@ -1,20 +1,24 @@
 "use client";
-// /employer/dashboard — DSH-01 + DSH-03
-// Headline metric: avg time-to-hire (huge numerals). StatCards: active jobs, new
-// applicants today, hires this week. Funnel (Views→Applied→Shortlisted→Interview→Hired).
-// Per-job drill-down rows: applicants by stage + views + score-distribution sparkline.
+// /employer/dashboard — Master Prompt §31: dashboard answers
+// "How is hiring going? Where are candidates stuck? How quickly? Which jobs need attention?"
+// Prioritize: active roles, applicants, shortlist rate, hiring funnel, time-to-hire,
+// open positions, urgent hiring, jobs requiring action.
+//
+// Slop removed: motion entrance, decorative blur blob (size-40 blur-2xl),
+// PipelineSummaryRow motion.div width animation, "Click any job to expand" copy.
+// Added: dl/dt/dd headline panel, border-t sectioned layout, surface-raised panels,
+// restrained FunnelChart (no gradient), per-job drilldown with semantic dl.
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/shared/AppShell";
 import { StatCard } from "@/components/shared/StatCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { FunnelChart } from "@/components/dashboard/FunnelChart";
 import { TimeToHireHeadline } from "@/components/dashboard/TimeToHireHeadline";
 import { PerJobDrilldownRow, type PerJob } from "@/components/dashboard/PerJobDrilldownRow";
-import { LayoutDashboard, Briefcase, UserPlus, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Briefcase, UserPlus, Handshake, Eye } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { motion } from "framer-motion";
 import { EmployerReputationCard } from "@/components/employer/EmployerReputationCard";
 
 interface DashboardData {
@@ -59,44 +63,83 @@ export default function EmployerDashboardPage() {
     };
   }, [t]);
 
+  // Derived shortlist rate (% of applied → shortlisted). Avoid decorative analytics.
+  const shortlistRate =
+    data && data.funnel.applied > 0
+      ? Math.round((data.funnel.shortlisted / data.funnel.applied) * 100)
+      : null;
+
   return (
     <AppShell>
-      <div className="flex flex-col gap-6 max-w-6xl mx-auto">
-        <header className="flex items-center gap-2">
-          <LayoutDashboard className="size-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">{t("navDashboard")}</h1>
+      <main className="flex flex-col gap-6 max-w-6xl mx-auto">
+        {/* Page header — border-b sectioned */}
+        <header className="border-b border-border pb-4 flex items-center gap-3">
+          <span className="size-8 rounded-md bg-primary/10 text-primary grid place-items-center border border-border" aria-hidden>
+            <LayoutDashboard className="size-5" />
+          </span>
+          <div>
+            <p className="text-meta uppercase tracking-wide text-ink-subtle">
+              {t("dashEyebrow")}
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              {t("navDashboard")}
+            </h1>
+          </div>
         </header>
 
-        {/* Headline: avg time-to-hire (huge numerals) */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-        >
-        <Card className="relative overflow-hidden">
-          <div aria-hidden className="absolute -right-10 -top-10 size-40 rounded-full bg-primary/5 blur-2xl" />
-          <CardContent className="relative p-6">
-            {!data ? (
-              <div className="h-16 w-72 bg-muted/40 rounded animate-pulse" />
-            ) : (
-              <TimeToHireHeadline hours={data.timeToHireHours} />
-            )}
+        {/* Headline: avg time-to-hire (Master Prompt §31) */}
+        <Card className="surface-raised shadow-raise overflow-hidden">
+          <div aria-hidden className="h-0.5 w-full bg-primary" />
+          <CardContent className="p-6">
+            <dl className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 sm:gap-8">
+              <div>
+                <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+                  {t("dashTimeToHire")}
+                </dt>
+                <dd className="mt-2">
+                  {!data ? (
+                    <div className="h-16 w-72 bg-surface-sunken rounded animate-pulse" />
+                  ) : (
+                    <TimeToHireHeadline hours={data.timeToHireHours} />
+                  )}
+                </dd>
+              </div>
+              {/* Shortlist-rate supplementary metric (only when data is loaded) */}
+              <dd className="border-t sm:border-t-0 sm:border-l border-border pt-4 sm:pt-0 sm:pl-6">
+                <p className="text-meta uppercase tracking-wide text-ink-subtle">
+                  {t("dashShortlistRate")}
+                </p>
+                <p className="text-3xl font-bold tabular-nums text-ink mt-1 leading-none">
+                  {shortlistRate === null ? "—" : `${shortlistRate}%`}
+                </p>
+                <p className="text-meta text-ink-subtle mt-2">
+                  {t("dashShortlistRateHint")}
+                </p>
+              </dd>
+            </dl>
           </CardContent>
         </Card>
-        </motion.div>
 
-        {/* StatCards: 3-4 across on desktop, 2x2 on mobile */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* StatCards — 4-up on desktop, 2x2 on mobile. dl/dt/dd grid. */}
+        <section aria-label={t("dashStatsAria")}>
+          <h2 className="text-meta uppercase tracking-wide text-ink-subtle mb-3">
+            {t("dashStatsHeading")}
+          </h2>
           {!data && !error
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-24 rounded-xl border bg-card animate-pulse" />
-              ))
+            ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-hidden>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-24 rounded-md border bg-surface-sunken animate-pulse" />
+                ))}
+              </div>
+            )
             : null}
           {data && (
-            <>
+            <dl className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 label={t("dashActiveJobs")}
                 value={data.activeJobs}
+                hint={t("dashActiveJobsHint")}
                 icon={Briefcase}
                 tone="default"
               />
@@ -111,80 +154,50 @@ export default function EmployerDashboardPage() {
                 label={t("dashHiresThisWeek")}
                 value={data.hiresThisWeek}
                 hint={t("last7Days")}
-                icon={ShieldCheck}
+                icon={Handshake}
                 tone="success"
               />
               <StatCard
                 label={t("dashFunnelHired")}
                 value={data.funnel.hired}
                 hint={t("allTimeTotal")}
-                icon={ShieldCheck}
+                icon={Eye}
                 tone="default"
               />
-            </>
+            </dl>
           )}
         </section>
 
-        {/* Funnel + per-job breakdown */}
+        {/* Funnel + per-job breakdown + reputation */}
         {error ? (
           <EmptyState title={t("errGeneric")} description={error} />
         ) : !data ? (
           <LoadingSkeleton count={2} />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("dashFunnel")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FunnelChart funnel={data.funnel} />
-              </CardContent>
-            </Card>
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Funnel */}
+            <article className="surface-raised shadow-raise rounded-md border border-border p-5 lg:col-span-2">
+              <header className="flex items-baseline justify-between gap-2 mb-4">
+                <h2 className="text-base font-semibold text-ink">{t("dashFunnel")}</h2>
+                <p className="text-meta text-ink-subtle">{t("dashFunnelHint")}</p>
+              </header>
+              <FunnelChart funnel={data.funnel} />
+            </article>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("pipelineSnapshot")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <PipelineSummaryRow
-                  label={t("dashFunnelApplied")}
-                  value={data.funnel.applied}
-                  max={data.funnel.applied}
-                  tone="bg-primary"
-                />
-                <PipelineSummaryRow
-                  label={t("dashFunnelShortlisted")}
-                  value={data.funnel.shortlisted}
-                  max={data.funnel.applied}
-                  tone="bg-accent"
-                />
-                <PipelineSummaryRow
-                  label={t("dashFunnelInterview")}
-                  value={data.funnel.interview + data.funnel.offer}
-                  max={data.funnel.applied}
-                  tone="bg-orange-500"
-                />
-                <PipelineSummaryRow
-                  label={t("dashFunnelHired")}
-                  value={data.funnel.hired}
-                  max={data.funnel.applied}
-                  tone="bg-emerald-600"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Round 9: employer reputation summary (rec #1 from round-8 worklog) */}
+            {/* Employer reputation summary */}
             <EmployerReputationCard />
-          </div>
+          </section>
         )}
 
         {/* Per-job drill-down (DSH-03) */}
-        <section>
-          <header className="mb-3">
-            <h2 className="text-lg font-semibold tracking-tight">{t("dashPerJob")}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Click any job to expand applicants-by-stage and score distribution.
-            </p>
+        <section aria-label={t("dashPerJob")}>
+          <header className="flex items-baseline justify-between gap-3 mb-3 border-b border-border pb-2">
+            <div>
+              <h2 className="text-base font-semibold text-ink">{t("dashPerJob")}</h2>
+              <p className="text-meta text-ink-subtle mt-0.5">
+                {t("dashPerJobHint")}
+              </p>
+            </div>
           </header>
           {!data ? (
             <LoadingSkeleton count={3} />
@@ -202,40 +215,7 @@ export default function EmployerDashboardPage() {
             </div>
           )}
         </section>
-      </div>
+      </main>
     </AppShell>
-  );
-}
-
-function PipelineSummaryRow({
-  label,
-  value,
-  max,
-  tone,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  tone: string;
-}) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`size-2 rounded-full ${tone}`} aria-hidden />
-          <span className="text-sm text-muted-foreground">{label}</span>
-        </div>
-        <span className="text-sm font-semibold tabular-nums">{value}</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden>
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className={`h-full rounded-full ${tone}`}
-        />
-      </div>
-    </div>
   );
 }

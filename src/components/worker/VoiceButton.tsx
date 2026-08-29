@@ -42,7 +42,6 @@ export function VoiceButton({ lang, onTranscript }: VoiceButtonProps) {
   const { t } = useLanguage();
   const [listening, setListening] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Lazy initial state — runs once on the client; safe during SSR (defaults to true).
   const [supported] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     const w = window as unknown as { SpeechRecognition?: Ctor; webkitSpeechRecognition?: Ctor };
@@ -57,10 +56,7 @@ export function VoiceButton({ lang, onTranscript }: VoiceButtonProps) {
       webkitSpeechRecognition?: Ctor;
     };
     const CtorImpl = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!CtorImpl) {
-      // supported state is computed lazily; nothing to do here.
-      return;
-    }
+    if (!CtorImpl) return;
     const rec = new CtorImpl();
     rec.lang = BCP47[lang] ?? "en-IN";
     rec.continuous = false;
@@ -111,27 +107,32 @@ export function VoiceButton({ lang, onTranscript }: VoiceButtonProps) {
 
   if (!supported) {
     return (
-      <Card className="border-amber-300/60 bg-amber-50">
+      <Card className="border-warning/40">
         <CardContent className="p-4 flex items-start gap-3 text-sm">
-          <AlertCircle className="size-5 text-amber-700 shrink-0 mt-0.5" />
-          <p className="text-amber-900">{t("onboardVoiceUnsupported")}</p>
+          <AlertCircle className="size-5 text-warning-foreground shrink-0 mt-0.5" aria-hidden />
+          <p className="text-warning-foreground">{t("onboardVoiceUnsupported")}</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-accent/40 bg-accent/5">
-      <CardContent className="p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col">
-            <p className="text-sm font-semibold flex items-center gap-2">
-              <Mic className="size-4 text-accent-foreground" />
-              {t("onboardVoice")}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {BCP47[lang]}
-            </p>
+    <Card className="border-border bg-surface">
+      <CardContent className="p-4 sm:p-5 flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="size-9 grid place-items-center rounded-md border border-border bg-surface-sunken text-ink-muted shrink-0">
+              <Mic className="size-4" aria-hidden />
+            </span>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <p className="text-sm font-semibold text-ink">{t("onboardVoice")}</p>
+              <p className="text-meta text-ink-muted leading-relaxed">
+                {t("onboardVoiceHint")}
+              </p>
+              <p className="text-meta text-ink-subtle tabular-nums mt-0.5">
+                {BCP47[lang]}
+              </p>
+            </div>
           </div>
           <Button
             type="button"
@@ -140,13 +141,19 @@ export function VoiceButton({ lang, onTranscript }: VoiceButtonProps) {
             className="gap-2 min-h-11"
             aria-pressed={listening}
           >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : listening ? <Square className="size-4" /> : <Mic className="size-4" />}
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : listening ? (
+              <Square className="size-4" aria-hidden />
+            ) : (
+              <Mic className="size-4" aria-hidden />
+            )}
             {busy ? t("loading") : listening ? t("onboardVoiceStop") : t("onboardVoiceStart")}
           </Button>
         </div>
         {listening && (
-          <div className="flex items-center gap-2 text-xs text-accent-foreground">
-            <span className="inline-block size-2 rounded-full bg-accent animate-pulse" />
+          <div className="flex items-center gap-2 text-meta text-warning-foreground">
+            <span className="status-dot is-warning animate-pulse" aria-hidden />
             {t("onboardVoiceListening")}
           </div>
         )}

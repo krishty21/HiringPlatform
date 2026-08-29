@@ -5,20 +5,19 @@ import { AppShell } from "@/components/shared/AppShell";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { WageDisplay } from "@/components/shared/WageDisplay";
-import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { RatingStars } from "@/components/ratings/RatingStars";
 import { SimilarJobs } from "@/components/jobs/SimilarJobs";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
 import {
-  ArrowLeft, MapPin, Briefcase, Users, Share2, Loader2, Check, Zap, Clock, Sparkles, Star,
+  ArrowLeft, ArrowRight, MapPin, Briefcase, Users, Share2, Loader2, Check, Clock,
+  ShieldCheck, Gauge, IndianRupee, ChevronRight,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { computeMatch } from "@/lib/matching/score";
+import { explainMatch } from "@/lib/matching/explain";
+import { haversineKm } from "@/lib/matching/haversine";
 
 interface JobDetail {
   id: string;
@@ -29,10 +28,13 @@ interface JobDetail {
   wageMin: number;
   wageMax: number;
   city: string;
+  lat: number;
+  lng: number;
   shift: "day" | "night" | "any";
   isUrgent: boolean;
   status: string;
   description: string;
+  viewsCount?: number;
   employer?: { id: string; companyName: string; city: string; isVerified: boolean; ratingAvg?: number; ratingCount?: number };
   skills: { skillId: string; required: boolean; skill?: { nameEn: string; nameHi: string; nameTe: string } }[];
   matchScore: number | null;
@@ -46,19 +48,134 @@ interface ApplicationExisting {
   alreadyApplied?: boolean;
 }
 
+interface WorkerProfileLite {
+  id: string;
+  tradeId: string | null;
+  trade?: { id: string; nameEn: string; nameHi: string; nameTe: string; category: string } | null;
+  yearsExp: number;
+  city: string;
+  lat: number;
+  lng: number;
+  wageMin: number;
+  wageMax: number;
+  shiftPref: "day" | "night" | "any";
+  trustTier: "new" | "id_verified" | "skill_verified" | "top_pro";
+  maxRadiusKm: number;
+  skills: { skillId: string; proficiency: number; skill?: { nameEn: string } }[];
+}
+
+// Match-breakdown panel — premium, transparent, no "AI Match" label.
+// Renders only when the worker's matchScore is available (i.e. the worker has
+// at least one skill and the job has skills/trade). Mirrors the SRD §8.1
+// weighting: Skills 35, Location 25, Experience 15, Wage 15, Trust 10.
+function MatchExplanation({
+  score,
+  worker,
+  job,
+  distanceKm,
+  t,
+}: {
+  score: number;
+  worker: WorkerProfileLite;
+  job: JobDetail;
+  distanceKm: number;
+  t: (k: any, v?: Record<string, string | number>) => string;
+}) {
+  // Re-compute the breakdown client-side using the same pure functions the
+  // server uses. (computeMatch is pure TS; haversine is pure TS; both safe
+  // for client use.)
+  const result = computeMatch({
+    worker: {
+      id: worker.id, tradeId: worker.tradeId, yearsExp: worker.yearsExp,
+      lat: worker.lat, lng: worker.lng, wageMin: worker.wageMin, wageMax: worker.wageMax,
+      shiftPref: worker.shiftPref, trustTier: worker.trustTier, maxRadiusKm: worker.maxRadiusKm,
+      skills: worker.skills.map(s => ({ skillId: s.skillId, proficiency: s.proficiency })),
+    },
+    job: {
+      id: job.id, tradeId: job.tradeId, wageMin: job.wageMin, wageMax: job.wageMax,
+      lat: job.lat, lng: job.lng, shift: job.shift, isUrgent: job.isUrgent,
+      skills: job.skills.map(s => ({ skillId: s.skillId, required: s.required })),
+    },
+  });
+  const b = result.breakdown;
+
+  // Component weights → /xxx denominators (per Master Prompt §22).
+  const rows: { key: string; label: string; value: number; denom: number }[] = [
+    { key: "skills", label: t("landingS5Skills"), value: Math.round(b.S * 35), denom: 35 },
+    { key: "location", label: t("landingS5Location"), value: Math.round(b.D * 25), denom: 25 },
+    { key: "experience", label: t("landingS5Experience"), value: Math.round(b.E * 15), denom: 15 },
+    { key: "wage", label: t("landingS5Wage"), value: Math.round(b.W * 15), denom: 15 },
+    { key: "trust", label: t("landingS5Trust"), value: Math.round(b.T * 10), denom: 10 },
+  ];
+
+  // Top 3 plain-language reasons — uses the established explainMatch helper.
+  const tradeName = worker.trade?.nameEn ?? null;
+  const reasons = explainMatch({
+    score: result,
+    worker: { yearsExp: worker.yearsExp, tradeName, skillCount: worker.skills.length },
+    job: { skillCount: job.skills.length, tradeName: job.trade?.nameEn ?? null, city: job.city, wageMin: job.wageMin, wageMax: job.wageMax },
+    distanceKm,
+  });
+
+  return (
+    <section
+      aria-labelledby="match-explanation-heading"
+      className="surface-raised rounded-md p-4 sm:p-5 flex flex-col gap-4 shadow-raise"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="flex items-baseline gap-3 min-w-0">
+          <span className="text-3xl sm:text-4xl font-semibold tabular-nums text-ink leading-none">
+            {score}
+          </span>
+          <span className="text-meta uppercase tracking-wider text-ink-subtle">
+            {t("matchHeading")}
+          </span>
+        </div>
+      </div>
+
+      <dl className="flex flex-col gap-1.5 border-t border-border pt-3">
+        {rows.map(r => (
+          <div
+            key={r.key}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
+            <dt className="text-ink-muted">{r.label}</dt>
+            <dd className="tabular-nums text-ink font-medium">
+              {r.value}
+              <span className="text-ink-subtle">/{r.denom}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {reasons.length > 0 && (
+        <ul className="flex flex-col gap-1.5 border-t border-border pt-3">
+          {reasons.map((reason, i) => (
+            <li
+              key={i}
+              className="flex items-start gap-2 text-sm text-ink leading-relaxed"
+            >
+              <Check className="size-3.5 text-positive shrink-0 mt-0.5" aria-hidden />
+              <span className="text-pretty">{reason}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t, lang } = useLanguage();
   const [job, setJob] = useState<JobDetail | null>(null);
+  const [worker, setWorker] = useState<WorkerProfileLite | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [existingApp, setExistingApp] = useState<ApplicationExisting | null>(null);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
 
   useEffect(() => {
-    // Round 13: fetch the single job directly from GET /api/jobs/:id (any
-    // status — the feed only returns open jobs, which made closed-job details
-    // unreachable from application cards). 404 → proper empty state.
     fetch(`/api/jobs/${encodeURIComponent(id)}`, { cache: "no-store" })
       .then(r => {
         if (r.status === 404) { setNotFound(true); return null; }
@@ -67,6 +184,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       })
       .then((data: JobDetail | null) => { if (data) setJob(data); })
       .catch(() => setNotFound(true));
+
+    // Fetch the worker's profile in parallel — needed for client-side
+    // match-breakdown computation (we don't ship it from the API to keep
+    // the contract frozen; the worker already trusts their own profile).
+    fetch("/api/worker/profile", { cache: "no-store" })
+      .then(r => {
+        if (r.status === 403 || r.status === 404) return null;
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((data: WorkerProfileLite | null) => { if (data) setWorker(data); })
+      .catch(() => {});
   }, [id]);
 
   async function apply() {
@@ -78,8 +207,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         body: JSON.stringify({ jobId: id }),
       });
       if (!res.ok) {
-        // Round 13: surface the JOB_CLOSED API guard as a clear localized toast
-        // (the button is disabled client-side, but a stale page can still fire).
         const j = await res.json().catch(() => null);
         if (j?.error === "JOB_CLOSED") throw new Error("job-closed");
         throw new Error("apply-failed");
@@ -104,7 +231,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const tradeName = job.trade
       ? (lang === "hi" ? job.trade.nameHi : lang === "te" ? job.trade.nameTe : job.trade.nameEn)
       : job.title;
-    const text = `🛠️ ${job.title}\n${tradeName} · ${job.city}\n₹${job.wageMin}-${job.wageMax}${t("perDay")} · ${t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")} ${t("jobShift")}\n${t("feedVerifiedEmployer")}: ${job.employer?.companyName ?? ""}`;
+    const text = `${job.title}\n${tradeName} · ${job.city}\n₹${job.wageMin}-${job.wageMax}${t("perDay")} · ${t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")} ${t("jobShift")}\n${t("feedVerifiedEmployer")}: ${job.employer?.companyName ?? ""}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
@@ -139,262 +266,276 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     : null;
   const isApplied = applied || !!existingApp;
   const isClosed = job.status !== "open";
-  // Round 8: employer reputation
   const employerRating = job.employer?.ratingCount && job.employer.ratingCount > 0
     ? { avg: job.employer.ratingAvg ?? 0, count: job.employer.ratingCount }
     : null;
   const highlyRatedEmployer = !!employerRating && employerRating.avg >= 4.5 && employerRating.count >= 3;
-  const employerInitials = job.employer?.companyName
-    ?.split(" ").filter(Boolean).map(p => p[0]).slice(0, 2).join("").toUpperCase() ?? "";
+  const hasMatch = job.matchScore != null && job.matchScore > 0 && worker;
+  const distKm = job.distanceKm != null ? job.distanceKm : (worker ? haversineKm(worker.lat, worker.lng, job.lat, job.lng) : 0);
 
   return (
     <AppShell>
       <div className="flex flex-col gap-4">
-        <Link href="/home" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground w-fit">
-          <ArrowLeft className="size-4" />
+        <Link
+          href="/home"
+          className="inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink w-fit min-h-11"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
           {t("back")}
         </Link>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="h-full"
-          >
-          <Card className={`relative overflow-hidden h-full ${job.isUrgent ? "border-accent/60" : ""}`}>
-            {job.isUrgent && (
-              <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-accent/70 to-transparent" />
-            )}
-            <CardContent className="p-6 flex flex-col gap-4">
-              {/* Header */}
-              <div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+          {/* Main column — job summary + match breakdown + similar jobs */}
+          <div className="flex flex-col gap-4">
+            {/* Job summary — border-t sectioned, no gradient hairline */}
+            <article className="surface-raised rounded-md overflow-hidden">
+              <header className="px-5 py-4 sm:px-6 sm:py-5 flex flex-col gap-2 border-b border-border">
                 {job.isUrgent && (
-                  <div className="self-start inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent-foreground mb-2">
-                    <Zap className="size-3" />
+                  <p className="inline-flex items-center gap-1.5 text-meta font-medium text-warning-foreground">
+                    <span className="status-dot is-warning" aria-hidden />
                     {t("feedUrgent")}
-                  </div>
+                  </p>
                 )}
-                <h1 className={`text-2xl font-bold tracking-tight ${isClosed ? "text-muted-foreground" : ""}`}>{job.title}</h1>
+                <h1
+                  className={`text-2xl sm:text-3xl font-semibold tracking-tight text-ink text-balance ${
+                    isClosed ? "text-ink-subtle" : ""
+                  }`}
+                >
+                  {job.title}
+                </h1>
                 {isClosed && (
-                  <Badge variant="outline" className="mt-2 border-slate-300 bg-slate-100 text-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:border-slate-700 gap-1">
-                    <span aria-hidden className="size-1.5 rounded-full bg-slate-500" />
+                  <p className="inline-flex items-center gap-1.5 text-meta font-medium text-ink-muted">
+                    <span className="status-dot is-neutral" aria-hidden />
                     {t("jobClosedBadge")}
-                  </Badge>
+                  </p>
                 )}
-                <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5 flex-wrap">
+                <p className="text-meta text-ink-muted flex items-center gap-1.5 flex-wrap">
                   {tradeName && <span>{tradeName}</span>}
                   {tradeName && <span aria-hidden>·</span>}
                   <span className="inline-flex items-center gap-1">
-                    <MapPin className="size-3.5" />
+                    <MapPin className="size-3.5" aria-hidden />
                     {job.city}
-                    {job.distanceKm != null && <span className="text-muted-foreground"> · {job.distanceKm.toFixed(1)} {t("km")}</span>}
+                    {job.distanceKm != null && (
+                      <span className="text-ink-subtle"> · {job.distanceKm.toFixed(1)} {t("km")}</span>
+                    )}
                   </span>
                   <span aria-hidden>·</span>
                   <span className="inline-flex items-center gap-1">
-                    <Clock className="size-3.5" />
+                    <Clock className="size-3.5" aria-hidden />
                     {new Date(job.createdAt).toLocaleDateString()}
                   </span>
                 </p>
-              </div>
+              </header>
 
-              {/* Match score */}
-              {job.matchScore != null && (
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <MatchScoreBadge score={job.matchScore} size="lg" />
-                    <span className="text-xs text-muted-foreground">{t("feedWhy", { score: job.matchScore })}</span>
-                  </div>
-                  <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden" aria-hidden>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${job.matchScore}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-                      className={`h-full rounded-full ${job.matchScore >= 70 ? "bg-emerald-500" : job.matchScore >= 50 ? "bg-accent" : "bg-muted-foreground/50"}`}
-                    />
-                  </div>
+              {/* Meta — dl grid with tabular numerals */}
+              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-y-3 gap-x-4 px-5 py-4 sm:px-6 sm:py-4 border-b border-border">
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+                    {t("jobWage")}
+                  </dt>
+                  <dd className="text-ink font-medium tabular-nums">
+                    <WageDisplay min={job.wageMin} max={job.wageMax} size="md" />
+                  </dd>
                 </div>
-              )}
-
-              <Separator />
-
-              {/* Meta grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("jobWage")}</p>
-                  <WageDisplay min={job.wageMin} max={job.wageMax} size="md" />
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1">
+                    <Users className="size-3" aria-hidden />
+                    {t("jobHeadcount")}
+                  </dt>
+                  <dd className="text-ink font-medium tabular-nums">
+                    {job.headcount}
+                  </dd>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Users className="size-3" />{t("jobHeadcount")}
-                  </p>
-                  <p className="text-lg font-bold tabular-nums mt-1">{job.headcount}</p>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+                    {t("jobShift")}
+                  </dt>
+                  <dd className="text-ink font-medium">
+                    {t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")}
+                  </dd>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("jobShift")}</p>
-                  <Badge variant="outline" className="mt-1 uppercase">{t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")}</Badge>
+                <div className="flex flex-col gap-0.5">
+                  <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+                    {t("jobLocation")}
+                  </dt>
+                  <dd className="text-ink font-medium">{job.city}</dd>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("jobLocation")}</p>
-                  <p className="text-sm font-semibold mt-1">{job.city}</p>
-                </div>
-              </div>
-
-              <Separator />
+              </dl>
 
               {/* Description */}
               {job.description && (
-                <div>
-                  <h2 className="font-semibold text-sm mb-1">{t("jobDescription")}</h2>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{job.description}</p>
-                </div>
+                <section className="px-5 py-4 sm:px-6 sm:py-4 border-b border-border">
+                  <h2 className="text-sm font-semibold text-ink mb-1.5">
+                    {t("jobDescription")}
+                  </h2>
+                  <p className="text-sm text-ink-muted whitespace-pre-line text-pretty">
+                    {job.description}
+                  </p>
+                </section>
               )}
 
-              {/* Skills */}
+              {/* Skills — inline text, no chips */}
               {job.skills.length > 0 && (
-                <>
-                  <Separator />
-                  <div>
-                    <h2 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <Briefcase className="size-4" />
-                      {t("jobSkills")}
-                    </h2>
-                    <div className="flex flex-wrap gap-1.5">
-                      {job.skills.map(s => (
-                        <Badge
-                          key={s.skillId}
-                          variant={s.required ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {s.skill ? (lang === "hi" ? s.skill.nameHi : lang === "te" ? s.skill.nameTe : s.skill.nameEn) : "—"}
-                          {s.required && <span className="ml-1 text-[10px] opacity-70">required</span>}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </>
+                <section className="px-5 py-4 sm:px-6 sm:py-4 border-b border-border">
+                  <h2 className="text-sm font-semibold text-ink mb-1.5 flex items-center gap-1.5">
+                    <Briefcase className="size-4 text-ink-muted" aria-hidden />
+                    {t("jobSkills")}
+                  </h2>
+                  <p className="text-sm text-ink-muted leading-relaxed">
+                    {job.skills.map(s => {
+                      const name = s.skill
+                        ? (lang === "hi" ? s.skill.nameHi : lang === "te" ? s.skill.nameTe : s.skill.nameEn)
+                        : "—";
+                      return name + (s.required ? ` (${t("skillRequired").toLowerCase()})` : "");
+                    }).join(", ")}
+                  </p>
+                </section>
               )}
 
               {/* Posted by */}
               {job.employer && (
-                <>
-                  <Separator />
-                  <div>
-                    <h2 className="font-semibold text-sm mb-2">{t("jobPostedBy")}</h2>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span
-                        aria-hidden
-                        className={`size-10 shrink-0 rounded-full grid place-items-center text-xs font-bold ${highlyRatedEmployer ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300" : "bg-primary/10 text-primary"}`}
-                      >
-                        {employerInitials || <Briefcase className="size-4" />}
-                      </span>
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold">{job.employer.companyName}</p>
-                          {job.employer.isVerified && (
-                            <VerificationBadge status="approved" label={t("feedVerifiedEmployer")} />
-                          )}
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <MapPin className="size-3" />
-                            {job.employer.city}
-                          </Badge>
-                        </div>
-                        {employerRating && (
-                          <div
-                            className="flex items-center gap-1.5 gap-x-2 text-xs flex-wrap"
-                            aria-label={t("employerRatingAria", { avg: employerRating.avg, count: employerRating.count })}
-                          >
-                            <RatingStars value={employerRating.avg} size="sm" readOnly />
-                            <span className="font-semibold text-amber-700 dark:text-amber-400 tabular-nums">{employerRating.avg.toFixed(1)}</span>
-                            <span className="text-muted-foreground">· {employerRating.count === 1 ? t("ratingCountOne") : t("ratingCountMany", { count: employerRating.count })}</span>
-                            {highlyRatedEmployer && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                                <Star className="size-3 fill-amber-400 text-amber-500" aria-hidden />
-                                {t("employerRatingHighly")}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* Apply rail — sticky on desktop */}
-          <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
-            >
-            <Card className={`${isClosed ? "border-slate-300 dark:border-slate-700" : "border-primary/30"} shadow-sm`}>
-              <CardContent className="p-4 flex flex-col gap-3">
-                <p className="text-sm font-semibold flex items-center gap-2">
-                  <Sparkles className="size-4 text-accent-foreground" />
-                  {isApplied ? t("jobApplied") : isClosed ? t("jobClosedBadge") : t("jobApply")}
-                </p>
-                {isClosed && !isApplied && (
-                  <div className="rounded-lg border border-slate-300 bg-slate-50 dark:bg-slate-950/40 dark:border-slate-700 p-3 flex flex-col gap-1">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <span aria-hidden className="size-1.5 rounded-full bg-slate-500" />
-                      {t("jobClosedBanner")}
+                <section className="px-5 py-4 sm:px-6 sm:py-4">
+                  <h2 className="text-sm font-semibold text-ink mb-2">
+                    {t("jobPostedBy")}
+                  </h2>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <p className="text-sm font-semibold text-ink">
+                      {job.employer.companyName}
                     </p>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400">{t("jobClosedHint")}</p>
+                    {job.employer.isVerified && (
+                      <span className="trust-pill is-employer">
+                        <ShieldCheck className="size-3.5" aria-hidden />
+                        {t("feedVerifiedEmployer")}
+                      </span>
+                    )}
+                    <span className="text-meta text-ink-muted inline-flex items-center gap-1">
+                      <MapPin className="size-3" aria-hidden />
+                      {job.employer.city}
+                    </span>
+                    {employerRating && (
+                      <span
+                        className="ml-auto inline-flex items-center gap-1.5 text-meta text-ink-muted shrink-0 tabular-nums"
+                        aria-label={t("employerRatingAria", { avg: employerRating.avg, count: employerRating.count })}
+                        title={highlyRatedEmployer ? t("employerRatingHighly") : undefined}
+                      >
+                        <RatingStars value={employerRating.avg} size="sm" readOnly />
+                        <span className="font-medium text-ink">{employerRating.avg.toFixed(1)}</span>
+                        <span className="text-ink-subtle">
+                          · {employerRating.count === 1 ? t("ratingCountOne") : t("ratingCountMany", { count: employerRating.count })}
+                        </span>
+                      </span>
+                    )}
                   </div>
+                </section>
+              )}
+            </article>
+
+            {/* Match explanation — premium, only when worker has a real score */}
+            {hasMatch && (
+              <MatchExplanation
+                score={job.matchScore as number}
+                worker={worker as WorkerProfileLite}
+                job={job}
+                distanceKm={distKm}
+                t={t}
+              />
+            )}
+
+            {/* Similar jobs discovery rail */}
+            <SimilarJobs
+              currentJobId={job.id}
+              tradeId={job.tradeId}
+              city={job.city}
+              currentEmployerId={job.employer?.id}
+              limit={3}
+            />
+          </div>
+
+          {/* Apply rail — sticky on desktop, neutral */}
+          <aside className="flex flex-col gap-3 lg:sticky lg:top-20 lg:self-start">
+            <section className="surface-raised rounded-md p-4 flex flex-col gap-3 shadow-raise">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-ink">
+                  {isApplied ? t("jobApplied") : isClosed ? t("jobClosedBadge") : t("jobApply")}
+                </h2>
+                {isApplied && (
+                  <span className="trust-pill is-verified">
+                    <Check className="size-3.5" aria-hidden />
+                    {t("applied")}
+                  </span>
                 )}
-                {!isApplied && !isClosed && (
-                  <p className="text-xs text-muted-foreground">{t("jobApplyConfirm")}</p>
+              </div>
+
+              {isClosed && !isApplied && (
+                <div className="surface-inset rounded-md p-3 flex flex-col gap-1">
+                  <p className="text-meta font-medium text-ink flex items-center gap-1.5">
+                    <span className="status-dot is-neutral" aria-hidden />
+                    {t("jobClosedBanner")}
+                  </p>
+                  <p className="text-meta text-ink-muted">{t("jobClosedHint")}</p>
+                </div>
+              )}
+
+              {!isApplied && !isClosed && (
+                <p className="text-meta text-ink-muted leading-relaxed">
+                  {t("jobApplyConfirm")}
+                </p>
+              )}
+
+              <Button
+                type="button"
+                onClick={apply}
+                disabled={isApplied || applying || isClosed}
+                className="min-h-12 gap-2 w-full"
+                variant={isApplied ? "secondary" : isClosed ? "outline" : "default"}
+                size="lg"
+              >
+                {applying ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : isApplied ? (
+                  <Check className="size-5" aria-hidden />
+                ) : isClosed ? (
+                  <Briefcase className="size-5" aria-hidden />
+                ) : (
+                  <Briefcase className="size-5" aria-hidden />
                 )}
-                <Button
-                  type="button"
-                  onClick={apply}
-                  disabled={isApplied || applying || isClosed}
-                  className="min-h-12 gap-2"
-                  variant={isApplied ? "secondary" : isClosed ? "outline" : "default"}
-                  size="lg"
+                {isApplied ? t("applied") : isClosed ? t("jobClosedApplyDisabled") : t("jobApply")}
+              </Button>
+
+              <Button
+                type="button"
+                onClick={shareWhatsApp}
+                variant="outline"
+                className="min-h-11 gap-2 w-full"
+              >
+                <Share2 className="size-4" aria-hidden />
+                {t("feedShare")}
+              </Button>
+
+              {existingApp && (
+                <Link
+                  href={`/applications/${existingApp.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 min-h-11 px-4 rounded-md border border-border bg-surface text-sm font-medium text-ink hover:bg-surface-sunken transition-colors"
                 >
-                  {applying ? <Loader2 className="size-4 animate-spin" /> : isApplied ? <Check className="size-5" /> : <Briefcase className="size-5" />}
-                  {isApplied ? t("applied") : isClosed ? t("jobClosedApplyDisabled") : t("jobApply")}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={shareWhatsApp}
-                  variant="outline"
-                  className="min-h-11 gap-2"
-                >
-                  <Share2 className="size-4" />
-                  {t("feedShare")}
-                </Button>
-                {existingApp && (
-                  <Button asChild variant="ghost" size="sm" className="mt-1 gap-1 min-h-11">
-                    <Link href={`/applications/${existingApp.id}`}>{t("trackerTitle")}</Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-            </motion.div>
+                  {t("trackerTitle")}
+                  <ChevronRight className="size-4" aria-hidden />
+                </Link>
+              )}
+            </section>
+
+            {/* Compact wage strip — high-signal, low-noise */}
+            <section className="surface-raised rounded-md p-4 flex flex-col gap-2">
+              <p className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+                <IndianRupee className="size-3.5" aria-hidden />
+                {t("passportWage")}
+              </p>
+              <p className="text-2xl font-semibold tabular-nums text-ink leading-none">
+                <WageDisplay min={job.wageMin} max={job.wageMax} size="lg" />
+              </p>
+              <p className="text-meta text-ink-subtle">{t("perDay")}</p>
+            </section>
           </aside>
         </div>
-
-        {/* Round 11: Similar jobs discovery rail */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.2, ease: "easeOut" }}
-          className="mt-2"
-        >
-          <SimilarJobs
-            currentJobId={job.id}
-            tradeId={job.tradeId}
-            city={job.city}
-            currentEmployerId={job.employer?.id}
-            limit={3}
-          />
-        </motion.div>
       </div>
     </AppShell>
   );

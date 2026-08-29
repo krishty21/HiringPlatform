@@ -1,13 +1,12 @@
 "use client";
 // PerJobDrilldownRow — DSH-03 per-job detail row.
-// Shows: title, applicants by stage (badges), total views, sparkline of score distribution.
-// Click → expands to candidate list / links to /employer/pipeline?jobId=...
+// Per Master Prompt §31/§32: avoid decorative analytics; color + shape (status-dot)
+// instead of color-only badges; semantic dl/dt/dd on expand.
 import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Eye, Users, ArrowRight, Zap } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, Users, ArrowRight } from "lucide-react";
 import { ScoreDistributionSparkline } from "./ScoreDistributionSparkline";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { cn } from "@/lib/utils";
@@ -28,13 +27,14 @@ export interface PerJob {
   scoreDistribution: number[]; // length 5
 }
 
-const STAGE_TONES: Record<string, string> = {
-  applied: "bg-blue-100 text-blue-800 border-blue-200",
-  shortlisted: "bg-amber-100 text-amber-800 border-amber-200",
-  interview: "bg-orange-100 text-orange-800 border-orange-200",
-  offer: "bg-violet-100 text-violet-800 border-violet-200",
-  hired: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  rejected: "bg-rose-100 text-rose-800 border-rose-200",
+// Stage → status-dot class (color + shape, never color alone).
+const STAGE_DOT: Record<string, string> = {
+  applied: "is-info",
+  shortlisted: "is-warning",
+  interview: "is-info",
+  offer: "is-warning",
+  hired: "is-positive",
+  rejected: "is-error",
 };
 
 // Localized full stage names (tracker keys shared with the pipeline + tracker)
@@ -60,8 +60,8 @@ export function PerJobDrilldownRow({ job }: { job: PerJob }) {
   return (
     <Card
       className={cn(
-        "border transition-shadow",
-        open ? "shadow-md" : "shadow-sm hover:shadow-sm",
+        "surface-raised shadow-raise transition-colors",
+        open ? "border-ink/30" : "hover:border-ink/30",
       )}
     >
       <CardContent className="p-4">
@@ -74,81 +74,90 @@ export function PerJobDrilldownRow({ job }: { job: PerJob }) {
           aria-controls={`job-${job.jobId}-detail`}
         >
           {open ? (
-            <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="size-4 text-ink-subtle shrink-0" />
           ) : (
-            <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+            <ChevronRight className="size-4 text-ink-subtle shrink-0" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">
+            <p className="font-semibold text-sm truncate text-ink">
               {job.title}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-meta mt-0.5 text-ink-subtle">
               {totalApps === 1 ? t("dashApplicantOne") : t("dashApplicantMany", { count: totalApps })}
               {" · "}{job.status === "closed" ? t("myJobsStatusClosed") : t("myJobsStatusOpen")}
             </p>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-            <Eye className="size-3.5" />
+          <div className="hidden sm:flex items-center gap-1.5 text-meta text-ink-subtle">
+            <Eye className="size-3.5" aria-hidden />
             <span className="tabular-nums">{job.views}</span>
           </div>
-          <div className="flex items-center gap-1 flex-wrap justify-end">
+          <ul className="flex items-center gap-2 flex-wrap justify-end" aria-label={t("dashApplicantsByStage")}>
             {stages.map(([stage, n]) =>
               n > 0 ? (
-                <Badge
+                <li
                   key={stage}
-                  variant="outline"
-                  className={cn("text-[10px] px-1.5 py-0 tabular-nums", STAGE_TONES[stage])}
+                  className="inline-flex items-center gap-1 text-meta tabular-nums border border-border rounded px-1.5 py-0.5 bg-surface"
                   title={t(STAGE_LABEL_KEYS[stage] ?? "trackerStageApplied")}
                 >
+                  <span className={cn("status-dot", STAGE_DOT[stage])} aria-hidden />
                   {stage[0].toUpperCase()}{n}
-                </Badge>
+                </li>
               ) : null,
             )}
-          </div>
+          </ul>
         </button>
 
-        {/* Expanded detail */}
+        {/* Expanded detail — semantic dl */}
         {open && (
           <div
             id={`job-${job.jobId}-detail`}
             className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4"
           >
             {/* Applicants by stage (full labels) */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
+            <dl className="space-y-1.5">
+              <dt className="text-meta uppercase tracking-wide text-ink-subtle">
                 {t("dashApplicantsByStage")}
-              </p>
+              </dt>
               <div className="flex flex-col gap-1.5">
                 {stages.map(([stage, n]) => (
-                  <div key={stage} className="flex items-center justify-between text-xs">
-                    <span>{t(STAGE_LABEL_KEYS[stage] ?? "trackerStageApplied")}</span>
-                    <span className="tabular-nums font-semibold">{n}</span>
-                  </div>
+                  <dd key={stage} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <span className={cn("status-dot", STAGE_DOT[stage])} aria-hidden />
+                      {t(STAGE_LABEL_KEYS[stage] ?? "trackerStageApplied")}
+                    </span>
+                    <span className="tabular-nums font-semibold text-ink">{n}</span>
+                  </dd>
                 ))}
               </div>
-            </div>
+            </dl>
 
             {/* Views + total */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">{t("dashViewsApplicants")}</p>
-              <div className="flex items-center gap-2 text-sm">
-                <Eye className="size-4 text-muted-foreground" />
-                <span className="tabular-nums font-semibold">{job.views}</span>
-                <span className="text-muted-foreground">{t("dashFunnelViews").toLowerCase()}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Users className="size-4 text-muted-foreground" />
-                <span className="tabular-nums font-semibold">{totalApps}</span>
-                <span className="text-muted-foreground">{t("myJobsApplicants")}</span>
-              </div>
-            </div>
+            <dl className="space-y-1.5">
+              <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("dashViewsApplicants")}
+              </dt>
+              <dd className="flex items-center gap-2 text-sm">
+                <Eye className="size-4 text-ink-subtle" aria-hidden />
+                <span className="tabular-nums font-semibold text-ink">{job.views}</span>
+                <span className="text-ink-subtle">{t("dashFunnelViews").toLowerCase()}</span>
+              </dd>
+              <dd className="flex items-center gap-2 text-sm">
+                <Users className="size-4 text-ink-subtle" aria-hidden />
+                <span className="tabular-nums font-semibold text-ink">{totalApps}</span>
+                <span className="text-ink-subtle">{t("myJobsApplicants")}</span>
+              </dd>
+            </dl>
 
             {/* Score distribution sparkline */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">{t("dashScoreDist")}</p>
-              <ScoreDistributionSparkline distribution={job.scoreDistribution} />
-              <p className="text-[10px] text-muted-foreground">{t("dashScoreBuckets")}</p>
-            </div>
+            <dl className="space-y-1.5">
+              <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("dashScoreDist")}
+              </dt>
+              <dd>
+                <ScoreDistributionSparkline distribution={job.scoreDistribution} />
+              </dd>
+              <dd className="text-[10px] text-ink-subtle">{t("dashScoreBuckets")}</dd>
+            </dl>
 
             {/* CTA → pipeline Kanban with this job pre-selected */}
             <div className="sm:col-span-3 flex justify-end">

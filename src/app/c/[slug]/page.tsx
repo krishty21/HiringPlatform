@@ -179,7 +179,7 @@ export default async function PublicKaamCardPage({
 
 function KaamCardShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-secondary/40 via-background to-background">
+    <div className="min-h-screen flex flex-col bg-surface-sunken">
       <KaamCardHeader />
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12 flex items-start justify-center">
         <div className="w-full max-w-3xl">{children}</div>

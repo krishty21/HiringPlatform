@@ -5,11 +5,8 @@ import { AppShell } from "@/components/shared/AppShell";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { JobCard, type WorkerJobCardData } from "@/components/worker/JobCard";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -17,10 +14,9 @@ import {
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSavedJobs } from "@/hooks/use-saved-jobs";
 import { useSession } from "next-auth/react";
-import { motion } from "framer-motion";
 import {
   Search, X, Zap, Bookmark, ArrowDownWideNarrow, MapPin, Briefcase,
-  ChevronDown, Loader2, Compass, SlidersHorizontal, Star, Radio,
+  ChevronDown, Loader2, Compass, Clock, Gauge,
 } from "lucide-react";
 import type { Skill } from "@/lib/schemas";
 import { toast } from "sonner";
@@ -46,7 +42,7 @@ function JobBoard() {
   const { data: session, status } = useSession();
   const { savedIds, savedCount } = useSavedJobs();
 
-  // ---- URL-synced state (shareable deep links: /jobs?q=welder&city=...&sort=wage) ----
+  // URL-synced state
   const [query, setQuery] = useState(search.get("q") ?? "");
   const [tradeId, setTradeId] = useState(search.get("trade") ?? "");
   const [city, setCity] = useState(search.get("city") ?? "");
@@ -56,7 +52,6 @@ function JobBoard() {
   const [savedOnly, setSavedOnly] = useState(search.get("saved") === "1");
   const [topEmployersOnly, setTopEmployersOnly] = useState(search.get("top") === "1");
 
-  // ---- data ----
   const [skills, setSkills] = useState<Skill[]>([]);
   const [jobs, setJobs] = useState<WorkerJobCardData[] | null>(null);
   const [hasNext, setHasNext] = useState(false);
@@ -64,13 +59,9 @@ function JobBoard() {
   const [profileExists, setProfileExists] = useState<boolean | null>(null);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
-  // ---- worker "Available today" quick-toggle (round 11) ----
-  // Visible only to logged-in workers. Mirrors the toggle on /home but lets
-  // a worker flip their availability while browsing the board.
   const [availableToday, setAvailableToday] = useState<boolean | null>(null);
   const [availableSaving, setAvailableSaving] = useState(false);
 
-  // Skills taxonomy (for trade filter)
   useEffect(() => {
     fetch("/api/skills")
       .then(r => r.json())
@@ -78,8 +69,6 @@ function JobBoard() {
       .catch(() => setSkills([]));
   }, []);
 
-  // Worker profile existence (redirect to onboarding when missing).
-  // Non-workers (employer/admin) can browse the board too — no profile needed.
   useEffect(() => {
     if (status !== "authenticated") return;
     const role = (session?.user as { role?: string } | undefined)?.role;
@@ -93,7 +82,6 @@ function JobBoard() {
       .then(data => {
         if (data === null) return;
         setProfileExists(true);
-        // Round 11: seed the quick-toggle from the worker's stored flag.
         if (typeof data.availableToday === "boolean") {
           setAvailableToday(data.availableToday);
         }
@@ -101,7 +89,6 @@ function JobBoard() {
       .catch(() => setProfileExists(false));
   }, [status, session]);
 
-  // Round 11: workers can flip availability directly from the board header.
   async function toggleAvailableToday(checked: boolean) {
     if (availableToday === null) return;
     setAvailableToday(checked);
@@ -115,7 +102,7 @@ function JobBoard() {
       if (!res.ok) throw new Error("patch-failed");
       toast.success(checked ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff"));
     } catch {
-      setAvailableToday(!checked); // rollback
+      setAvailableToday(!checked);
       toast.error(t("errGeneric"));
     } finally {
       setAvailableSaving(false);
@@ -129,8 +116,6 @@ function JobBoard() {
     }
   }, [profileExists, status, session, router]);
 
-  // Applied jobs (mark cards so the Apply button doesn't double-submit).
-  // Round 12: withdrawn applications DON'T mark the card — the worker may re-apply.
   useEffect(() => {
     if (status !== "authenticated") return;
     fetch("/api/applications/mine", { cache: "no-store" })
@@ -143,8 +128,6 @@ function JobBoard() {
       .catch(() => {});
   }, [status]);
 
-  // Server-side query (trade/shift/urgent). Browse-all: distanceKm=200 overrides
-  // the worker-radius filter so every open job on the platform is reachable here.
   const serverQuery = useMemo(() => {
     const p = new URLSearchParams();
     p.set("pageSize", String(PAGE_SIZE));
@@ -155,7 +138,6 @@ function JobBoard() {
     return p.toString();
   }, [tradeId, shift, urgentOnly]);
 
-  // Fetch page 1 (debounced) whenever server-side filters change
   const loadFirstPage = useCallback(async () => {
     setJobs(null);
     try {
@@ -176,12 +158,10 @@ function JobBoard() {
     return () => clearTimeout(id);
   }, [loadFirstPage, profileExists]);
 
-  // Load-more appends the next page
   const loadMore = useCallback(async () => {
     if (loadingMore || !jobs) return;
     setLoadingMore(true);
     try {
-      // Infer next page from the items we already hold
       const nextPage = Math.floor(jobs.length / PAGE_SIZE) + 1;
       const res = await fetch(`/api/jobs?${serverQuery}&page=${nextPage}`, { cache: "no-store" });
       if (!res.ok) { toast.error(t("errGeneric")); return; }
@@ -199,7 +179,7 @@ function JobBoard() {
     }
   }, [loadingMore, jobs, serverQuery, t]);
 
-  // ---- URL sync (replace, no scroll jump) ----
+  // URL sync
   useEffect(() => {
     if (typeof window === "undefined") return;
     const p = new URLSearchParams();
@@ -224,13 +204,11 @@ function JobBoard() {
     [tradeSkills, tradeId],
   );
 
-  // Cities derived from loaded jobs (only cities that actually have jobs)
   const cities = useMemo(() => {
     if (!jobs) return [];
     return Array.from(new Set(jobs.map(j => j.city))).sort();
   }, [jobs]);
 
-  // ---- client-side pipeline: text search → city → saved → top employers → sort ----
   const visible = useMemo(() => {
     if (!jobs) return null;
     const q = query.trim().toLowerCase();
@@ -247,7 +225,6 @@ function JobBoard() {
       }
       if (city && j.city !== city) return false;
       if (savedOnly && !savedIds.has(j.id)) return false;
-      // Round 8: "Top employers" — jobs from employers rated ≥4.5 by 3+ workers
       if (topEmployersOnly) {
         const r = j.employer;
         if (!r?.ratingAvg || !r.ratingCount || r.ratingAvg < 4.5 || r.ratingCount < 3) return false;
@@ -263,11 +240,10 @@ function JobBoard() {
     return out;
   }, [jobs, query, city, savedOnly, savedIds, sort, topEmployersOnly]);
 
-  // ---- active filter chips ----
   interface Chip { key: string; label: string; clear: () => void }
   const chips: Chip[] = useMemo(() => {
     const out: Chip[] = [];
-    if (query.trim()) out.push({ key: "q", label: `“${query.trim()}”`, clear: () => setQuery("") });
+    if (query.trim()) out.push({ key: "q", label: `"${query.trim()}"`, clear: () => setQuery("") });
     if (tradeName) out.push({ key: "trade", label: tradeName, clear: () => setTradeId("") });
     if (city) out.push({ key: "city", label: city, clear: () => setCity("") });
     if (shift !== "any") out.push({ key: "shift", label: t(shift === "day" ? "shiftDay" : "shiftNight"), clear: () => setShift("any") });
@@ -285,7 +261,6 @@ function JobBoard() {
     setUrgentOnly(false);
     setSavedOnly(false);
     setTopEmployersOnly(false);
-    // keep sort — it's a view preference, not a filter
   }
 
   const hasActiveFilters = chips.length > 0;
@@ -302,114 +277,94 @@ function JobBoard() {
   return (
     <AppShell>
       <div className="flex flex-col gap-4">
-        {/* ---------- Hero / search header ---------- */}
-        <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-4 sm:p-6">
-          {/* decorative bridge arcs */}
-          <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full border-[14px] border-primary/10" />
-          <div aria-hidden className="pointer-events-none absolute -right-4 -top-10 size-28 rounded-full border-[10px] border-accent/15" />
-
-          <div className="relative flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                  <Compass className="size-6 text-primary" />
-                  {t("boardTitle")}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">{t("boardSubtitle")}</p>
-              </div>
-              {visible && (
-                <Badge variant="secondary" className="tabular-nums px-3 py-1 text-xs shrink-0">
-                  {t(visible.length === 1 ? "boardResultOne" : "boardResults", { count: visible.length })}
-                </Badge>
-              )}
+        {/* Page header — no gradient, no decorative arcs */}
+        <section className="border-b border-border pb-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex flex-col gap-1">
+              <p className="text-meta uppercase tracking-wider text-ink-subtle">
+                {t("boardSubtitle")}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink flex items-center gap-2.5 text-balance">
+                <Compass className="size-5 text-ink-muted" aria-hidden />
+                {t("boardTitle")}
+              </h1>
             </div>
-
-            {/* Search bar */}
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
-              <Input
-                type="search"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder={t("boardSearchPlaceholder")}
-                aria-label={t("boardSearchPlaceholder")}
-                className="pl-10 pr-10 h-12 text-base rounded-xl bg-card shadow-sm border-border/80 focus-visible:ring-2"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label={t("boardClearAll")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 grid place-items-center size-7 rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Round 11: worker "Available today" quick toggle */}
-            {isWorker && availableToday !== null && (
-              <motion.button
-                type="button"
-                onClick={() => toggleAvailableToday(!availableToday)}
-                disabled={availableSaving}
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                aria-pressed={availableToday}
-                aria-label={t("boardAvailableToday")}
-                className={`group inline-flex items-center gap-3 self-start rounded-xl border px-4 py-2.5 text-left transition-all duration-200 ${
-                  availableToday
-                    ? "border-emerald-400/70 bg-emerald-50 dark:bg-emerald-950/40 shadow-[0_0_0_3px_rgba(16,185,129,0.08)]"
-                    : "border-border bg-card hover:border-emerald-300 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20"
-                }`}
-              >
-                <span
-                  aria-hidden
-                  className={`relative grid size-9 place-items-center rounded-full transition-colors ${
-                    availableToday
-                      ? "bg-emerald-500 text-white"
-                      : "bg-muted text-muted-foreground group-hover:bg-emerald-100 group-hover:text-emerald-700"
-                  }`}
-                >
-                  {availableSaving ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Radio className={`size-4 ${availableToday ? "animate-pulse" : ""}`} />
-                  )}
-                  {availableToday && (
-                    <span aria-hidden className="absolute inset-0 rounded-full bg-emerald-400 opacity-40 motion-safe:animate-ping" />
-                  )}
-                </span>
-                <span className="flex flex-col gap-0.5 min-w-0">
-                  <span className={`text-sm font-semibold leading-tight ${availableToday ? "text-emerald-800 dark:text-emerald-200" : "text-foreground"}`}>
-                    {availableToday ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff")}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground truncate">
-                    {t("boardAvailableTodayHint")}
-                  </span>
-                </span>
-                <Switch
-                  checked={availableToday}
-                  disabled={availableSaving}
-                  onCheckedChange={toggleAvailableToday}
-                  onClick={e => e.stopPropagation()} // avoid double-trigger from outer button
-                  className="ml-1 data-[state=checked]:bg-emerald-600"
-                  aria-label={t("boardAvailableToday")}
-                />
-              </motion.button>
+            {visible && (
+              <p className="text-meta text-ink-muted tabular-nums shrink-0 pt-2">
+                {t(visible.length === 1 ? "boardResultOne" : "boardResults", { count: visible.length })}
+              </p>
             )}
           </div>
+
+          {/* Search bar — plain, no shadow */}
+          <div className="relative mt-3">
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-ink-subtle"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={t("boardSearchPlaceholder")}
+              aria-label={t("boardSearchPlaceholder")}
+              className="pl-10 pr-10 h-11 text-base bg-surface"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label={t("boardClearAll")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 grid place-items-center size-7 rounded-md text-ink-subtle hover:bg-surface-sunken hover:text-ink transition-colors"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            )}
+          </div>
+
+          {/* Available-today toggle — plain row, no emerald pulse */}
+          {isWorker && availableToday !== null && (
+            <div
+              className={`mt-3 flex items-center gap-3 rounded-md border px-4 py-2.5 ${
+                availableToday
+                  ? "border-positive/40 bg-positive/5"
+                  : "border-border bg-surface"
+              }`}
+            >
+              <span
+                aria-hidden
+                className="grid size-7 place-items-center rounded-md border border-border bg-surface text-ink-muted"
+              >
+                <Clock className="size-3.5" aria-hidden />
+              </span>
+              <div className="flex flex-col min-w-0 flex-1">
+                <p
+                  className={`text-sm font-medium leading-tight ${
+                    availableToday ? "text-positive" : "text-ink"
+                  }`}
+                >
+                  {availableToday ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff")}
+                </p>
+                <p className="text-meta text-ink-muted truncate">
+                  {t("boardAvailableTodayHint")}
+                </p>
+              </div>
+              <Switch
+                checked={availableToday}
+                disabled={availableSaving}
+                onCheckedChange={toggleAvailableToday}
+                aria-label={t("boardAvailableToday")}
+              />
+            </div>
+          )}
         </section>
 
-        {/* ---------- Sticky toolbar ---------- */}
-        <div className="sticky top-14 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-b border-border">
+        {/* Sticky toolbar — neutral selects, neutral toggle rows */}
+        <div className="sticky top-14 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/95 backdrop-blur-[6px] supports-[backdrop-filter]:bg-background/80 border-b border-border">
           <div className="flex items-center gap-2 flex-wrap">
-            <SlidersHorizontal className="size-4 text-muted-foreground shrink-0" aria-hidden />
-
             <Select value={tradeId || "any"} onValueChange={v => setTradeId(v === "any" ? "" : v)}>
-              <SelectTrigger className="h-9 w-auto min-w-28 gap-1 text-xs font-medium" aria-label={t("feedFilterTrade")}>
-                <Briefcase className="size-3.5 text-muted-foreground" />
+              <SelectTrigger className="h-9 w-auto min-w-28 gap-1 text-sm font-medium" aria-label={t("feedFilterTrade")}>
+                <Briefcase className="size-3.5 text-ink-subtle" aria-hidden />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -421,8 +376,8 @@ function JobBoard() {
             </Select>
 
             <Select value={city || "any"} onValueChange={v => setCity(v === "any" ? "" : v)}>
-              <SelectTrigger className="h-9 w-auto min-w-24 gap-1 text-xs font-medium" aria-label={t("boardCity")}>
-                <MapPin className="size-3.5 text-muted-foreground" />
+              <SelectTrigger className="h-9 w-auto min-w-24 gap-1 text-sm font-medium" aria-label={t("boardCity")}>
+                <MapPin className="size-3.5 text-ink-subtle" aria-hidden />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -434,7 +389,7 @@ function JobBoard() {
             </Select>
 
             <Select value={shift} onValueChange={v => setShift(v as typeof shift)}>
-              <SelectTrigger className="h-9 w-auto min-w-24 text-xs font-medium" aria-label={t("feedFilterShift")}>
+              <SelectTrigger className="h-9 w-auto min-w-24 text-sm font-medium" aria-label={t("feedFilterShift")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -445,8 +400,8 @@ function JobBoard() {
             </Select>
 
             <Select value={sort} onValueChange={v => setSort(v as SortKey)}>
-              <SelectTrigger className="h-9 w-auto min-w-32 gap-1 text-xs font-medium sm:ml-auto" aria-label={t("boardSortLabel")}>
-                <ArrowDownWideNarrow className="size-3.5 text-muted-foreground" />
+              <SelectTrigger className="h-9 w-auto min-w-32 gap-1 text-sm font-medium sm:ml-auto" aria-label={t("boardSortLabel")}>
+                <ArrowDownWideNarrow className="size-3.5 text-ink-subtle" aria-hidden />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -458,33 +413,63 @@ function JobBoard() {
             </Select>
           </div>
 
-          {/* Toggle chips row */}
+          {/* Toggle rows — neutral bordered, status-dot for active state */}
           <div className="flex items-center gap-2 flex-wrap mt-2">
             <label
-              className={`inline-flex items-center gap-2 h-9 rounded-full border px-3 cursor-pointer transition-colors ${urgentOnly ? "border-accent bg-accent/15 text-accent-foreground" : "border-border bg-card text-muted-foreground hover:border-accent/50"}`}
+              className={`inline-flex items-center gap-2 h-9 rounded-md border px-3 cursor-pointer transition-colors ${
+                urgentOnly
+                  ? "border-warning/40 bg-warning/5 text-warning-foreground"
+                  : "border-border bg-surface text-ink-muted hover:text-ink hover:bg-surface-sunken"
+              }`}
             >
-              <Zap className="size-3.5" />
-              <span className="text-xs font-medium">{t("feedUrgent")}</span>
-              <Switch checked={urgentOnly} onCheckedChange={setUrgentOnly} className="scale-75 data-[state=checked]:bg-accent-foreground" aria-label={t("feedUrgent")} />
+              <span
+                className={`status-dot ${urgentOnly ? "is-warning" : "is-neutral"}`}
+                aria-hidden
+              />
+              <span className="text-sm font-medium">{t("feedUrgent")}</span>
+              <Switch
+                checked={urgentOnly}
+                onCheckedChange={setUrgentOnly}
+                className="scale-75"
+                aria-label={t("feedUrgent")}
+              />
             </label>
 
             <label
-              className={`inline-flex items-center gap-2 h-9 rounded-full border px-3 cursor-pointer transition-colors ${savedOnly ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:border-primary/50"}`}
+              className={`inline-flex items-center gap-2 h-9 rounded-md border px-3 cursor-pointer transition-colors ${
+                savedOnly
+                  ? "border-primary/40 bg-primary/5 text-primary"
+                  : "border-border bg-surface text-ink-muted hover:text-ink hover:bg-surface-sunken"
+              }`}
             >
-              <Bookmark className={`size-3.5 ${savedOnly ? "fill-primary" : ""}`} />
-              <span className="text-xs font-medium">{t("boardSavedOnly")}</span>
+              <Bookmark className={`size-3.5 ${savedOnly ? "fill-primary" : ""}`} aria-hidden />
+              <span className="text-sm font-medium">{t("boardSavedOnly")}</span>
               {savedCount > 0 && (
-                <Badge variant="secondary" className="text-[10px] tabular-nums h-5 px-1.5">{savedCount}</Badge>
+                <span className="text-meta tabular-nums text-ink-subtle">({savedCount})</span>
               )}
-              <Switch checked={savedOnly} onCheckedChange={setSavedOnly} className="scale-75" aria-label={t("boardSavedOnly")} />
+              <Switch
+                checked={savedOnly}
+                onCheckedChange={setSavedOnly}
+                className="scale-75"
+                aria-label={t("boardSavedOnly")}
+              />
             </label>
 
             <label
-              className={`inline-flex items-center gap-2 h-9 rounded-full border px-3 cursor-pointer transition-colors ${topEmployersOnly ? "border-amber-400 bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300" : "border-border bg-card text-muted-foreground hover:border-amber-400/60"}`}
+              className={`inline-flex items-center gap-2 h-9 rounded-md border px-3 cursor-pointer transition-colors ${
+                topEmployersOnly
+                  ? "border-primary/40 bg-primary/5 text-primary"
+                  : "border-border bg-surface text-ink-muted hover:text-ink hover:bg-surface-sunken"
+              }`}
             >
-              <Star className={`size-3.5 ${topEmployersOnly ? "fill-amber-500 text-amber-500" : ""}`} />
-              <span className="text-xs font-medium">{t("boardTopEmployers")}</span>
-              <Switch checked={topEmployersOnly} onCheckedChange={setTopEmployersOnly} className="scale-75 data-[state=checked]:bg-amber-500" aria-label={t("boardTopEmployers")} />
+              <Gauge className="size-3.5" aria-hidden />
+              <span className="text-sm font-medium">{t("boardTopEmployers")}</span>
+              <Switch
+                checked={topEmployersOnly}
+                onCheckedChange={setTopEmployersOnly}
+                className="scale-75"
+                aria-label={t("boardTopEmployers")}
+              />
             </label>
 
             {hasActiveFilters && (
@@ -493,34 +478,34 @@ function JobBoard() {
                 variant="ghost"
                 size="sm"
                 onClick={clearAll}
-                className="h-9 rounded-full text-xs gap-1 ml-auto text-muted-foreground hover:text-foreground"
+                className="h-9 rounded-md text-meta text-ink-muted hover:text-ink ml-auto gap-1"
               >
-                <X className="size-3.5" />
+                <X className="size-3.5" aria-hidden />
                 {t("boardClearAll")}
               </Button>
             )}
           </div>
         </div>
 
-        {/* ---------- Active filter chips ---------- */}
+        {/* Active filter chips — neutral with X */}
         {hasActiveFilters && (
-          <div className="flex items-center gap-2 flex-wrap" aria-label={t("boardClearAll")}>
+          <div className="flex items-center gap-1.5 flex-wrap" aria-label={t("boardClearAll")}>
             {chips.map(c => (
               <button
                 key={c.key}
                 type="button"
                 onClick={c.clear}
-                className="inline-flex items-center gap-1.5 h-8 rounded-full bg-primary/10 text-primary pl-3 pr-2 text-xs font-medium hover:bg-primary/15 transition-colors group"
+                className="inline-flex items-center gap-1.5 h-8 rounded-md border border-border bg-surface pl-2.5 pr-2 text-meta font-medium text-ink hover:bg-surface-sunken transition-colors"
                 aria-label={`${c.label} — remove filter`}
               >
                 {c.label}
-                <X className="size-3.5 opacity-60 group-hover:opacity-100" />
+                <X className="size-3 text-ink-subtle" aria-hidden />
               </button>
             ))}
           </div>
         )}
 
-        {/* ---------- Results ---------- */}
+        {/* Results */}
         {jobs === null && <LoadingSkeleton count={4} />}
 
         {jobs !== null && visible !== null && visible.length === 0 && query.trim() !== "" && (
@@ -565,54 +550,46 @@ function JobBoard() {
         {visible !== null && visible.length > 0 && (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {visible.map((job, i) => (
-                <motion.div
-                  key={job.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: Math.min(i, 6) * 0.05, ease: "easeOut" }}
-                >
-                  <JobCard job={job} applied={appliedIds.has(job.id)} />
-                </motion.div>
+              {visible.map((job) => (
+                <JobCard key={job.id} job={job} applied={appliedIds.has(job.id)} />
               ))}
             </div>
 
-            {/* Footer: count + load more / end of list */}
             <div className="flex flex-col items-center gap-3 mt-2 pb-2">
-              <p className="text-xs text-muted-foreground tabular-nums">
+              <p className="text-meta text-ink-subtle tabular-nums">
                 {t("boardShowing", { shown: visible.length, total: jobs.length })}
               </p>
               {hasNext ? (
-                <Button type="button" variant="outline" onClick={loadMore} disabled={loadingMore} className="gap-2 min-h-11 px-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="gap-2 min-h-11 px-6"
+                >
                   {loadingMore
-                    ? <Loader2 className="size-4 animate-spin" />
-                    : <ChevronDown className="size-4" />}
+                    ? <Loader2 className="size-4 animate-spin" aria-hidden />
+                    : <ChevronDown className="size-4" aria-hidden />}
                   {t("boardLoadMore")}
                 </Button>
               ) : (
-                <div className="flex items-center gap-3 w-full max-w-xs text-muted-foreground" aria-hidden>
+                <div className="flex items-center gap-3 w-full max-w-xs text-ink-subtle" aria-hidden>
                   <span className="h-px flex-1 bg-border" />
-                  <span className="text-[10px] uppercase tracking-widest whitespace-nowrap">{t("boardEndOfList")}</span>
+                  <span className="text-meta uppercase tracking-widest whitespace-nowrap">
+                    {t("boardEndOfList")}
+                  </span>
                   <span className="h-px flex-1 bg-border" />
                 </div>
               )}
             </div>
           </>
         )}
-
-        {/* Screen-reader summary of current filters */}
-        <Card className="sr-only">
-          <CardContent>
-            {t(visible?.length === 1 ? "boardResultOne" : "boardResults", { count: visible?.length ?? 0 })}
-            {hasActiveFilters ? ` · ${chips.map(c => c.label).join(", ")}` : ""}
-          </CardContent>
-        </Card>
       </div>
     </AppShell>
   );
 }
 
-export default function JobBoardPage() {
+export default function JobsPage() {
   return (
     <Suspense fallback={<AppShell><LoadingSkeleton count={3} /></AppShell>}>
       <JobBoard />

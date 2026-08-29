@@ -1,8 +1,9 @@
 "use client";
-// /verify — worker + employer verification page (VER-01..06).
-// Workers see: ID upload dropzone + skill cert upload dropzone (+ skill picker)
-//                + list of submitted docs with statuses.
-// Employers see: company registration upload dropzone + list of submitted docs.
+// /verify — credential infrastructure (Master Prompt §33).
+// Workers: upload government ID + skill certificate (+ skill picker) +
+//           list of submitted docs with statuses (Identity Verified / Skills
+//           Verified / Documents pending).
+// Employers: upload company registration + list of submitted docs.
 // VER-06: no raw ID number is ever asked for or stored. Only the file itself.
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -14,8 +15,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, FileText, Check } from "lucide-react";
+import {
+  ShieldCheck, FileText, IdCard, Award, Check, Clock,
+} from "lucide-react";
 
 interface SkillRow {
   id: string;
@@ -23,6 +25,50 @@ interface SkillRow {
   nameHi: string;
   nameTe: string;
   category: string;
+}
+
+interface VerifySummary {
+  idApproved: boolean;
+  skillApprovedCount: number;
+  totalSkillCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+}
+
+// Derive the worker's verification summary from the VerificationList data.
+// Fetches the doc list directly (the VerificationList component fetches the
+// same endpoint; we fetch here for the headline counts).
+function useVerificationSummary(refreshKey: number): VerifySummary | null {
+  const [summary, setSummary] = useState<VerifySummary | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/verifications", { cache: "no-store" });
+        if (!res.ok) { if (!cancelled) setSummary(null); return; }
+        const data = (await res.json()) as { items?: Array<{ docType: string; status: string; skill?: { nameEn?: string } | null }> };
+        if (cancelled) return;
+        const items = data.items ?? [];
+        const idApproved = items.some(d => d.docType === "id" && d.status === "approved");
+        const skillDocs = items.filter(d => d.docType === "skill_cert");
+        const skillApprovedCount = skillDocs.filter(d => d.status === "approved").length;
+        const pendingCount = items.filter(d => d.status === "pending").length;
+        const rejectedCount = items.filter(d => d.status === "rejected").length;
+        setSummary({
+          idApproved,
+          skillApprovedCount,
+          totalSkillCount: skillDocs.length,
+          pendingCount,
+          rejectedCount,
+        });
+      } catch {
+        if (!cancelled) setSummary(null);
+      }
+    };
+    setTimeout(load, 0);
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+  return summary;
 }
 
 export default function VerifyPage() {
@@ -33,9 +79,8 @@ export default function VerifyPage() {
   const [mySkillIds, setMySkillIds] = useState<Set<string>>(new Set());
   const [pickedSkillId, setPickedSkillId] = useState<string | undefined>(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
+  const summary = useVerificationSummary(refreshKey);
 
-  // Workers need the skills list to attach a skill cert to a specific skill.
-  // Default the picker to one of the worker's OWN skills (not the first global skill).
   useEffect(() => {
     if (role !== "worker") return;
     let cancelled = false;
@@ -55,7 +100,6 @@ export default function VerifyPage() {
         if (skillsRes.ok) {
           const data = (await skillsRes.json()) as { items: SkillRow[] };
           if (cancelled) return;
-          // Own skills first (stable), then the rest.
           const sorted = [...data.items].sort((a, b) => {
             const aOwn = ownIds.has(a.id) ? 0 : 1;
             const bOwn = ownIds.has(b.id) ? 0 : 1;
@@ -81,89 +125,162 @@ export default function VerifyPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+        {/* Header — credential infrastructure feel */}
         <header className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="size-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">{t("verifyTitle")}</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">{t("verifyPiiNote")}</p>
+          <p className="text-meta uppercase tracking-wider text-ink-subtle">
+            {t("verifyTitle")}
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink text-balance">
+            {t("verifyTitle")}
+          </h1>
+          <p className="text-sm text-ink-muted text-pretty">
+            {t("verifyPiiNote")}
+          </p>
         </header>
 
-        {/* Uploaders */}
+        {/* Status strip — dl with verified/pending counts (workers only) */}
+        {role === "worker" && summary && (
+          <section className="surface-raised rounded-md p-4 sm:p-5 shadow-raise" aria-label={t("verifyStatusSummaryAria")}>
+            <dl className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1">
+                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+                  <IdCard className="size-3.5" aria-hidden />
+                  {t("verifyStatusId")}
+                </dt>
+                <dd className="text-sm font-medium">
+                  {summary.idApproved ? (
+                    <span className="inline-flex items-center gap-1.5 text-positive">
+                      <Check className="size-4" aria-hidden />
+                      {t("verifyStatusApproved")}
+                    </span>
+                  ) : (
+                    <span className="text-ink-subtle">{t("verifyStatusPending")}</span>
+                  )}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+                  <Award className="size-3.5" aria-hidden />
+                  {t("verifyStatusSkills")}
+                </dt>
+                <dd className="text-sm font-medium text-ink tabular-nums">
+                  {summary.skillApprovedCount}/{summary.totalSkillCount}{" "}
+                  <span className="text-ink-subtle font-normal">{t("verifyStatusApproved").toLowerCase()}</span>
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+                  <Clock className="size-3.5" aria-hidden />
+                  {t("verifyStatusDocs")}
+                </dt>
+                <dd className="text-sm font-medium text-ink tabular-nums">
+                  {summary.pendingCount}
+                  <span className="text-ink-subtle font-normal"> {t("verifyStatusPending").toLowerCase()}</span>
+                </dd>
+              </div>
+            </dl>
+          </section>
+        )}
+
+        {/* Uploaders — grouped, professional, with helpful descriptions */}
         {role === "worker" && (
           <section className="flex flex-col gap-4">
-            <UploadDropzone
-              docType="id"
-              onUploaded={() => setRefreshKey((k) => k + 1)}
-            />
+            <section className="surface-raised rounded-md overflow-hidden shadow-raise">
+              <header className="px-4 py-3 border-b border-border flex items-center gap-2">
+                <IdCard className="size-4 text-ink-muted" aria-hidden />
+                <h2 className="text-sm font-semibold text-ink">
+                  {t("verifyUploadId")}
+                </h2>
+              </header>
+              <div className="p-4">
+                <p className="text-meta text-ink-muted mb-3 leading-relaxed">
+                  {t("verifyUploadIdHint")}
+                </p>
+                <UploadDropzone
+                  docType="id"
+                  onUploaded={() => setRefreshKey((k) => k + 1)}
+                />
+              </div>
+            </section>
 
-            <div className="flex flex-col gap-3">
-              {skills === null ? (
-                <Skeleton className="h-12 w-full" />
-              ) : (
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border bg-secondary/30 flex items-center justify-between gap-3 flex-wrap">
-                    <p className="text-sm font-semibold flex items-center gap-2">
-                      <FileText className="size-4 text-primary" />
-                      {t("verifyUploadCert")}
-                    </p>
-                    <div className="w-56">
-                      <Select
-                        value={pickedSkillId ?? ""}
-                        onValueChange={(v) => setPickedSkillId(v)}
-                      >
-                        <SelectTrigger className="min-h-11">
-                          <SelectValue placeholder={t("search")} />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-72 shramsetu-scroll">
-                          {skills.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              <span className="inline-flex items-center gap-1.5">
-                                {mySkillIds.has(s.id) && (
-                                  <Check className="size-3.5 text-emerald-600" aria-hidden />
-                                )}
-                                {s.nameEn} · {s.category}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <UploadDropzone
-                      docType="skill_cert"
-                      skillId={pickedSkillId}
-                      skillName={pickedSkill?.nameEn}
-                      disabled={!pickedSkillId}
-                      onUploaded={() => setRefreshKey((k) => k + 1)}
-                    />
-                  </div>
+            <section className="surface-raised rounded-md overflow-hidden shadow-raise">
+              <header className="px-4 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+                <h2 className="text-sm font-semibold text-ink flex items-center gap-2">
+                  <FileText className="size-4 text-ink-muted" aria-hidden />
+                  {t("verifyUploadCert")}
+                </h2>
+                <div className="w-56">
+                  {skills === null ? (
+                    <Skeleton className="h-11 w-full" />
+                  ) : (
+                    <Select
+                      value={pickedSkillId ?? ""}
+                      onValueChange={(v) => setPickedSkillId(v)}
+                    >
+                      <SelectTrigger className="min-h-11">
+                        <SelectValue placeholder={t("search")} />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72 shramsetu-scroll">
+                        {skills.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <span className="inline-flex items-center gap-1.5">
+                              {mySkillIds.has(s.id) && (
+                                <Check className="size-3.5 text-positive" aria-hidden />
+                              )}
+                              {s.nameEn} · {s.category}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
-              )}
-            </div>
+              </header>
+              <div className="p-4">
+                <p className="text-meta text-ink-muted mb-3 leading-relaxed">
+                  {t("verifyUploadCertHint")}
+                </p>
+                <UploadDropzone
+                  docType="skill_cert"
+                  skillId={pickedSkillId}
+                  skillName={pickedSkill?.nameEn}
+                  disabled={!pickedSkillId}
+                  onUploaded={() => setRefreshKey((k) => k + 1)}
+                />
+              </div>
+            </section>
           </section>
         )}
 
         {role === "employer" && (
           <section className="flex flex-col gap-4">
-            <UploadDropzone
-              docType="company"
-              onUploaded={() => setRefreshKey((k) => k + 1)}
-            />
+            <section className="surface-raised rounded-md overflow-hidden shadow-raise">
+              <header className="px-4 py-3 border-b border-border flex items-center gap-2">
+                <ShieldCheck className="size-4 text-ink-muted" aria-hidden />
+                <h2 className="text-sm font-semibold text-ink">
+                  {t("verifyUploadCompany")}
+                </h2>
+              </header>
+              <div className="p-4">
+                <UploadDropzone
+                  docType="company"
+                  onUploaded={() => setRefreshKey((k) => k + 1)}
+                />
+              </div>
+            </section>
           </section>
         )}
 
-        {/* Status list */}
+        {/* Submitted documents list */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-lg font-semibold">{t("verifyTitle")}</h2>
-            <Badge
-              variant="outline"
-              className="bg-accent/15 text-accent-foreground border-accent/40 max-w-full sm:max-w-none whitespace-normal text-left leading-snug h-auto py-1"
-            >
+            <h2 className="text-lg font-semibold text-ink">
+              {t("verifyDocsListLabel")}
+            </h2>
+            <span className="trust-pill is-verified">
+              <ShieldCheck className="size-3.5" aria-hidden />
               {t("verifyMasked")}
-            </Badge>
+            </span>
           </div>
           <VerificationList refreshKey={refreshKey} />
         </section>

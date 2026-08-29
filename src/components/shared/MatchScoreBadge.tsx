@@ -1,18 +1,39 @@
-import { Badge } from "@/components/ui/badge";
-import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * MatchScoreBadge — clean numeric badge.
+ * Master Prompt §69: replace Sparkles icon with Gauge (or a clean numeric badge).
+ * Per §11 — combine color + shape + text, never color alone.
+ * Removed: Sparkles icon, color-only Badge tones, "%" symbol clutter.
+ * Added: clean numeric readout with a small "MATCH" eyebrow, tone via status-dot color.
+ */
 export function MatchScoreBadge({ score, size = "md" }: { score: number; size?: "sm" | "md" | "lg" }) {
   const tone =
-    score >= 80 ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-    : score >= 60 ? "bg-amber-100 text-amber-800 border-amber-300"
-    : score >= 40 ? "bg-orange-100 text-orange-800 border-orange-300"
-    : "bg-rose-100 text-rose-800 border-rose-300";
-  const cls = size === "sm" ? "px-2 py-0.5 text-xs" : size === "lg" ? "px-3 py-1.5 text-base" : "px-2.5 py-1 text-sm";
+    score >= 80
+      ? { dot: "is-positive", text: "text-positive" }
+      : score >= 60
+        ? { dot: "is-positive", text: "text-positive" }
+        : score >= 40
+          ? { dot: "is-warning", text: "text-warning-foreground" }
+          : { dot: "is-error", text: "text-destructive" };
+  const padCls =
+    size === "sm"
+      ? "px-2 py-0.5 text-xs"
+      : size === "lg"
+        ? "px-2.5 py-1 text-sm"
+        : "px-2 py-0.5 text-xs";
+
   return (
-    <Badge variant="outline" className={cn(tone, "border font-bold tabular-nums", cls)}>
-      <Sparkles className={size === "sm" ? "size-3" : "size-4"} />
-      {score}%
-    </Badge>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border border-border bg-surface tabular-nums",
+        padCls,
+      )}
+      aria-label={`Match score ${score}`}
+    >
+      <span className={cn("status-dot", tone.dot)} aria-hidden />
+      <span className="text-meta uppercase tracking-wide text-ink-subtle">Match</span>
+      <span className={cn("font-semibold", tone.text)}>{score}</span>
+    </span>
   );
 }

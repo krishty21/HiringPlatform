@@ -4,31 +4,23 @@ import Link from "next/link";
 import { AppShell } from "@/components/shared/AppShell";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
-import { StatCard } from "@/components/shared/StatCard";
 import { RatingSummary } from "@/components/ratings/RatingSummary";
 import { TrustTimeline } from "@/components/worker/TrustTimeline";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
 import {
-  ShieldCheck, Star, MapPin, Zap, Eye, Briefcase, Share2, Loader2, Save, Sparkles, Check,
+  ShieldCheck, MapPin, Eye, Briefcase, Share2, Loader2, Save, Check, IdCard,
+  Award, Trophy, Clock, ChevronRight, Gauge,
 } from "lucide-react";
-
-const TRUST_LADDER = ["new", "id_verified", "skill_verified", "top_pro"] as const;
 
 interface WorkerProfileData {
   id: string;
@@ -63,6 +55,10 @@ interface WorkerProfileData {
   }[];
 }
 
+const TRUST_LADDER: ReadonlyArray<WorkerProfileData["trustTier"]> = [
+  "new", "id_verified", "skill_verified", "top_pro",
+];
+
 const CITIES = [
   "Bhimavaram", "Tadepalligudem", "Rajahmundry", "Vijayawada",
   "Visakhapatnam", "Kakinada", "Hyderabad", "Guntur", "Nellore", "Tirupati",
@@ -79,6 +75,13 @@ const CITY_LATLNG: Record<string, { lat: number; lng: number }> = {
   Guntur: { lat: 16.3067, lng: 80.4365 },
   Nellore: { lat: 14.4426, lng: 79.9865 },
   Tirupati: { lat: 13.6288, lng: 79.4192 },
+};
+
+const TIER_ICON: Record<WorkerProfileData["trustTier"], typeof IdCard> = {
+  new: Clock,
+  id_verified: IdCard,
+  skill_verified: Award,
+  top_pro: Trophy,
 };
 
 export default function WorkerProfilePage() {
@@ -128,7 +131,8 @@ export default function WorkerProfilePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Live strength meter
+  // Live strength meter — computed from the editable form state + server-side
+  // languages/skills/trust data.
   const liveStrength = useMemo(() => {
     if (!profile) return 0;
     const has = (b: boolean) => (b ? 1 : 0);
@@ -244,7 +248,7 @@ export default function WorkerProfilePage() {
     const tradeName = profile.trade
       ? (lang === "hi" ? profile.trade.nameHi : lang === "te" ? profile.trade.nameTe : profile.trade.nameEn)
       : "Worker";
-    const text = `🪪 ${t("passportKaamCard")} — ${profile.fullName}\n${tradeName} · ${profile.yearsExp} ${t("passportYears")}\n${profile.city} · ${t("passportTier")}: ${profile.trustTier}\n${t("passportWage")}: ₹${profile.wageMin}-${profile.wageMax}${t("perDay")}`;
+    const text = `${t("passportKaamCard")} — ${profile.fullName}\n${tradeName} · ${profile.yearsExp} ${t("passportYears")}\n${profile.city} · ${t("passportTier")}: ${profile.trustTier}\n${t("passportWage")}: ₹${profile.wageMin}-${profile.wageMax}${t("perDay")}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
@@ -275,141 +279,206 @@ export default function WorkerProfilePage() {
     ? (lang === "hi" ? profile.trade.nameHi : lang === "te" ? profile.trade.nameTe : profile.trade.nameEn)
     : "—";
 
+  // Trust-ladder progression UI (Master Prompt §25):
+  // ○ todo   ● current   ✓ done
+  const currentIdx = TRUST_LADDER.indexOf(profile.trustTier);
+
   return (
     <AppShell>
-      <header className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("passportTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t("passportKaamCard")}</p>
+      {/* Page header */}
+      <header className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex flex-col gap-1 min-w-0">
+          <p className="text-meta uppercase tracking-wider text-ink-subtle">
+            {t("passportKaamCard")}
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink text-balance">
+            {t("passportTitle")}
+          </h1>
         </div>
-        <Button onClick={shareWhatsApp} variant="outline" className="gap-2 min-h-11">
-          <Share2 className="size-4" />
+        <Button
+          onClick={shareWhatsApp}
+          variant="outline"
+          className="gap-2 min-h-11 shrink-0"
+        >
+          <Share2 className="size-4" aria-hidden />
           {t("passportKaamCardShare")}
         </Button>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Skill Passport card */}
-        <Card className="passport-card">
-          <CardContent className="p-6 flex flex-col gap-4">
-            <div className="flex items-start gap-4">
-              <Avatar className="size-16 border-2 border-primary/30">
-                {profile.photoUrl ? (
-                  <img src={profile.photoUrl} alt={profile.fullName} className="size-full object-cover" />
-                ) : (
-                  <AvatarFallback className="text-lg font-bold bg-primary/5 text-primary">{initials}</AvatarFallback>
-                )}
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <div>
-                    <h2 className="text-xl font-bold tracking-tight">{profile.fullName}</h2>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                      <Briefcase className="size-3.5" />
-                      {tradeName} · {profile.yearsExp} {t("passportYears")}
-                    </p>
-                  </div>
-                  <TrustTierBadge tier={profile.trustTier} score={profile.trustScore} size="lg" />
-                </div>
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  {profile.availableToday && (
-                    <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 gap-1 text-xs">
-                      <Zap className="size-3" />
-                      {t("today")}
-                    </Badge>
+      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        {/* ── Workforce Passport — signature card ─────────────────────────── */}
+        <article className="passport-card rounded-md flex flex-col">
+          {/* Identity strip — who is this person? */}
+          <header className="px-5 py-5 sm:px-6 sm:py-6 border-b border-border flex items-start gap-4 flex-wrap">
+            <span
+              aria-hidden
+              className="size-16 sm:size-20 grid place-items-center rounded-md bg-primary text-primary-foreground text-xl sm:text-2xl font-semibold shrink-0"
+            >
+              {initials}
+            </span>
+            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-ink break-words">
+                {profile.fullName}
+              </h2>
+              <p className="text-meta text-ink-muted flex items-center gap-1.5 flex-wrap">
+                <Briefcase className="size-3.5" aria-hidden />
+                {tradeName}
+                <span aria-hidden>·</span>
+                <span>{profile.yearsExp} {t("passportYears")}</span>
+                <span aria-hidden>·</span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="size-3.5" aria-hidden />
+                  {profile.city}
+                </span>
+              </p>
+              {profile.availableToday && (
+                <p className="inline-flex items-center gap-1.5 text-meta font-medium text-positive">
+                  <span className="status-dot is-positive" aria-hidden />
+                  {t("onboardAvailableToday")}
+                </p>
+              )}
+            </div>
+            {profile.passportPublic && (
+              <span
+                className="passport-stamp inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-meta font-semibold uppercase tracking-wider"
+                aria-label={t("kaamCardVerifiedStamp")}
+              >
+                <ShieldCheck className="size-3.5" aria-hidden />
+                {t("kaamCardVerifiedStamp")}
+              </span>
+            )}
+          </header>
+
+          {/* Trust progression ladder — New → ID → Skill → Top Pro */}
+          <section className="px-5 py-4 sm:px-6 border-b border-border flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                <ShieldCheck className="size-4 text-ink-muted" aria-hidden />
+                {t("passportTier")}
+              </h3>
+              <p className="text-meta text-ink-muted tabular-nums">
+                {profile.trustScore}/100
+              </p>
+            </div>
+            <ol className="grid grid-cols-4 gap-2" aria-label={t("passportTrustScore")}>
+              {([
+                ["new", t("passportTierNew")],
+                ["id_verified", t("passportTierIdVerified")],
+                ["skill_verified", t("passportTierSkillVerified")],
+                ["top_pro", t("passportTierTopPro")],
+              ] as const).map(([tier, label], i) => {
+                const Icon = TIER_ICON[tier];
+                const isDone = i < currentIdx;
+                const isCurrent = i === currentIdx;
+                const isTodo = i > currentIdx;
+                return (
+                  <li
+                    key={tier}
+                    className={`flex flex-col items-center gap-1.5 text-center rounded-md border p-2.5 transition-colors ${
+                      isDone
+                        ? "border-positive/40 bg-positive/5"
+                        : isCurrent
+                          ? "border-accent/40 bg-accent/5"
+                          : "border-border bg-surface-sunken"
+                    }`}
+                    aria-current={isCurrent ? "step" : undefined}
+                  >
+                    <span
+                      className={`size-7 grid place-items-center rounded-full border-2 ${
+                        isDone
+                          ? "border-positive bg-positive text-positive-foreground"
+                          : isCurrent
+                            ? "border-accent bg-accent text-accent-foreground"
+                            : "border-border bg-surface text-ink-subtle"
+                      }`}
+                      aria-hidden
+                    >
+                      {isDone ? (
+                        <Check className="size-3.5" aria-hidden />
+                      ) : isCurrent ? (
+                        <span className="size-1.5 rounded-full bg-current" aria-hidden />
+                      ) : (
+                        <Icon className="size-3.5" aria-hidden />
+                      )}
+                    </span>
+                    <span
+                      className={`text-meta font-medium leading-tight ${
+                        isCurrent ? "text-accent-foreground" : isTodo ? "text-ink-subtle" : "text-ink"
+                      }`}
+                    >
+                      {label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+
+          {/* Identity / Skills / Reliability — three-layer dl */}
+          <section className="px-5 py-4 sm:px-6 border-b border-border">
+            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-y-3 gap-x-6">
+              <div className="flex flex-col gap-1">
+                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+                  <IdCard className="size-3.5" aria-hidden />
+                  {t("passportTierIdVerified")}
+                </dt>
+                <dd className="text-sm font-medium text-ink">
+                  {profile.trustTier !== "new" ? (
+                    <span className="inline-flex items-center gap-1.5 text-positive">
+                      <Check className="size-4" aria-hidden />
+                      {t("passportTierVerified")}
+                    </span>
+                  ) : (
+                    <span className="text-ink-subtle">{t("passportTierPending")}</span>
                   )}
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <MapPin className="size-3" />
-                    {profile.city}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <Eye className="size-3" />
-                    {t("viewsCount", { count: profile.profileViews })}
-                  </Badge>
-                </div>
+                </dd>
               </div>
-            </div>
-
-            <Separator />
-
-            {/* Trust tier ladder — New → ID Verified → Skill Verified → Top Pro */}
-            <div className="grid gap-2 rounded-lg border border-border bg-card/50 p-3" aria-label={`${t("passportTier")}: ${profile.trustScore}/100`}>
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold flex items-center gap-1.5">
-                  <ShieldCheck className="size-3.5 text-primary" />
-                  {t("passportTier")}
-                </span>
-                <span className="tabular-nums font-bold">{profile.trustScore}/100 · {t("passportTrustScore")}</span>
+              <div className="flex flex-col gap-1">
+                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+                  <Award className="size-3.5" aria-hidden />
+                  {t("passportTierSkillVerified")}
+                </dt>
+                <dd className="text-sm font-medium text-ink">
+                  {profile.trustTier === "skill_verified" || profile.trustTier === "top_pro" ? (
+                    <span className="inline-flex items-center gap-1.5 text-positive">
+                      <Check className="size-4" aria-hidden />
+                      {t("passportTierVerified")}
+                    </span>
+                  ) : (
+                    <span className="text-ink-subtle">{t("passportTierPending")}</span>
+                  )}
+                </dd>
               </div>
-              <ol className="flex items-center gap-0" aria-hidden>
-                {([
-                  ["new", t("passportTierNew")],
-                  ["id_verified", t("passportTierIdVerified")],
-                  ["skill_verified", t("passportTierSkillVerified")],
-                  ["top_pro", t("passportTierTopPro")],
-                ] as const).map(([tier, label], i) => {
-                  const currentIdx = TRUST_LADDER.indexOf(profile.trustTier);
-                  const state = i < currentIdx ? "done" : i === currentIdx ? "current" : "todo";
-                  return (
-                    <li key={tier} className="flex-1 flex flex-col items-center gap-1.5 last:flex-none">
-                      <div className="flex items-center w-full">
-                        {i > 0 && (
-                          <span className={`h-0.5 flex-1 mx-0.5 rounded-full ${i <= currentIdx ? "bg-primary/60" : "bg-border"}`} />
-                        )}
-                        <span
-                          className={`size-6 rounded-full grid place-items-center border-2 text-[10px] font-bold transition-colors ${
-                            state === "done"
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : state === "current"
-                                ? "bg-accent/15 border-accent text-accent-foreground ring-4 ring-accent/15"
-                                : "bg-muted/50 border-border text-muted-foreground/60"
-                          }`}
-                        >
-                          {state === "done" ? <Check className="size-3" /> : i + 1}
-                        </span>
-                        {i < 3 && (
-                          <span className={`h-0.5 flex-1 mx-0.5 rounded-full ${i < currentIdx ? "bg-primary/60" : "bg-border"}`} />
-                        )}
-                      </div>
-                      <span
-                        className={`text-[10px] font-medium text-center leading-tight ${
-                          state === "current" ? "text-accent-foreground" : "text-muted-foreground"
-                        } ${i === 3 ? "whitespace-nowrap" : ""}`}
-                      >
-                        {label}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-
-            {/* Strength meter — live (WRK-04) */}
-            <div className="grid gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold flex items-center gap-1.5">
-                  <Sparkles className="size-3.5" />
+              <div className="flex flex-col gap-1">
+                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+                  <Gauge className="size-3.5" aria-hidden />
                   {t("passportStrength")}
-                </span>
-                <span className="tabular-nums">{liveStrength}%</span>
+                </dt>
+                <dd className="text-sm font-medium text-ink tabular-nums">
+                  {liveStrength}%
+                </dd>
               </div>
-              <Progress value={liveStrength} className="h-2" />
-            </div>
+            </dl>
+          </section>
 
-            <Separator />
-
-            {/* Editable fields */}
+          {/* Editable details — grouped fields, professional labels */}
+          <section className="px-5 py-4 sm:px-6 border-b border-border flex flex-col gap-4">
+            <h3 className="text-sm font-semibold text-ink">{t("passportExperience")}</h3>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="fullName">{t("onboardFullName")}</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="fullName" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardFullName")}
+                </Label>
                 <Input
                   id="fullName" value={edit.fullName}
                   onChange={e => setEdit(s => ({ ...s, fullName: e.target.value }))}
                   className="min-h-11"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="yearsExp">{t("onboardYearsExp")}</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="yearsExp" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardYearsExp")}
+                </Label>
                 <Input
                   id="yearsExp" type="number" min={0} max={50}
                   value={edit.yearsExp}
@@ -417,8 +486,10 @@ export default function WorkerProfilePage() {
                   className="min-h-11"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="city">{t("onboardCity")}</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="city" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardCity")}
+                </Label>
                 <Select
                   value={edit.city}
                   onValueChange={(v) => setEdit(s => ({ ...s, city: v }))}
@@ -429,8 +500,10 @@ export default function WorkerProfilePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="shift">{t("onboardShift")}</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="shift" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardShift")}
+                </Label>
                 <Select
                   value={edit.shiftPref}
                   onValueChange={(v) => setEdit(s => ({ ...s, shiftPref: v as typeof edit.shiftPref }))}
@@ -443,8 +516,10 @@ export default function WorkerProfilePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="wageMin">{t("onboardWageMin")} (₹/day)</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="wageMin" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardWageMin")} (₹/day)
+                </Label>
                 <Input
                   id="wageMin" type="number" min={0} step={50}
                   value={edit.wageMin}
@@ -452,8 +527,10 @@ export default function WorkerProfilePage() {
                   className="min-h-11"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="wageMax">{t("onboardWageMax")} (₹/day)</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="wageMax" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardWageMax")} (₹/day)
+                </Label>
                 <Input
                   id="wageMax" type="number" min={0} step={50}
                   value={edit.wageMax}
@@ -461,8 +538,10 @@ export default function WorkerProfilePage() {
                   className="min-h-11"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="photoUrl">Photo URL <span className="text-xs text-muted-foreground">({t("optional")})</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="photoUrl" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardPhotoUrl")} <span className="text-ink-subtle normal-case">({t("optional")})</span>
+                </Label>
                 <Input
                   id="photoUrl" type="url"
                   value={edit.photoUrl}
@@ -470,8 +549,10 @@ export default function WorkerProfilePage() {
                   className="min-h-11" placeholder="https://…"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="radius">{t("onboardRadius")}: <span className="font-semibold">{edit.maxRadiusKm} {t("km")}</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="radius" className="text-meta text-ink-subtle uppercase tracking-wide">
+                  {t("onboardRadius")}: <span className="text-ink font-medium normal-case">{edit.maxRadiusKm} {t("km")}</span>
+                </Label>
                 <Input
                   id="radius" type="range" min={1} max={200} step={5}
                   value={edit.maxRadiusKm}
@@ -481,8 +562,10 @@ export default function WorkerProfilePage() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="bio">{t("onboardBio")} <span className="text-xs text-muted-foreground">({edit.bio.length}/500)</span></Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="bio" className="text-meta text-ink-subtle uppercase tracking-wide">
+                {t("onboardBio")} <span className="text-ink-subtle normal-case">({edit.bio.length}/500)</span>
+              </Label>
               <Textarea
                 id="bio" rows={4} maxLength={500}
                 value={edit.bio}
@@ -492,142 +575,198 @@ export default function WorkerProfilePage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button onClick={saveProfileEdits} disabled={saving} className="gap-2 min-h-11">
-                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              <Button
+                onClick={saveProfileEdits}
+                disabled={saving}
+                className="gap-2 min-h-11"
+              >
+                {saving ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Save className="size-4" aria-hidden />
+                )}
                 {t("save")}
               </Button>
             </div>
+          </section>
 
-            <Separator />
+          {/* Skills — verified skill list */}
+          {profile.skills.length > 0 && (
+            <section className="px-5 py-4 sm:px-6 border-b border-border">
+              <h3 className="text-sm font-semibold text-ink mb-2">{t("passportSkills")}</h3>
+              <dl className="grid gap-2 sm:grid-cols-2">
+                {profile.skills.map(s => {
+                  const name = s.skill
+                    ? (lang === "hi" ? s.skill.nameHi : lang === "te" ? s.skill.nameTe : s.skill.nameEn)
+                    : "—";
+                  return (
+                    <div
+                      key={s.skillId}
+                      className="surface-inset rounded-md px-3 py-2 flex items-center justify-between gap-2"
+                    >
+                      <dt className="text-sm font-medium text-ink">{name}</dt>
+                      <dd
+                        className="inline-flex items-center gap-0.5"
+                        aria-label={`Proficiency ${s.proficiency} of 5`}
+                      >
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span
+                            key={i}
+                            aria-hidden
+                            className={`size-2 rounded-full ${
+                              i < s.proficiency ? "bg-accent" : "bg-border"
+                            }`}
+                          />
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            </section>
+          )}
 
-            {/* Skills (read-only display) */}
-            {profile.skills.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-sm mb-2">{t("passportSkills")}</h3>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {profile.skills.map(s => {
-                    const name = s.skill
-                      ? (lang === "hi" ? s.skill.nameHi : lang === "te" ? s.skill.nameTe : s.skill.nameEn)
-                      : "—";
-                    return (
-                      <div key={s.skillId} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card/50 px-3 py-2">
-                        <span className="text-sm font-medium">{name}</span>
-                        <div className="flex items-center gap-1" aria-label={`Proficiency ${s.proficiency} of 5`}>
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`size-3 ${i < s.proficiency ? "fill-accent text-accent-foreground" : "text-muted-foreground/30"}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+          {/* Endorsements — work evidence */}
+          {profile.endorsements.length > 0 && (
+            <section className="px-5 py-4 sm:px-6">
+              <h3 className="text-sm font-semibold text-ink mb-2 flex items-center gap-2">
+                {t("passportEndorsements")}
+                <span className="text-meta tabular-nums text-ink-subtle">
+                  ({profile.endorsements.length})
+                </span>
+              </h3>
+              <ul className="grid gap-2">
+                {profile.endorsements.map(e => (
+                  <li key={e.id} className="surface-inset rounded-md p-3 flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-ink">{e.companyName}</p>
+                      {e.employerVerified && (
+                        <span className="trust-pill is-employer">
+                          <ShieldCheck className="size-3.5" aria-hidden />
+                          {t("feedVerifiedEmployer")}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-ink-muted text-pretty">
+                      {e.comment || t("endorsementFallback", { skill: e.skillName })}
+                    </p>
+                    <p className="text-meta text-ink-subtle">
+                      {new Date(e.createdAt).toLocaleDateString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </article>
 
-            {/* Endorsements */}
-            {profile.endorsements.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <Star className="size-4 text-accent-foreground" />
-                    {t("passportEndorsements")}
-                    <Badge variant="outline" className="text-xs">{profile.endorsements.length}</Badge>
-                  </h3>
-                  <div className="grid gap-2">
-                    {profile.endorsements.map(e => (
-                      <div key={e.id} className="rounded-md border border-accent/30 bg-accent/5 p-3">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold">{e.companyName}</span>
-                          {e.employerVerified && (
-                            <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300">{t("feedVerifiedEmployer")}</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm mt-1">{e.comment || t("endorsementFallback", { skill: e.skillName })}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {new Date(e.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Side rail */}
+        {/* Side rail — compact status + actions */}
         <aside className="flex flex-col gap-4">
-          <StatCard
-            label={t("passportViewsThisWeek")}
-            value={profile.profileViews}
-            icon={Eye}
-            tone="accent"
-          />
+          {/* Compact stat strip — views this week */}
+          <section className="surface-raised rounded-md p-4 flex items-center gap-3 shadow-raise">
+            <span className="size-9 grid place-items-center rounded-md border border-border bg-surface-sunken text-ink-muted shrink-0">
+              <Eye className="size-4" aria-hidden />
+            </span>
+            <div className="flex flex-col min-w-0">
+              <p className="text-2xl font-semibold tabular-nums text-ink leading-none">
+                {profile.profileViews}
+              </p>
+              <p className="text-meta text-ink-muted leading-tight mt-1">
+                {t("passportViewsThisWeek")}
+              </p>
+            </div>
+          </section>
 
-          {/* Worker's employer-rating summary (R16) — avg rating received from employers */}
+          {/* Employer-rating summary */}
           <RatingSummary
             endpoint="/api/ratings/worker"
             userId={profile.id}
             title={t("ratingSummaryWorkerTitle")}
           />
 
-          {/* Round 9: Trust journey timeline — derived from verification events */}
+          {/* Trust journey timeline — meaningful, no animation stagger */}
           <TrustTimeline />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Zap className="size-4 text-emerald-700" />
-                {t("onboardAvailableToday")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-between gap-3">
-              <Label htmlFor="avail" className="text-sm text-muted-foreground">{t("visibleToEmployers")}</Label>
-              <Switch
-                id="avail"
-                checked={edit.availableToday}
-                onCheckedChange={toggleAvailable}
-                disabled={saving}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldCheck className="size-4 text-primary" />
-                {t("passportKaamCardToggle")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="pp" className="text-sm text-muted-foreground">{t("passportKaamCardToggleHelp")}</Label>
-                <Switch
-                  id="pp"
-                  checked={edit.passportPublic}
-                  onCheckedChange={togglePassportPublic}
-                  disabled={saving}
-                />
+          {/* Available-today toggle */}
+          <section className="surface-raised rounded-md p-4 flex items-center justify-between gap-3 shadow-raise">
+            <div className="flex items-start gap-3 min-w-0">
+              <span className="size-9 grid place-items-center rounded-md border border-border bg-surface-sunken text-ink-muted shrink-0">
+                <Clock className="size-4" aria-hidden />
+              </span>
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <p className="text-sm font-semibold text-ink">
+                  {t("onboardAvailableToday")}
+                </p>
+                <p className="text-meta text-ink-muted leading-relaxed">
+                  {t("visibleToEmployers")}
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <Switch
+              id="avail"
+              checked={edit.availableToday}
+              onCheckedChange={toggleAvailable}
+              disabled={saving}
+              aria-label={t("onboardAvailableToday")}
+            />
+          </section>
 
-          <Card className="border-dashed bg-muted/30">
-            <CardContent className="p-4 flex flex-col gap-2">
-              <p className="text-xs font-semibold flex items-center gap-1.5">
-                <Star className="size-3.5 text-accent-foreground" />
-                {t("passportVerifyNow")}
-              </p>
-              <p className="text-xs text-muted-foreground">{t("verifyPiiNote")}</p>
-              <Button asChild variant="outline" size="sm" className="mt-2 gap-1.5 min-h-11 w-full">
-                <Link href="/onboarding/worker">{t("passportUploadCert")}</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Public Kaam Card toggle */}
+          <section className="surface-raised rounded-md p-4 flex flex-col gap-2 shadow-raise">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="size-9 grid place-items-center rounded-md border border-border bg-surface-sunken text-ink-muted shrink-0">
+                  <ShieldCheck className="size-4" aria-hidden />
+                </span>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <p className="text-sm font-semibold text-ink">
+                    {t("passportKaamCardToggle")}
+                  </p>
+                  <p className="text-meta text-ink-muted leading-relaxed">
+                    {t("passportKaamCardToggleHelp")}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="pp"
+                checked={edit.passportPublic}
+                onCheckedChange={togglePassportPublic}
+                disabled={saving}
+                aria-label={t("passportKaamCardToggle")}
+              />
+            </div>
+            {profile.passportPublic && (
+              <Link
+                href={`/c/${profile.id}`}
+                className="mt-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-4 rounded-md border border-border bg-surface text-sm font-medium text-ink hover:bg-surface-sunken transition-colors"
+              >
+                {t("kaamCardPublicBadge")}
+                <ChevronRight className="size-4" aria-hidden />
+              </Link>
+            )}
+          </section>
+
+          {/* Verify-now prompt — credential infrastructure, not gaming */}
+          <section className="surface-inset rounded-md p-4 flex flex-col gap-2">
+            <p className="text-sm font-semibold text-ink flex items-center gap-1.5">
+              <ShieldCheck className="size-4 text-ink-muted" aria-hidden />
+              {t("passportVerifyNow")}
+            </p>
+            <p className="text-meta text-ink-muted leading-relaxed">
+              {t("verifyPiiNote")}
+            </p>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="mt-2 gap-1.5 min-h-11 w-full"
+            >
+              <Link href="/verify">
+                {t("passportUploadCert")}
+                <ChevronRight className="size-4" aria-hidden />
+              </Link>
+            </Button>
+          </section>
         </aside>
       </div>
     </AppShell>

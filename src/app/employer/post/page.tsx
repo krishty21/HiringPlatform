@@ -1,4 +1,6 @@
 "use client";
+// /employer/post — Master Prompt §64: form UX. Clear labels, useful descriptions,
+// grouped fields, logical progression, mobile-friendly controls.
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/shared/AppShell";
 import { JobPostForm } from "@/components/employer/JobPostForm";
@@ -21,23 +23,31 @@ export default function PostJobPage() {
 
   return (
     <AppShell>
-      <header className="mb-4">
-        <h1 className="text-2xl font-bold tracking-tight">{t("postJobTitle")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t("postJobUrgentHelp")}
-        </p>
-      </header>
+      <main className="flex flex-col gap-6 max-w-3xl mx-auto">
+        {/* Header — border-b sectioned */}
+        <header className="border-b border-border pb-4">
+          <p className="text-meta uppercase tracking-wide text-ink-subtle">
+            {t("postJobEyebrow")}
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">
+            {t("postJobTitle")}
+          </h1>
+          <p className="text-meta text-ink-subtle mt-1">
+            {t("postJobSubtitle")}
+          </p>
+        </header>
 
-      {error && (
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="p-4 text-sm text-destructive">
-            {t("errGeneric")}
-          </CardContent>
-        </Card>
-      )}
+        {error && (
+          <Card className="surface-raised shadow-raise border-destructive/40">
+            <CardContent className="p-4 text-sm text-destructive">
+              {t("errGeneric")}
+            </CardContent>
+          </Card>
+        )}
 
-      {!skills && !error && <LoadingSkeleton count={3} />}
-      {skills && skills.length > 0 && <JobPostForm skills={skills} />}
+        {!skills && !error && <LoadingSkeleton count={3} />}
+        {skills && skills.length > 0 && <JobPostForm skills={skills} />}
+      </main>
     </AppShell>
   );
 }

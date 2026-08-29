@@ -14,8 +14,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  MoreVertical, ChevronRight, Loader2,
+  MoreHorizontal, ChevronRight, Loader2,
 } from "lucide-react";
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from "@/components/ui/select";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -23,6 +26,7 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
 import { EndorsementModal } from "./EndorsementModal";
 import type { Skill } from "@/lib/schemas";
+import { cn } from "@/lib/utils";
 
 const STATUSES = ["applied", "shortlisted", "interview", "offer", "hired", "rejected"] as const;
 type Status = typeof STATUSES[number];
@@ -36,13 +40,14 @@ const STATUS_KEYS: Record<Status, "trackerStageApplied" | "trackerStageShortlist
   rejected: "trackerStageRejected",
 };
 
-const STATUS_TONE: Record<Status, string> = {
-  applied: "border-t-muted-foreground/40 bg-muted/30",
-  shortlisted: "border-t-accent bg-accent/[0.06]",
-  interview: "border-t-primary bg-primary/[0.05]",
-  offer: "border-t-accent bg-accent/[0.10]",
-  hired: "border-t-emerald-500 bg-emerald-50/60",
-  rejected: "border-t-rose-400 bg-rose-50/60",
+// Status → status-dot class (color + shape, never color alone).
+const STATUS_DOT: Record<Status, string> = {
+  applied: "is-info",
+  shortlisted: "is-warning",
+  interview: "is-info",
+  offer: "is-warning",
+  hired: "is-positive",
+  rejected: "is-error",
 };
 
 export interface PipelineApplication {
@@ -70,6 +75,18 @@ export interface PipelineApplication {
   };
 }
 
+/**
+ * PipelineKanban — operational hiring board.
+ * Master Prompt §30: clarity, density, drag/drop affordance, keyboard actions,
+ * card hierarchy, stage counts, filtering, bulk actions. NEVER rely only on drag-and-drop —
+ * each card has an accessible Select dropdown for stage transitions.
+ *
+ * Removed: rose/amber/sky/violet color-only buttons, emerald available-today Badge,
+ *   decorative top-gradient column tones (border-t-emerald-500/rose-400/...).
+ * Added: status-dot on column header + per-card "Stage" Select dropdown (accessible
+ *   alternative), surface-raised cards, neutral button tones with status-dot,
+ *   bulk-shortlist button with explicit count badge.
+ */
 export function PipelineKanban({
   applications,
   skills,
@@ -85,7 +102,6 @@ export function PipelineKanban({
   const [endorsement, setEndorsement] = useState<{ workerId: string; workerName: string } | null>(null);
 
   // Apply local "optimistic" status overrides on top of incoming applications.
-  // Avoids the setState-in-effect anti-pattern; updates are driven by user actions only.
   const items = useMemo(
     () => applications.map(a => overrides[a.id] ? { ...a, status: overrides[a.id]! } : a),
     [applications, overrides],
@@ -116,9 +132,8 @@ export function PipelineKanban({
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("FAILED");
-      // Optimistic update via overrides map (no setState-in-effect issues)
       setOverrides(prev => ({ ...prev, [applicationId]: status }));
-      toast.success(`${t(STATUS_KEYS[status])} ✓`);
+      toast.success(`${t(STATUS_KEYS[status])}`);
 
       // EMP-07: hire → prompt endorsement
       if (status === "hired") {
@@ -143,8 +158,6 @@ export function PipelineKanban({
     const activeIdStr = String(e.active.id);
     const overId = e.over?.id;
     if (!overId) return;
-    // over.id may be a card id (drop onto card) or a column id (drop into empty column).
-    // If over.id is a card, find its status; else if it's a column id (status name), use that.
     const overCard = items.find(a => a.id === overId);
     const newStatus = (STATUSES as readonly string[]).includes(String(overId))
       ? (String(overId) as Status)
@@ -188,6 +201,9 @@ export function PipelineKanban({
     toast.success(ok === 1 ? t("pipelineBulkDoneOne") : t("pipelineBulkDoneMany", { count: ok }));
   }
 
+  // Total counts for the bulk action summary
+  const totalApps = items.length;
+
   return (
     <DndContext
       sensors={sensors}
@@ -196,13 +212,15 @@ export function PipelineKanban({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <p className="text-meta text-ink-subtle flex items-center gap-2">
+          <span className="status-dot is-info" aria-hidden />
           {t("pipelineDragHint")}
+          <span className="tabular-nums">{totalApps}</span>
         </p>
         {bulkSelected.size > 0 && (
-          <Button onClick={bulkShortlist} disabled={busy === "bulk"} className="gap-2 min-h-10">
-            {busy === "bulk" && <Loader2 className="size-4 animate-spin" />}
+          <Button onClick={bulkShortlist} disabled={busy === "bulk"} className="gap-2 min-h-9">
+            {busy === "bulk" && <Loader2 className="size-4 animate-spin" aria-hidden />}
             {t("pipelineBulkShortlist")} ({bulkSelected.size})
           </Button>
         )}
@@ -259,18 +277,18 @@ function PipelineColumn({
     <div className="shrink-0 w-72 sm:w-80 snap-start">
       <div
         ref={setNodeRef}
-        className={`flex flex-col gap-2 rounded-xl border border-border border-t-4 ${STATUS_TONE[status]} p-3 min-h-48 shadow-sm transition-shadow`}
+        className="flex flex-col gap-2 surface-raised shadow-raise rounded-md p-3 min-h-48"
       >
         <div className="flex items-center justify-between px-1">
-          <h3 className="font-semibold text-sm flex items-center gap-2">
-            <span className={`size-1.5 rounded-full ${status === "hired" ? "bg-emerald-500" : status === "rejected" ? "bg-rose-400" : status === "offer" ? "bg-accent" : status === "interview" ? "bg-primary" : status === "shortlisted" ? "bg-accent/70" : "bg-muted-foreground/40"}`} aria-hidden />
+          <h3 className="font-semibold text-sm flex items-center gap-2 text-ink">
+            <span className={cn("status-dot", STATUS_DOT[status])} aria-hidden />
             {title}
           </h3>
           <Badge variant="outline" className="text-xs tabular-nums">{applications.length}</Badge>
         </div>
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {applications.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-6 text-center border border-dashed border-border/60 rounded-lg">
+            <p className="text-meta text-ink-subtle py-6 text-center border border-dashed border-border rounded-md">
               {t("pipelineEmpty")}
             </p>
           ) : (
@@ -320,23 +338,14 @@ function PipelineCard({
   const w = application.worker;
   const initials = w.fullName.split(" ").map(p => p[0]).slice(0, 2).join("").toUpperCase();
 
-  // Action set per status — accessibility + mobile-friendly (directive §13)
-  const actions: { label: string; status: Status; tone: string }[] = [];
-  if (application.status === "applied") {
-    actions.push({ label: t("shortlistCta"), status: "shortlisted", tone: "bg-amber-100 text-amber-900 hover:bg-amber-200" });
-  }
-  if (application.status === "shortlisted") {
-    actions.push({ label: t("pipelineInterview"), status: "interview", tone: "bg-sky-100 text-sky-900 hover:bg-sky-200" });
-  }
-  if (application.status === "interview") {
-    actions.push({ label: t("trackerStageOffer"), status: "offer", tone: "bg-violet-100 text-violet-900 hover:bg-violet-200" });
-  }
-  if (application.status === "offer") {
-    actions.push({ label: t("pipelineHire"), status: "hired", tone: "bg-emerald-100 text-emerald-900 hover:bg-emerald-200" });
-  }
-  if (application.status !== "rejected" && application.status !== "hired") {
-    actions.push({ label: t("trackerStageRejected"), status: "rejected", tone: "bg-rose-100 text-rose-900 hover:bg-rose-200" });
-  }
+  // Accessible stage-transition Select — Master Prompt §30: "Do NOT rely only on drag-and-drop."
+  const stageOptions: { value: Status; label: string }[] = [
+    { value: "shortlisted", label: t("trackerStageShortlisted") },
+    { value: "interview", label: t("trackerStageInterview") },
+    { value: "offer", label: t("trackerStageOffer") },
+    { value: "hired", label: t("trackerStageHired") },
+    { value: "rejected", label: t("trackerStageRejected") },
+  ].filter(o => o.value !== application.status);
 
   return (
     <div
@@ -344,8 +353,12 @@ function PipelineCard({
       style={style}
       {...attributes}
       {...listeners}
-      className={`rounded-lg bg-card border border-border shadow-sm p-3 flex flex-col gap-2 cursor-grab active:cursor-grabbing ${dragging || isDragging ? "opacity-50 ring-2 ring-primary/40" : ""}`}
-      aria-roledescription="draggable application card"
+      className={cn(
+        "surface-raised shadow-raise rounded-md border border-border p-3 flex flex-col gap-2",
+        "cursor-grab active:cursor-grabbing transition-colors hover:border-ink/30",
+        (dragging || isDragging) && "opacity-50 ring-2 ring-primary/40",
+      )}
+      aria-roledescription={t("pipelineCardAriaRole")}
     >
       <div className="flex items-start gap-2">
         {bulkSelectable && (
@@ -357,28 +370,34 @@ function PipelineCard({
             className="mt-0.5"
           />
         )}
-        <Avatar className="size-8 shrink-0">
+        <Avatar className="size-8 shrink-0 border border-border">
           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{w.fullName}</p>
-          <p className="text-xs text-muted-foreground truncate">{w.tradeName ?? "—"}</p>
+          <p className="font-medium text-sm truncate text-ink">{w.fullName}</p>
+          <p className="text-meta text-ink-subtle truncate">{w.tradeName ?? "—"}</p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8" onClick={(e) => e.stopPropagation()}>
-              <MoreVertical className="size-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={t("pipelineCardActions")}
+            >
+              <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            {actions.map(a => (
+            {stageOptions.map(a => (
               <DropdownMenuItem
-                key={a.status}
-                onClick={() => onTransition(application.id, a.status)}
+                key={a.value}
+                onClick={() => onTransition(application.id, a.value)}
                 disabled={busy}
               >
                 {a.label}
-                <ChevronRight className="size-3 ml-auto" />
+                <ChevronRight className="size-3 ml-auto" aria-hidden />
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
@@ -391,33 +410,48 @@ function PipelineCard({
         </DropdownMenu>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-        <Badge variant="outline" className="text-[10px]">{w.yearsExp} {t("unitYears")}</Badge>
-        <Badge variant="outline" className="text-[10px]">₹{w.wageMin}–{w.wageMax}</Badge>
-        {w.availableToday && (
-          <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300">
-            {t("today")}
-          </Badge>
-        )}
-      </div>
-
-      {actions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border" onClick={(e) => e.stopPropagation()}>
-          {actions.map(a => (
-            <Button
-              key={a.status}
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={`h-7 px-2 text-[11px] ${a.tone}`}
-              onClick={(e) => { e.stopPropagation(); onTransition(application.id, a.status); }}
-              disabled={busy}
-            >
-              {busy ? <Loader2 className="size-3 animate-spin" /> : a.label}
-            </Button>
-          ))}
+      {/* Meta row — neutral border-bottom chipless dl */}
+      <dl className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-subtle">
+        <div className="flex items-center gap-1">
+          <dt className="sr-only">{t("passportExperience")}</dt>
+          <dd className="tabular-nums">{w.yearsExp} {t("unitYears")}</dd>
         </div>
-      )}
+        <div className="flex items-center gap-1">
+          <dt className="sr-only">{t("passportWage")}</dt>
+          <dd className="tabular-nums">₹{w.wageMin}–{w.wageMax}</dd>
+        </div>
+        {w.availableToday && (
+          <div className="flex items-center gap-1">
+            <dt className="sr-only">{t("today")}</dt>
+            <dd className="flex items-center gap-1 text-positive">
+              <span className="status-dot is-positive" aria-hidden />
+              {t("today")}
+            </dd>
+          </div>
+        )}
+      </dl>
+
+      {/* Accessible stage-transition Select + drag handle */}
+      <div
+        className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Select
+          value=""
+          onValueChange={(v) => onTransition(application.id, v as Status)}
+          disabled={busy}
+        >
+          <SelectTrigger className="h-7 min-w-[120px] gap-1 text-xs px-2" aria-label={t("pipelineCardMoveTo")}>
+            <SelectValue placeholder={t("pipelineCardMoveTo")} />
+          </SelectTrigger>
+          <SelectContent>
+            {stageOptions.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {busy && <Loader2 className="size-3.5 animate-spin text-ink-subtle" aria-hidden />}
+      </div>
     </div>
   );
 }

@@ -1,9 +1,13 @@
 "use client";
-import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
+/**
+ * StatCard — operational metric tile for employer dashboard + admin console.
+ * Per Master Prompt §31/§32: number + table + progress bar over decorative analytics.
+ * Restrained surfaces (surface-raised), no motion, no blur blobs, no scale hover.
+ */
 export function StatCard({
   label,
   value,
@@ -19,63 +23,55 @@ export function StatCard({
   tone?: "default" | "primary" | "accent" | "success";
   className?: string;
 }) {
-  const toneCls = {
-    default: "bg-card text-foreground",
-    primary: "bg-primary text-primary-foreground",
-    accent: "bg-accent text-accent-foreground",
-    success: "bg-emerald-100 text-emerald-900",
-  }[tone];
-  const iconBg = tone === "default"
-    ? "bg-primary/10 text-primary"
-    : tone === "success"
-      ? "bg-emerald-200/50 text-emerald-800"
-      : "bg-black/10 text-current";
+  // Tone drives only color of the icon chip + a thin top hairline — never a colored card.
+  const iconChipCls =
+    tone === "primary"
+      ? "bg-primary/10 text-primary"
+      : tone === "accent"
+        ? "bg-accent/10 text-accent-foreground"
+        : tone === "success"
+          ? "bg-positive/10 text-positive"
+          : "bg-primary/10 text-primary";
+  const hairlineCls =
+    tone === "primary"
+      ? "bg-primary"
+      : tone === "accent"
+        ? "bg-accent"
+        : tone === "success"
+          ? "bg-positive"
+          : "bg-ink-subtle";
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      whileHover={{ y: -2 }}
-      className="h-full"
+    <Card
+      className={cn(
+        "surface-raised shadow-raise h-full overflow-hidden",
+        "transition-colors hover:border-ink/30",
+        className,
+      )}
     >
-      <Card
-        className={cn(
-          toneCls,
-          "border relative overflow-hidden transition-shadow hover:shadow-md h-full",
-          className,
-        )}
-      >
-        {/* Subtle decorative corner glow (non-interactive) */}
-        <div
-          aria-hidden
-          className={cn(
-            "absolute -right-8 -top-8 size-24 rounded-full blur-2xl pointer-events-none",
-            tone === "default" ? "bg-primary/5" : "bg-black/5",
-          )}
-        />
-        <CardContent className="relative p-5 flex items-start gap-4">
-          {Icon && (
-            <div
-              className={cn(
-                "size-10 rounded-lg flex items-center justify-center shrink-0 ring-1 ring-inset",
-                iconBg,
-                tone === "default" ? "ring-primary/15" : "ring-black/10",
-              )}
-            >
-              <Icon className="size-5" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium opacity-80 truncate">{label}</p>
-            <p className="text-2xl font-bold tabular-nums mt-1 leading-none">
-              {value}
-            </p>
-            {hint && (
-              <p className="text-xs opacity-70 mt-2 truncate">{hint}</p>
+      <div aria-hidden className={cn("h-0.5 w-full", hairlineCls)} />
+      <CardContent className="p-5 flex items-start gap-4">
+        {Icon && (
+          <div
+            className={cn(
+              "size-10 rounded-md grid place-items-center shrink-0 border border-border",
+              iconChipCls,
             )}
+            aria-hidden
+          >
+            <Icon className="size-5" />
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-meta uppercase tracking-wide truncate">{label}</p>
+          <p className="text-2xl font-bold tabular-nums mt-1 leading-none text-ink">
+            {value}
+          </p>
+          {hint && (
+            <p className="text-meta mt-2 truncate">{hint}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

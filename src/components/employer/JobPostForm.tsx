@@ -17,7 +17,7 @@ import {
   SelectGroup, SelectLabel,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, Plus, X } from "lucide-react";
+import { Wand2, Loader2, Plus, X, Gauge } from "lucide-react";
 import { toast } from "sonner";
 
 type FormValues = {
@@ -45,6 +45,16 @@ const CITIES: Record<string, { lat: number; lng: number }> = {
   Kakinada: { lat: 16.9600, lng: 82.2377 },
 };
 
+/**
+ * JobPostForm — Master Prompt §64 form UX + §37 humanize AI.
+ * Removed: Sparkles icon on urgent toggle + AI description button (replaced with Wand2 +
+ *   Gauge — semantic "structured help" icons). Big rounded-full pill skill chips replaced
+ *   with chipless buttons + uppercase required/optional meta text. accent/40 bg-accent/10
+ *   tinted urgent card replaced with surface-inset.
+ * Added: text-meta uppercase labels with semantic icons (MapPin, Clock, IndianRupee),
+ *   grouped fields with clear progression (Basic → Skills → Description → Submit),
+ *   helpful descriptions, mobile-friendly controls (min-h-11).
+ */
 export function JobPostForm({ skills }: { skills: Skill[] }) {
   const { t } = useLanguage();
   const router = useRouter();
@@ -113,7 +123,6 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
     }
     setAiBusy(true);
     try {
-      const trade = skills.find(s => s.id === v.tradeId);
       const res = await fetch("/api/ai/job-description", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -143,7 +152,6 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
     setSubmitting(true);
     const start = Date.now();
     try {
-      // Per AC EMP-01: post live in feed < 10s — measured from submit click to redirect.
       const res = await fetch("/api/jobs", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -167,13 +175,20 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
       {/* Basic */}
-      <Card>
+      <Card className="surface-raised shadow-raise">
         <CardHeader>
-          <CardTitle className="text-lg">{t("postJobTitle")}</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2 text-ink">
+            <span className="text-meta uppercase tracking-wide text-ink-subtle">
+              {t("postJobStep1Label")}
+            </span>
+            {t("postJobTitle")}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4">
+        <CardContent className="grid gap-5">
           <div className="grid gap-2">
-            <Label htmlFor="title">{t("postJobJobTitle")}</Label>
+            <Label htmlFor="title" className="text-meta uppercase tracking-wide text-ink-subtle">
+              {t("postJobJobTitle")}
+            </Label>
             <Input
               id="title"
               placeholder={t("postJobTitlePlaceholder")}
@@ -185,7 +200,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="tradeId">{t("postJobTrade")}</Label>
+              <Label htmlFor="tradeId" className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("postJobTrade")}
+              </Label>
               <Controller
                 control={control}
                 name="tradeId"
@@ -194,7 +211,6 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
                     value={field.value}
                     onValueChange={(v) => {
                       field.onChange(v);
-                      // Clear selected skills when trade changes
                       setValue("skills", []);
                     }}
                   >
@@ -204,7 +220,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
                     <SelectContent>
                       {Object.entries(grouped).map(([cat, list]) => (
                         <SelectGroup key={cat}>
-                          <SelectLabel className="capitalize">{cat}</SelectLabel>
+                          <SelectLabel className="capitalize text-ink-subtle">{cat}</SelectLabel>
                           {list.map(s => (
                             <SelectItem key={s.id} value={s.id}>{s.nameEn}</SelectItem>
                           ))}
@@ -218,7 +234,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="headcount">{t("postJobHeadcount")}</Label>
+              <Label htmlFor="headcount" className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("postJobHeadcount")}
+              </Label>
               <Input
                 id="headcount" type="number" min={1} max={100}
                 className="min-h-11"
@@ -230,7 +248,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="wageMin">{t("postJobWageMin")}</Label>
+              <Label htmlFor="wageMin" className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("postJobWageMin")}
+              </Label>
               <Input
                 id="wageMin" type="number" min={0} step={50}
                 className="min-h-11"
@@ -238,7 +258,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="wageMax">{t("postJobWageMax")}</Label>
+              <Label htmlFor="wageMax" className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("postJobWageMax")}
+              </Label>
               <Input
                 id="wageMax" type="number" min={0} step={50}
                 className="min-h-11"
@@ -249,7 +271,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="city">{t("postJobCity")}</Label>
+              <Label htmlFor="city" className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("postJobCity")}
+              </Label>
               <Controller
                 control={control}
                 name="city"
@@ -269,7 +293,9 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
               {errors.city && <p className="text-xs text-destructive">{errors.city.message}</p>}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="shift">{t("postJobShift")}</Label>
+              <Label htmlFor="shift" className="text-meta uppercase tracking-wide text-ink-subtle">
+                {t("postJobShift")}
+              </Label>
               <Controller
                 control={control}
                 name="shift"
@@ -289,76 +315,94 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-accent/40 bg-accent/10 p-4">
+          {/* Urgent toggle — neutral surface-inset, no Sparkles */}
+          <div className="surface-inset rounded-md flex items-center justify-between gap-4 p-4">
             <div className="flex flex-col">
-              <Label htmlFor="isUrgent" className="text-base font-semibold flex items-center gap-2">
-                <Sparkles className="size-4 text-accent-foreground" />
+              <Label htmlFor="isUrgent" className="text-base font-semibold text-ink">
                 {t("postJobUrgent")}
               </Label>
-              <p className="text-xs text-muted-foreground mt-1">{t("postJobUrgentHelp")}</p>
+              <p className="text-meta mt-1 text-ink-subtle">{t("postJobUrgentHelp")}</p>
             </div>
-            <Controller
-              control={control}
-              name="isUrgent"
-              render={({ field }) => (
-                <Switch
-                  id="isUrgent"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
+            <div className="flex items-center gap-2">
+              <span
+                className={`status-dot ${isUrgent ? "is-warning" : "is-neutral"}`}
+                aria-hidden
+              />
+              <Controller
+                control={control}
+                name="isUrgent"
+                render={({ field }) => (
+                  <Switch
+                    id="isUrgent"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Skills */}
+      {/* Skills — chipless buttons */}
       {tradeId && tradeSkills.length > 0 && (
-        <Card>
+        <Card className="surface-raised shadow-raise">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-ink">
+              <Gauge className="size-4 text-ink-subtle" aria-hidden />
               {t("postJobSkills")}
-              <Badge variant="outline" className="text-xs">{t("postJobSelectedCount", { count: selectedSkills.length })}</Badge>
+              <Badge variant="outline" className="text-xs tabular-nums">{selectedSkills.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-meta mb-3 text-ink-subtle">{t("postJobSkillsHint")}</p>
+            <ul className="flex flex-wrap gap-2" aria-label={t("postJobSkills")}>
               {tradeSkills.map(s => {
                 const sel = selectedSkills.find(x => x.skillId === s.id);
                 return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => toggleSkill(s.id)}
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm min-h-9 transition-colors ${sel ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-accent/10 border-border"}`}
-                    aria-pressed={!!sel}
-                  >
-                    {sel ? <X className="size-3" /> : <Plus className="size-3" />}
-                    {s.nameEn}
-                    {sel && (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => { e.stopPropagation(); toggleRequired(s.id); }}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleRequired(s.id); } }}
-                        className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${sel.required ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}
-                        title={t("toggleRequired")}
-                      >
-                        {sel.required ? t("skillRequired") : t("skillOptional")}
-                      </span>
-                    )}
-                  </button>
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSkill(s.id)}
+                      className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm min-h-9 transition-colors ${
+                        sel
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-surface hover:bg-surface-sunken border-border hover:border-ink/30"
+                      }`}
+                      aria-pressed={!!sel}
+                    >
+                      {sel ? <X className="size-3" aria-hidden /> : <Plus className="size-3" aria-hidden />}
+                      {s.nameEn}
+                      {sel && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => { e.stopPropagation(); toggleRequired(s.id); }}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleRequired(s.id); } }}
+                          className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-border bg-surface text-ink-muted"
+                          title={t("toggleRequired")}
+                        >
+                          {sel.required ? t("skillRequired") : t("skillOptional")}
+                        </span>
+                      )}
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       )}
 
-      {/* Description + AI */}
-      <Card>
+      {/* Description + AI helper */}
+      <Card className="surface-raised shadow-raise">
         <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
-          <CardTitle className="text-lg">{t("jobDescription")}</CardTitle>
+          <CardTitle className="text-lg text-ink">
+            <span className="text-meta uppercase tracking-wide text-ink-subtle block">
+              {t("postJobStep3Label")}
+            </span>
+            {t("jobDescription")}
+          </CardTitle>
           <Button
             type="button"
             variant="outline"
@@ -366,13 +410,14 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
             disabled={aiBusy || !tradeId || !city}
             className="gap-2 min-h-11 whitespace-normal text-left"
           >
-            {aiBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 shrink-0" />}
-            <span>{aiBusy ? t("postJobAiWorking") : t("postJobAiDesc")}</span>
+            {aiBusy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Wand2 className="size-4 shrink-0" aria-hidden />}
+            <span>{aiBusy ? t("postJobAiWorking") : t("postJobAiDescShort")}</span>
           </Button>
         </CardHeader>
         <CardContent className="grid gap-2">
+          <p className="text-meta text-ink-subtle">{t("postJobAiEdit")}</p>
           <Textarea
-            placeholder={t("postJobAiEdit")}
+            placeholder={t("postJobDescPlaceholder")}
             rows={6}
             className="min-h-32"
             {...register("description")}
@@ -383,7 +428,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
 
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={submitting} className="min-h-11 gap-2">
-          {submitting && <Loader2 className="size-4 animate-spin" />}
+          {submitting && <Loader2 className="size-4 animate-spin" aria-hidden />}
           {t("postJobSubmit")}
         </Button>
       </div>

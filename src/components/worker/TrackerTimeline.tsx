@@ -1,6 +1,5 @@
 "use client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { CheckCircle2, Circle, Clock, XCircle, Undo2 } from "lucide-react";
 import type { Application } from "@/lib/schemas";
@@ -45,16 +44,16 @@ export function TrackerTimeline({ application }: { application: Application }) {
   const { t } = useLanguage();
 
   if (application.status === "withdrawn") {
-    // Round 12: worker withdrew — neutral card with the "apply again" hint.
+    // Round 12: worker withdrew — neutral dashed card with the "apply again" hint.
     return (
-      <Card className="border-slate-300/60 dark:border-slate-700">
-        <CardContent className="p-4 flex items-center gap-3">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900/60">
-            <Undo2 className="size-4 text-slate-500 dark:text-slate-300" />
+      <Card className="border-dashed border-border bg-surface-sunken">
+        <CardContent className="p-4 flex items-start gap-3">
+          <span className="size-9 grid place-items-center rounded-md border border-border bg-surface text-ink-muted shrink-0">
+            <Undo2 className="size-4" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="font-semibold text-sm">{t("trackerStageWithdrawn")}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{t("withdrawBannerHint")}</p>
+            <p className="font-semibold text-sm text-ink">{t("trackerStageWithdrawn")}</p>
+            <p className="text-meta text-ink-muted mt-0.5">{t("withdrawBannerHint")}</p>
           </div>
         </CardContent>
       </Card>
@@ -64,12 +63,14 @@ export function TrackerTimeline({ application }: { application: Application }) {
   if (application.status === "rejected") {
     return (
       <Card className="border-destructive/40">
-        <CardContent className="p-4 flex items-center gap-3">
-          <XCircle className="size-6 text-destructive" />
+        <CardContent className="p-4 flex items-start gap-3">
+          <span className="size-9 grid place-items-center rounded-md border border-destructive/30 bg-destructive/5 text-destructive shrink-0">
+            <XCircle className="size-4" aria-hidden />
+          </span>
           <div>
-            <p className="font-semibold text-sm">{t("trackerStageRejected")}</p>
+            <p className="font-semibold text-sm text-ink">{t("trackerStageRejected")}</p>
             {application.rejectedAt && (
-              <p className="text-xs text-muted-foreground">{fmtDateTime(application.rejectedAt)}</p>
+              <p className="text-meta text-ink-muted mt-0.5 tabular-nums">{fmtDateTime(application.rejectedAt)}</p>
             )}
           </div>
         </CardContent>
@@ -82,15 +83,15 @@ export function TrackerTimeline({ application }: { application: Application }) {
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="grid gap-2">
-          <p className="font-semibold">{t("trackerTitle")}</p>
-          <p className="text-xs text-muted-foreground mb-2">
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex flex-col gap-1 mb-3">
+          <p className="font-semibold text-ink">{t("trackerTitle")}</p>
+          <p className="text-meta text-ink-subtle">
             {t("onboardStep")} 1 → 5 · {t("loading").replace("…", "")}
           </p>
         </div>
-        <ol className="relative grid gap-6 pl-8">
-          {/* vertical line */}
+        <ol className="relative grid gap-5 pl-8">
+          {/* vertical rail */}
           <span className="tracker-line absolute left-[14px] top-2 bottom-2 w-0.5 rounded-full" aria-hidden />
           {STAGE_KEYS.map((stage, idx) => {
             const reached = idx <= currentIdx;
@@ -110,23 +111,23 @@ export function TrackerTimeline({ application }: { application: Application }) {
                   className={`absolute -left-8 size-7 rounded-full grid place-items-center ${dotCls}`}
                   aria-current={isCurrent ? "step" : undefined}
                 >
-                  {reached ? <CheckCircle2 className="size-4" /> : <Circle className="size-3.5" />}
+                  {reached ? <CheckCircle2 className="size-4" aria-hidden /> : <Circle className="size-3.5" aria-hidden />}
                 </span>
-                <div className="flex items-center gap-2">
-                  <p className={`text-sm font-semibold ${reached ? "" : "text-muted-foreground"}`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className={`text-sm font-semibold ${reached ? "text-ink" : "text-ink-subtle"}`}>
                     {t(stageLabel)}
                   </p>
                   {isCurrent && (
-                    <Badge variant="outline" className="text-[10px] gap-1 border-accent/40">
-                      <Clock className="size-3" />
+                    <span className="trust-pill is-pending">
+                      <Clock className="size-3" aria-hidden />
                       {t("today")}
-                    </Badge>
+                    </span>
                   )}
                 </div>
                 {ts ? (
-                  <p className="text-xs text-muted-foreground">{fmtDateTime(ts)}</p>
+                  <p className="text-meta text-ink-muted tabular-nums">{fmtDateTime(ts)}</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground/70">—</p>
+                  <p className="text-meta text-ink-subtle">—</p>
                 )}
               </li>
             );

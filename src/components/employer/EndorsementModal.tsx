@@ -9,11 +9,15 @@ import {
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
-import { Loader2, Star } from "lucide-react";
+import { Loader2, Award } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
 import type { Skill } from "@/lib/schemas";
 
+/**
+ * EndorsementModal — kept functional, slop cleaned.
+ * Removed: Star icon on dialog title (replaced with Award — semantic end-of-work symbol).
+ */
 export function EndorsementModal({
   open,
   onClose,
@@ -45,7 +49,7 @@ export function EndorsementModal({
         body: JSON.stringify({ workerId, skillId, comment }),
       });
       if (!res.ok) throw new Error("FAILED");
-      toast.success(t("pipelineEndorseSubmit") + " ✓");
+      toast.success(t("pipelineEndorseSubmit"));
       onClose();
       setSkillId("");
       setComment("");
@@ -61,7 +65,7 @@ export function EndorsementModal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Star className="size-5 text-accent-foreground" />
+            <Award className="size-5 text-accent-foreground" aria-hidden />
             {t("pipelineEndorsePrompt")}
           </DialogTitle>
           <DialogDescription>

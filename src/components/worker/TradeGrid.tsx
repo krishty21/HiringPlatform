@@ -2,7 +2,7 @@
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { cn } from "@/lib/utils";
 import {
-  Zap, Wrench, Flame, Cpu, Settings, Truck, Hammer, BrickWall, type LucideIcon,
+  Zap, Wrench, Flame, Cpu, Settings, Truck, Hammer, BrickWall, Check, type LucideIcon,
 } from "lucide-react";
 import type { Skill } from "@/lib/schemas";
 
@@ -16,7 +16,6 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
   logistics: Truck,
   carpentry: Hammer,
   masonry: BrickWall,
-  // fallback categories used in the seed taxonomy
   general: Settings,
 };
 
@@ -35,20 +34,20 @@ export function TradeGrid({
 }) {
   const { t, lang } = useLanguage();
 
-  // Group by category for the grid (show only the "trade" skills — nameEn matches the trade keyword map)
+  // Group by category for the grid (show only the "trade" skills)
   const grouped: Record<string, Skill[]> = {};
   for (const s of skills) {
     (grouped[s.category] ??= []).push(s);
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4">
       {Object.entries(grouped).map(([cat, list]) => {
         const Icon = CATEGORY_ICON[cat] ?? Settings;
         return (
           <div key={cat} className="grid gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-              <Icon className="size-3.5" />
+            <p className="text-meta font-semibold uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+              <Icon className="size-3.5" aria-hidden />
               {cat}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -63,13 +62,16 @@ export function TradeGrid({
                     onClick={() => onSelect(s.id)}
                     aria-pressed={active}
                     className={cn(
-                      "flex flex-col items-start gap-1 p-3 rounded-xl border min-h-20 text-left transition-all",
+                      "flex flex-col items-start gap-1.5 p-3 rounded-md border min-h-20 text-left transition-colors",
                       active
-                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                        : "bg-card hover:bg-accent/10 hover:border-accent/40 border-border",
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface text-ink-muted hover:text-ink hover:border-ink/30 border-border",
                     )}
                   >
-                    <Ic className="size-5" />
+                    <div className="flex items-center justify-between w-full">
+                      <Ic className="size-5" aria-hidden />
+                      {active && <Check className="size-4" aria-hidden />}
+                    </div>
                     <span className="text-sm font-semibold leading-tight">{name}</span>
                   </button>
                 );
@@ -78,9 +80,6 @@ export function TradeGrid({
           </div>
         );
       })}
-      <p className="text-xs text-muted-foreground mt-1">
-        {t("onboardStep")} 1 — {t("onboardStep1Title")}
-      </p>
     </div>
   );
 }

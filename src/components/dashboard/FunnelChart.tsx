@@ -1,7 +1,7 @@
 "use client";
 // FunnelChart — horizontal bars Views → Applied → Shortlisted → Interview → Hired.
 // Pure CSS bars (no chart library); width = count / maxStageCount.
-// Gradient: primary (left/top) → accent (right/bottom) on the largest bar; smaller bars stay solid primary.
+// Restrained per Master Prompt §32: solid ink tones, no gradients, no animations.
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { cn } from "@/lib/utils";
 
@@ -27,36 +27,47 @@ export function FunnelChart({ funnel }: { funnel: { views: number; applied: numb
   ];
   const max = Math.max(...stages.map((s) => s.value), 1);
 
+  // Solid tones — applied (navy) → shortlisted (warning) → interview (info)
+  // → offer (warning stronger) → hired (positive). Each has a status-dot.
+  const toneClass: Record<FunnelStage["key"], string> = {
+    views: "bg-ink-subtle/40",
+    applied: "bg-primary",
+    shortlisted: "bg-accent/80",
+    interview: "bg-info",
+    hired: "bg-positive",
+  };
+  const dotClass: Record<FunnelStage["key"], string> = {
+    views: "is-neutral",
+    applied: "is-info",
+    shortlisted: "is-warning",
+    interview: "is-info",
+    hired: "is-positive",
+  };
+
   return (
-    <div className="flex flex-col gap-3" aria-label={t("dashFunnel")}>
-      {stages.map((s, i) => {
+    <ol className="flex flex-col gap-2.5" aria-label={t("dashFunnel")}>
+      {stages.map((s) => {
         const pct = Math.max((s.value / max) * 100, 4); // min 4% so empty bars are still visible
         return (
-          <div key={s.key} className="flex items-center gap-3">
-            <div className="w-28 shrink-0 text-xs font-medium text-muted-foreground text-right">
-              {t(s.labelKey)}
+          <li key={s.key} className="flex items-center gap-3">
+            <div className="w-28 shrink-0 text-meta text-right flex items-center justify-end gap-1.5">
+              <span className={cn("status-dot", dotClass[s.key])} aria-hidden />
+              <span className="text-ink-muted">{t(s.labelKey)}</span>
             </div>
-            <div className="flex-1 h-8 bg-muted/40 rounded-md overflow-hidden relative">
+            <div className="flex-1 h-7 bg-surface-sunken rounded-sm overflow-hidden relative border border-border">
               <div
-                className={cn(
-                  "h-full rounded-md transition-all duration-500",
-                  i === 0
-                    ? "bg-gradient-to-r from-primary to-accent"
-                    : i === stages.length - 1
-                      ? "bg-gradient-to-r from-emerald-500 to-emerald-700"
-                      : "bg-gradient-to-r from-primary/90 to-primary/60",
-                )}
+                className={cn("h-full rounded-sm", toneClass[s.key])}
                 style={{ width: `${pct}%` }}
                 role="img"
                 aria-label={`${t(s.labelKey)}: ${s.value}`}
               />
-              <span className="absolute inset-y-0 right-2 flex items-center text-xs font-bold tabular-nums text-foreground">
+              <span className="absolute inset-y-0 right-2 flex items-center text-xs font-semibold tabular-nums text-ink">
                 {s.value}
               </span>
             </div>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

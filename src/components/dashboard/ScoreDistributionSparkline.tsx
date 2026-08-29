@@ -1,7 +1,8 @@
 "use client";
 // ScoreDistributionSparkline — minimal 5-bar SVG (no axes).
 // Buckets: [0-20, 21-40, 41-60, 61-80, 81-100].
-// Colors: rose → orange → amber → emerald → green (matching MatchScoreBadge tones).
+// Restrained ink tones per Master Prompt §32: dark navy bars, not rainbow.
+// Tones: subtle = slate for low, accent for high (color + density, never color alone).
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function ScoreDistributionSparkline({
@@ -21,12 +22,14 @@ export function ScoreDistributionSparkline({
   const gap = 3;
   const barWidth = (width - gap * (safe.length - 1)) / safe.length;
 
+  // Restrained ink-only palette: low buckets use ink-subtle, high use accent.
+  // Color + density — never color alone.
   const colors = [
-    "#f43f5e", // rose-500 (0-20)
-    "#f97316", // orange-500 (21-40)
-    "#f59e0b", // amber-500 (41-60)
-    "#10b981", // emerald-500 (61-80)
-    "#059669", // emerald-600 (81-100)
+    "var(--ink-subtle)",
+    "var(--ink-subtle)",
+    "var(--info)",
+    "var(--info)",
+    "var(--accent)",
   ];
 
   return (
@@ -36,7 +39,7 @@ export function ScoreDistributionSparkline({
         height={height}
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`${t("dashScoreDist")}`}
+        aria-label={t("dashScoreDist")}
         className="overflow-visible"
       >
         {safe.map((n, i) => {
@@ -63,8 +66,8 @@ export function ScoreDistributionSparkline({
         })}
       </svg>
       <div className="flex items-center justify-between w-full" style={{ width }}>
-        <span className="text-[9px] text-muted-foreground">0</span>
-        <span className="text-[9px] text-muted-foreground">100</span>
+        <span className="text-[9px] text-ink-subtle">0</span>
+        <span className="text-[9px] text-ink-subtle">100</span>
       </div>
     </div>
   );

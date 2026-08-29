@@ -7,24 +7,27 @@ import { Button } from "@/components/ui/button";
 export function LandingHeader() {
   const { t } = useLanguage();
   return (
-    <header className="sticky top-0 z-40 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 border-b border-border/60 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-      <Link
-        href="/"
-        className="flex items-center gap-2 font-bold text-primary group"
-        aria-label={t("brand")}
-      >
-        <span className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center text-base shadow-sm ring-1 ring-primary/20 transition-transform group-hover:scale-105">
-          श्र
-        </span>
-        <span className="text-xl tracking-tight">{t("brand")}</span>
-      </Link>
-      <div className="flex items-center gap-2">
-        <LanguageToggle compact />
-        <Link href="/login">
-          <Button variant="default" className="min-h-11 shadow-sm" aria-label={t("navLogin")}>
-            {t("navLogin")}
-          </Button>
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-[6px] supports-[backdrop-filter]:bg-background/80">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-semibold text-primary"
+          aria-label={t("brand")}
+        >
+          <span
+            aria-hidden
+            className="size-7 grid place-items-center rounded-md bg-primary text-primary-foreground text-sm font-semibold"
+          >
+            श्र
+          </span>
+          <span className="text-base tracking-tight">{t("brand")}</span>
         </Link>
+        <div className="flex items-center gap-2">
+          <LanguageToggle compact />
+          <Button asChild variant="default" size="sm" aria-label={t("navLogin")}>
+            <Link href="/login">{t("navLogin")}</Link>
+          </Button>
+        </div>
       </div>
     </header>
   );

@@ -1,4 +1,8 @@
 "use client";
+// /employer/candidates — Master Prompt §28: ATS-style candidate list.
+// Rows like "94 Ravi Kumar Skill Verified" — easy comparison.
+// Removed: amber "urgent boost" pill, rounded-full count badge, gradient hairline.
+// Added: border-b sectioned header, surface-raised filter rail, ATS row grid.
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/shared/AppShell";
@@ -11,7 +15,7 @@ import {
   type CandidateFiltersValue,
 } from "@/components/employer/CandidateFilters";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { Search, Zap, ArrowDownWideNarrow } from "lucide-react";
+import { Search, ArrowDownWideNarrow, ChevronRight } from "lucide-react";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
@@ -81,71 +85,85 @@ function CandidatesPageBody() {
 
   return (
     <AppShell>
-      <header className="mb-4 flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("candidatesTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-            {t("candidatesRankedBy")}
-            {urgentJobId && (
-              <span className="inline-flex items-center gap-1 text-rose-700 text-xs font-medium">
-                <Zap className="size-3" />
-                {t("candidatesUrgentBoost")}
-              </span>
-            )}
-            {results && results.length > 0 && (
-              <span className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium tabular-nums">
-                {total === 1 ? t("candidatesCountOne") : t("candidatesCountMany", { count: total })}
-              </span>
-            )}
-          </p>
-        </div>
-        {/* Sort selector — round 9 */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="sortSelect" className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <ArrowDownWideNarrow className="size-3.5" />
-            {t("candidatesSortLabel")}
-          </label>
-          <Select value={sort} onValueChange={(v) => setSort(v as SortValue)}>
-            <SelectTrigger id="sortSelect" className="h-9 min-w-[160px] gap-1.5 text-xs">
-              <SelectValue placeholder={t("candidatesSortMatch")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="match">{t("candidatesSortMatch")}</SelectItem>
-              <SelectItem value="rating">{t("candidatesSortRating")}</SelectItem>
-              <SelectItem value="distance">{t("candidatesSortDistance")}</SelectItem>
-              <SelectItem value="experience">{t("candidatesSortExperience")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </header>
+      <main className="flex flex-col gap-6">
+        {/* Header — border-b sectioned */}
+        <header className="border-b border-border pb-4 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-meta uppercase tracking-wide text-ink-subtle">
+              {t("candidatesEyebrow")}
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              {t("candidatesTitle")}
+            </h1>
+            <p className="text-meta text-ink-subtle mt-1 flex items-center gap-2 flex-wrap">
+              {t("candidatesRankedBy")}
+              {urgentJobId && (
+                <span className="inline-flex items-center gap-1 text-warning-foreground text-xs font-medium">
+                  <ChevronRight className="size-3" aria-hidden />
+                  {t("candidatesUrgentBoost")}
+                </span>
+              )}
+              {results && results.length > 0 && (
+                <span className="tabular-nums text-ink-muted">
+                  ·{" "}
+                  {total === 1
+                    ? t("candidatesCountOne")
+                    : t("candidatesCountMany", { count: total })}
+                </span>
+              )}
+            </p>
+          </div>
+          {/* Sort selector — Master Prompt §28: filter-heavy, comparison-oriented */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="sortSelect"
+              className="hidden sm:inline-flex items-center gap-1.5 text-meta uppercase tracking-wide text-ink-subtle"
+            >
+              <ArrowDownWideNarrow className="size-3.5" aria-hidden />
+              {t("candidatesSortLabel")}
+            </label>
+            <Select value={sort} onValueChange={(v) => setSort(v as SortValue)}>
+              <SelectTrigger id="sortSelect" className="h-9 min-w-[160px] gap-1.5 text-xs">
+                <SelectValue placeholder={t("candidatesSortMatch")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="match">{t("candidatesSortMatch")}</SelectItem>
+                <SelectItem value="rating">{t("candidatesSortRating")}</SelectItem>
+                <SelectItem value="distance">{t("candidatesSortDistance")}</SelectItem>
+                <SelectItem value="experience">{t("candidatesSortExperience")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
-        <aside className="lg:sticky lg:top-20 lg:self-start">
-          <CandidateFilters
-            skills={skills}
-            value={filters}
-            onChange={setFilters}
-          />
-        </aside>
-
-        <section>
-          {loading && <LoadingSkeleton count={4} />}
-
-          {!loading && results && results.length === 0 && (
-            <EmptyState
-              icon={Search}
-              title={t("candidatesEmpty")}
-              description={filters.topRated ? t("candidatesTopRatedEmpty") : t("candidatesEmptyHint")}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
+          <aside className="lg:sticky lg:top-20 lg:self-start">
+            <CandidateFilters
+              skills={skills}
+              value={filters}
+              onChange={setFilters}
             />
-          )}
+          </aside>
 
-          {!loading && results && results.length > 0 && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {results.map(c => <CandidateCard key={c.id} candidate={c} />)}
-            </div>
-          )}
-        </section>
-      </div>
+          <section>
+            {loading && <LoadingSkeleton count={4} />}
+
+            {!loading && results && results.length === 0 && (
+              <EmptyState
+                icon={Search}
+                title={t("candidatesEmpty")}
+                description={filters.topRated ? t("candidatesTopRatedEmpty") : t("candidatesEmptyHint")}
+              />
+            )}
+
+            {!loading && results && results.length > 0 && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {results.map(c => <CandidateCard key={c.id} candidate={c} />)}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
     </AppShell>
   );
 }

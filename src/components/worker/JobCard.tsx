@@ -2,17 +2,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WageDisplay } from "@/components/shared/WageDisplay";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useSavedJobs } from "@/hooks/use-saved-jobs";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import {
-  MapPin, Zap, Briefcase, Users, Share2, Loader2, Check, Clock,
-  Bookmark, BookmarkCheck, Star, ShieldCheck,
+  MapPin,
+  Briefcase,
+  Users,
+  Share2,
+  Loader2,
+  Check,
+  Clock,
+  Bookmark,
+  BookmarkCheck,
+  ShieldCheck,
+  Gauge,
 } from "lucide-react";
 
 export interface WorkerJobCardData {
@@ -43,17 +50,12 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
   const { isSaved, toggle } = useSavedJobs();
   const saved = isSaved(job.id);
 
-  // Employer reputation (round 8) — from the feed API's rating summary
   const employerRating = job.employer?.ratingCount && job.employer.ratingCount > 0
     ? { avg: job.employer.ratingAvg ?? 0, count: job.employer.ratingCount }
     : null;
   const highlyRatedEmployer = !!employerRating && employerRating.avg >= 4.5 && employerRating.count >= 3;
-  const employerInitials = job.employer?.companyName
-    ?.split(" ").filter(Boolean).map(p => p[0]).slice(0, 2).join("").toUpperCase() ?? "";
 
   function toggleSave(e: React.MouseEvent) {
-    // MUST come first — the whole card is clickable, so stop the event before
-    // it bubbles up to the card's onClick (which navigates to the job detail).
     e.preventDefault();
     e.stopPropagation();
     const wasSaved = isSaved(job.id);
@@ -63,8 +65,6 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
   }
 
   function stopCardKeypress(e: React.KeyboardEvent) {
-    // Keyboard equivalent of stopPropagation: the card's onKeyDown handler
-    // opens the job on Enter/Space — swallow those when focus is on the button.
     if (e.key === "Enter" || e.key === " ") e.stopPropagation();
   }
 
@@ -95,7 +95,7 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
     const tradeName = job.trade
       ? (lang === "hi" ? job.trade.nameHi : lang === "te" ? job.trade.nameTe : job.trade.nameEn)
       : job.title;
-    const text = `🛠️ ${job.title}\n${tradeName} · ${job.city}\n₹${job.wageMin}-${job.wageMax}${t("perDay")} · ${t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")} ${t("jobShift")}\n${t("feedVerifiedEmployer")}: ${job.employer?.companyName ?? ""}`;
+    const text = `${job.title}\n${tradeName} · ${job.city}\n₹${job.wageMin}-${job.wageMax}${t("perDay")} · ${t(job.shift === "day" ? "shiftDay" : job.shift === "night" ? "shiftNight" : "shiftAny")} ${t("jobShift")}\n${t("feedVerifiedEmployer")}: ${job.employer?.companyName ?? ""}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
@@ -108,123 +108,137 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
     ? (lang === "hi" ? job.trade.nameHi : lang === "te" ? job.trade.nameTe : job.trade.nameEn)
     : null;
 
+  // Localize shift label
+  const shiftLabel = job.shift === "day" ? t("shiftDay") : job.shift === "night" ? t("shiftNight") : t("shiftAny");
+
   return (
     <Card
-      className={`relative cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 ${job.isUrgent ? "border-accent/60" : highlyRatedEmployer ? "border-amber-300/60" : "hover:border-primary/40"}`}
+      className={`cursor-pointer transition-colors hover:bg-surface-sunken ${
+        job.isUrgent ? "border-warning/40" : ""
+      }`}
       onClick={open}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
+      aria-label={job.title}
     >
-      {/* Top gradient hairline — urgent (saffron) > highly-rated employer (amber) > subtle */}
-      <div
-        aria-hidden
-        className={`absolute inset-x-0 top-0 h-1 rounded-t-xl ${job.isUrgent ? "bg-gradient-to-r from-accent to-rose-400" : highlyRatedEmployer ? "bg-gradient-to-r from-amber-400 to-amber-300" : "bg-gradient-to-r from-primary/25 to-primary/5"}`}
-      />
-      <CardContent className="p-4 flex flex-col gap-3 pt-5">
-        {/* Urgent ribbon */}
+      <CardContent className="p-4 flex flex-col gap-3">
+        {/* Row 1 — Urgent flag (small, no ribbon) */}
         {job.isUrgent && (
-          <div className="self-start inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent-foreground">
-            <Zap className="size-3" />
+          <p className="inline-flex items-center gap-1.5 text-meta font-medium text-warning-foreground">
+            <span className="status-dot is-warning" aria-hidden />
             {t("feedUrgent")}
-          </div>
+          </p>
         )}
 
-        {/* Title + match + bookmark */}
+        {/* Row 2 — Title + bookmark + match */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-base leading-tight line-clamp-2">{job.title}</p>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
+            <h3 className="text-base font-semibold text-ink leading-tight line-clamp-2 text-pretty">
+              {job.title}
+            </h3>
+            <p className="text-meta text-ink-muted flex items-center gap-1.5 flex-wrap">
               {tradeName && <span>{tradeName}</span>}
               {tradeName && <span aria-hidden>·</span>}
               <span className="inline-flex items-center gap-1">
-                <MapPin className="size-3" />
+                <MapPin className="size-3" aria-hidden />
                 {job.city}
-                {job.distanceKm != null && <span className="text-muted-foreground"> · {job.distanceKm.toFixed(1)} {t("km")}</span>}
+                {job.distanceKm != null && (
+                  <span className="text-ink-subtle"> · {job.distanceKm.toFixed(1)} {t("km")}</span>
+                )}
               </span>
             </p>
           </div>
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <motion.button
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <button
               type="button"
-              whileTap={{ scale: 0.85 }}
               onClick={toggleSave}
               onKeyDown={stopCardKeypress}
               aria-pressed={saved}
               aria-label={saved ? t("unsaveJobLabel") : t("saveJobLabel")}
               title={saved ? t("unsaveJobLabel") : t("saveJobLabel")}
-              className={`grid place-items-center size-8 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                saved
-                  ? "text-primary bg-primary/10 hover:bg-primary/15"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              className={`grid place-items-center size-8 rounded-md border border-border bg-surface hover:bg-surface-sunken transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                saved ? "text-primary" : "text-ink-muted"
               }`}
             >
               {saved
-                ? <BookmarkCheck className="size-[18px] fill-primary" />
-                : <Bookmark className="size-[18px] fill-none" />}
-            </motion.button>
+                ? <BookmarkCheck className="size-4" aria-hidden />
+                : <Bookmark className="size-4" aria-hidden />}
+            </button>
             {job.matchScore != null && <MatchScoreBadge score={job.matchScore} size="md" />}
           </div>
         </div>
 
-        {/* Employer row (round 8 redesign): avatar + name + verified + rating chip */}
+        {/* Row 3 — Employer + verified + rating (semantic) */}
         {job.employer && (
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              aria-hidden
-              className={`size-7 shrink-0 rounded-full grid place-items-center text-[10px] font-bold ${highlyRatedEmployer ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300" : "bg-primary/10 text-primary"}`}
-            >
-              {employerInitials || <Briefcase className="size-3.5" />}
-            </span>
-            <span className="text-xs text-muted-foreground truncate font-medium">{job.employer.companyName}</span>
+          <div className="flex items-center gap-2 min-w-0 text-sm">
+            <span className="text-ink-muted truncate">{job.employer.companyName}</span>
             {job.employer.isVerified && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
+              <span className="trust-pill is-employer shrink-0">
                 <ShieldCheck className="size-3.5" aria-hidden />
-                <span className="sr-only">{t("feedVerifiedEmployer")}</span>
+                <span className="text-meta">{t("feedVerifiedEmployer")}</span>
               </span>
             )}
             {employerRating && (
               <span
-                className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums shrink-0 border ${highlyRatedEmployer ? "border-amber-400/50 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" : "border-amber-300/30 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"}`}
+                className="ml-auto inline-flex items-center gap-1 text-meta text-ink-muted shrink-0 tabular-nums"
                 aria-label={t("employerRatingAria", { avg: employerRating.avg, count: employerRating.count })}
-                title={highlyRatedEmployer ? t("employerRatingHighly") : t("employerRatingAria", { avg: employerRating.avg, count: employerRating.count })}
+                title={highlyRatedEmployer ? t("employerRatingHighly") : undefined}
               >
-                <Star className="size-3 fill-amber-400 text-amber-500" aria-hidden />
-                {employerRating.avg.toFixed(1)}
-                <span className="opacity-70">({employerRating.count})</span>
+                <Gauge className="size-3.5 text-ink-subtle" aria-hidden />
+                {employerRating.avg.toFixed(1)} ({employerRating.count})
               </span>
             )}
           </div>
         )}
 
-        {/* Meta row: wage, headcount, shift */}
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Briefcase className="size-3" />
-            <WageDisplay min={job.wageMin} max={job.wageMax} size="sm" />
+        {/* Row 4 — Meta: wage, headcount, shift — semantic grid, no chips */}
+        <dl className="grid grid-cols-3 gap-2 text-sm border-t border-border pt-2.5">
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+              {t("feedFilterWage")}
+            </dt>
+            <dd className="text-ink font-medium tabular-nums">
+              <WageDisplay min={job.wageMin} max={job.wageMax} size="sm" />
+            </dd>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground justify-end">
-            <Users className="size-3" />
-            {job.headcount} {t("jobHeadcount").toLowerCase()}
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+              {t("jobHeadcount")}
+            </dt>
+            <dd className="text-ink font-medium tabular-nums flex items-center gap-1">
+              <Users className="size-3 text-ink-subtle" aria-hidden />
+              {job.headcount}
+            </dd>
           </div>
-        </div>
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-meta uppercase tracking-wide text-ink-subtle">
+              {t("feedFilterShift")}
+            </dt>
+            <dd className="text-ink font-medium">{shiftLabel}</dd>
+          </div>
+        </dl>
 
-        {/* Skills chips */}
+        {/* Row 5 — Skills as inline text (no chips) */}
         {job.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {job.skills.slice(0, 4).map(s => (
-              <Badge key={s.skillId} variant={s.required ? "default" : "secondary"} className="text-[10px]">
+          <p className="text-meta text-ink-muted leading-relaxed">
+            <span className="text-ink-subtle uppercase tracking-wide mr-1.5">
+              {t("onboardSkills")}:
+            </span>
+            {job.skills.slice(0, 4).map((s, i) => (
+              <span key={s.skillId}>
                 {s.skill?.nameEn ?? "—"}
-              </Badge>
+                {i < Math.min(4, job.skills.length) - 1 ? ", " : ""}
+              </span>
             ))}
             {job.skills.length > 4 && (
-              <Badge variant="outline" className="text-[10px]">+{job.skills.length - 4}</Badge>
+              <span className="text-ink-subtle"> +{job.skills.length - 4}</span>
             )}
-          </div>
+          </p>
         )}
 
-        {/* Action row */}
-        <div className="flex items-center gap-2 border-t border-border pt-3">
+        {/* Row 6 — Actions */}
+        <div className="flex items-center gap-2 pt-1">
           <Button
             type="button"
             onClick={apply}
@@ -233,7 +247,13 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
             variant={applied ? "secondary" : "default"}
             aria-label={applied ? t("jobApplied") : t("jobApply")}
           >
-            {submitting ? <Loader2 className="size-4 animate-spin" /> : applied ? <Check className="size-4" /> : <Briefcase className="size-4" />}
+            {submitting ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : applied ? (
+              <Check className="size-4" aria-hidden />
+            ) : (
+              <Briefcase className="size-4" aria-hidden />
+            )}
             {applied ? t("applied") : t("jobApply")}
           </Button>
           <Button
@@ -244,13 +264,13 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
             aria-label={t("feedShare")}
             className="size-11 p-0"
           >
-            <Share2 className="size-4" />
+            <Share2 className="size-4" aria-hidden />
           </Button>
         </div>
 
-        {/* Posted time */}
-        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-          <Clock className="size-3" />
+        {/* Row 7 — Posted time, meta */}
+        <p className="text-meta text-ink-subtle flex items-center gap-1">
+          <Clock className="size-3" aria-hidden />
           {new Date(job.createdAt).toLocaleDateString()}
         </p>
       </CardContent>

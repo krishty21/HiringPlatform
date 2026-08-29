@@ -5,21 +5,20 @@ import { AppShell } from "@/components/shared/AppShell";
 import { TradeGrid } from "@/components/worker/TradeGrid";
 import { VoiceButton } from "@/components/worker/VoiceButton";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check } from "lucide-react";
+import {
+  Loader2, ChevronLeft, ChevronRight, Check, Clock, MapPin, IndianRupee,
+} from "lucide-react";
 import type { Skill, VoiceProfileJSON } from "@/lib/schemas";
 
 const CITIES: Record<string, { lat: number; lng: number }> = {
@@ -87,7 +86,6 @@ export function computeOnboardStrength(f: FormState): number {
   s += Math.min(25, 5 * f.skills.length);
   if (f.bio && f.bio.length > 50) s += 10;
   if (f.photoUrl) s += 10;
-  // verified: false in onboarding (new profile)
   return Math.min(100, s);
 }
 
@@ -113,15 +111,12 @@ export default function WorkerOnboardingPage() {
 
   const strength = useMemo(() => computeOnboardStrength(form), [form]);
 
-  // Filter "trade skills" for step 1 (top-level trade names; e.g. categories match a primary trade)
   const tradeSkills = useMemo(() => {
     if (!skills) return [];
-    // The seed has 8 trade rows whose nameEn matches the directive's trade keyword map
     const TRADE_NAMES = new Set(["Electrician", "Plumber", "Welder", "CNC Operator", "Fitter", "Delivery Executive", "Carpenter", "Mason"]);
     return skills.filter(s => TRADE_NAMES.has(s.nameEn));
   }, [skills]);
 
-  // Skills related to the selected trade (same category)
   const relatedSkills = useMemo(() => {
     if (!skills || !form.tradeId) return [];
     const trade = skills.find(s => s.id === form.tradeId);
@@ -152,7 +147,7 @@ export default function WorkerOnboardingPage() {
     setForm(prev => ({ ...prev, city, lat: c?.lat ?? prev.lat, lng: c?.lng ?? prev.lng }));
   }
 
-  // Voice flow: send transcript → AI → prefill form (stay on or jump to step 1 if user is on step 0)
+  // Voice flow — "Tell us about your work", not "AI Profile Generator".
   const handleTranscript = useCallback(async (transcript: string) => {
     setVoiceBusy(true);
     try {
@@ -165,7 +160,6 @@ export default function WorkerOnboardingPage() {
       const data = (await res.json()) as VoiceProfileJSON;
       applyVoiceResult(data);
       toast.success(t("onboardVoiceConfirm"));
-      // Jump to step 2 (wage/shift) so the user can review everything
       if (step === 0) setStep(1);
     } catch {
       toast.error(t("errGeneric"));
@@ -177,7 +171,6 @@ export default function WorkerOnboardingPage() {
   function applyVoiceResult(r: VoiceProfileJSON) {
     setForm(prev => {
       const next = { ...prev };
-      // Match trade by nameEn
       if (r.trade && skills) {
         const skill = skills.find(s => s.nameEn === r.trade);
         if (skill) next.tradeId = skill.id;
@@ -257,132 +250,234 @@ export default function WorkerOnboardingPage() {
     );
   }
 
+  const STEP_LABELS = [
+    t("onboardStep1Title"),
+    t("onboardStep2Title"),
+    t("onboardStep3Title"),
+  ];
+
   return (
     <AppShell>
-      <header className="mb-4">
-        <h1 className="text-2xl font-bold tracking-tight">{t("onboardTitle")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">3 {t("onboardStep").toLowerCase()}s · &lt;3 min</p>
+      {/* Page header — clean eyebrow + h1 */}
+      <header className="mb-6 flex flex-col gap-1">
+        <p className="text-meta uppercase tracking-wider text-ink-subtle">
+          {t("onboardTitle")}
+        </p>
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink text-balance">
+          {t("onboardStep1Title")}
+        </h1>
+        <p className="text-meta text-ink-muted mt-1">
+          3 {t("onboardStep").toLowerCase()}s · &lt;3 min
+        </p>
       </header>
 
-      {/* Progress */}
-      <div className="grid gap-2 mb-6">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+      {/* Step progress — border-t sectioned, no gradient accent */}
+      <nav className="mb-6" aria-label="Onboarding step progress">
+        <div className="flex items-center justify-between text-meta text-ink-muted mb-2">
           <span>{t("onboardStep")} {step + 1} {t("onboardOf")} 3</span>
-          <span>{strength}%</span>
+          <span className="tabular-nums">{strength}%</span>
         </div>
-        <Progress value={(step + 1) * 33} className="h-1.5" />
-        <ol className="grid grid-cols-3 gap-2 mt-2">
-          {[t("onboardStep1Title"), t("onboardStep2Title"), t("onboardStep3Title")].map((label, idx) => (
-            <li key={idx} className={`text-center text-xs font-medium px-2 py-1.5 rounded-lg border ${idx === step ? "bg-primary text-primary-foreground border-primary" : idx < step ? "bg-accent/20 text-accent-foreground border-accent/40" : "bg-card text-muted-foreground border-border"}`}>
-              {label}
-            </li>
-          ))}
+        <div className="h-1 rounded-full bg-surface-sunken overflow-hidden" role="progressbar" aria-valuenow={strength} aria-valuemin={0} aria-valuemax={100}>
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${(step + 1) * 33}%` }}
+          />
+        </div>
+        <ol className="grid grid-cols-3 gap-2 mt-3">
+          {STEP_LABELS.map((label, idx) => {
+            const isCurrent = idx === step;
+            const isDone = idx < step;
+            return (
+              <li
+                key={idx}
+                className={`text-center text-meta font-medium px-2 py-2 rounded-md border transition-colors ${
+                  isCurrent
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : isDone
+                      ? "border-positive/40 bg-positive/5 text-positive"
+                      : "border-border bg-surface text-ink-subtle"
+                }`}
+              >
+                <span className="inline-flex items-center justify-center gap-1">
+                  {isDone && <Check className="size-3" aria-hidden />}
+                  {label}
+                </span>
+              </li>
+            );
+          })}
         </ol>
-      </div>
+      </nav>
 
-      {/* Voice (only on first two steps) */}
+      {/* Voice onboarding — "Tell us about your work", not "AI Profile Generator" */}
       {step < 2 && (
-        <div className="mb-4">
+        <section className="mb-4">
           <VoiceButton lang={lang} onTranscript={handleTranscript} />
-          {voiceBusy && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5"><Loader2 className="size-3 animate-spin" /> {t("loading")}</p>}
-        </div>
+          {voiceBusy && (
+            <p className="text-meta text-ink-muted mt-2 inline-flex items-center gap-1.5">
+              <Loader2 className="size-3 animate-spin" aria-hidden />
+              {t("loading")}
+            </p>
+          )}
+        </section>
       )}
 
-      {/* Step 1: Trade grid */}
+      {/* Step 1 — Trade grid */}
       {step === 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t("onboardStep1Title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TradeGrid
-              skills={tradeSkills}
-              selected={form.tradeId || null}
-              onSelect={(id) => {
-                update("tradeId", id);
-                // Reset chosen sub-skills when trade changes
-                update("skills", []);
-              }}
-            />
-          </CardContent>
-        </Card>
+        <section className="surface-raised rounded-md p-5 sm:p-6 flex flex-col gap-4 shadow-raise">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold text-ink">{t("onboardStep1Title")}</h2>
+            <p className="text-meta text-ink-muted">
+              {t("onboardStep1Hint")}
+            </p>
+          </div>
+          <TradeGrid
+            skills={tradeSkills}
+            selected={form.tradeId || null}
+            onSelect={(id) => {
+              update("tradeId", id);
+              update("skills", []);
+            }}
+          />
+        </section>
       )}
 
-      {/* Step 2: Details */}
+      {/* Step 2 — Personal details + skills */}
       {step === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t("onboardStep2Title")}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="fullName">{t("onboardFullName")}</Label>
-              <Input id="fullName" value={form.fullName} onChange={e => update("fullName", e.target.value)} className="min-h-11" placeholder="e.g. Ravi Kumar" />
+        <section className="surface-raised rounded-md p-5 sm:p-6 flex flex-col gap-5 shadow-raise">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold text-ink">{t("onboardStep2Title")}</h2>
+            <p className="text-meta text-ink-muted">
+              {t("onboardStep2Hint")}
+            </p>
+          </div>
+
+          {/* Personal details — grouped fields */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="fullName" className="text-meta text-ink-subtle uppercase tracking-wide">
+                {t("onboardFullName")}
+              </Label>
+              <Input
+                id="fullName"
+                value={form.fullName}
+                onChange={e => update("fullName", e.target.value)}
+                className="min-h-11"
+                placeholder="e.g. Ravi Kumar"
+              />
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="yearsExp">{t("onboardYearsExp")}</Label>
-                <Input id="yearsExp" type="number" min={0} max={50} value={form.yearsExp} onChange={e => update("yearsExp", e.target.value)} className="min-h-11" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="city">{t("onboardCity")}</Label>
-                <Select value={form.city} onValueChange={onCityChange}>
-                  <SelectTrigger id="city" className="min-h-11 w-full"><SelectValue placeholder={t("chooseCity")} /></SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(CITIES).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="yearsExp" className="text-meta text-ink-subtle uppercase tracking-wide">
+                {t("onboardYearsExp")}
+              </Label>
+              <Input
+                id="yearsExp"
+                type="number" min={0} max={50}
+                value={form.yearsExp}
+                onChange={e => update("yearsExp", e.target.value)}
+                className="min-h-11"
+              />
             </div>
-            <div className="grid gap-2">
-              <Label>{t("onboardLanguages")}</Label>
-              <div className="flex flex-wrap gap-2">
-                {([["en","English"],["hi","हिन्दी"],["te","తెలుగు"]] as const).map(([code, label]) => {
-                  const active = form.languages.includes(code);
+            <div className="grid gap-1.5">
+              <Label htmlFor="city" className="text-meta text-ink-subtle uppercase tracking-wide flex items-center gap-1.5">
+                <MapPin className="size-3" aria-hidden />
+                {t("onboardCity")}
+              </Label>
+              <Select value={form.city} onValueChange={onCityChange}>
+                <SelectTrigger id="city" className="min-h-11 w-full"><SelectValue placeholder={t("chooseCity")} /></SelectTrigger>
+                <SelectContent>
+                  {Object.keys(CITIES).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Languages — toggle row */}
+          <div className="grid gap-1.5">
+            <Label className="text-meta text-ink-subtle uppercase tracking-wide">
+              {t("onboardLanguages")}
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {([["en","English"],["hi","हिन्दी"],["te","తెలుగు"]] as const).map(([code, label]) => {
+                const active = form.languages.includes(code);
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => toggleLanguage(code)}
+                    aria-pressed={active}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md border min-h-9 text-sm transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface text-ink-muted hover:text-ink hover:border-ink/30 border-border"
+                    }`}
+                  >
+                    {active && <Check className="size-3.5" aria-hidden />}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bio — long-form */}
+          <div className="grid gap-1.5">
+            <Label htmlFor="bio" className="text-meta text-ink-subtle uppercase tracking-wide flex items-center justify-between">
+              <span>{t("onboardBio")}</span>
+              <span className="text-ink-subtle normal-case tabular-nums">({form.bio.length}/500)</span>
+            </Label>
+            <Textarea
+              id="bio" rows={4} maxLength={500}
+              value={form.bio}
+              onChange={e => update("bio", e.target.value)}
+              className="min-h-24"
+              placeholder={t("onboardBioPlaceholder")}
+            />
+          </div>
+
+          {/* Photo URL */}
+          <div className="grid gap-1.5">
+            <Label htmlFor="photoUrl" className="text-meta text-ink-subtle uppercase tracking-wide">
+              {t("onboardPhotoUrl")} <span className="text-ink-subtle normal-case">({t("optional")})</span>
+            </Label>
+            <Input
+              id="photoUrl" type="url"
+              value={form.photoUrl}
+              onChange={e => update("photoUrl", e.target.value)}
+              className="min-h-11" placeholder="https://…"
+            />
+          </div>
+
+          {/* Related skills — same category as the chosen trade */}
+          {relatedSkills.length > 0 && (
+            <div className="grid gap-1.5">
+              <Label className="text-meta text-ink-subtle uppercase tracking-wide flex items-center gap-2">
+                {t("onboardSkills")}
+                <span className="text-ink-subtle normal-case tabular-nums">({form.skills.length})</span>
+              </Label>
+              <ul className="flex flex-wrap gap-2" aria-label={t("onboardSkills")}>
+                {relatedSkills.map(s => {
+                  const sel = form.skills.find(x => x.skillId === s.id);
+                  const name = lang === "hi" ? s.nameHi : lang === "te" ? s.nameTe : s.nameEn;
                   return (
-                    <button
-                      key={code}
-                      type="button"
-                      onClick={() => toggleLanguage(code)}
-                      aria-pressed={active}
-                      className={`px-3 py-1.5 rounded-full border min-h-9 text-sm transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent/10 border-border"}`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="bio">{t("onboardBio")} <span className="text-xs text-muted-foreground">({form.bio.length}/500)</span></Label>
-              <Textarea id="bio" rows={4} maxLength={500} value={form.bio} onChange={e => update("bio", e.target.value)} className="min-h-24" placeholder={t("onboardBioPlaceholder")} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="photoUrl">Photo URL <span className="text-xs text-muted-foreground">({t("optional")})</span></Label>
-              <Input id="photoUrl" type="url" value={form.photoUrl} onChange={e => update("photoUrl", e.target.value)} className="min-h-11" placeholder="https://…" />
-            </div>
-            {relatedSkills.length > 0 && (
-              <div className="grid gap-2">
-                <Label className="flex items-center gap-2">{t("onboardSkills")} <Badge variant="outline" className="text-[10px]">{form.skills.length}</Badge></Label>
-                <div className="flex flex-wrap gap-2">
-                  {relatedSkills.map(s => {
-                    const sel = form.skills.find(x => x.skillId === s.id);
-                    const name = lang === "hi" ? s.nameHi : lang === "te" ? s.nameTe : s.nameEn;
-                    return (
+                    <li key={s.id}>
                       <button
-                        key={s.id}
                         type="button"
                         onClick={() => toggleSkill(s.id)}
                         aria-pressed={!!sel}
-                        className={`px-3 py-1.5 rounded-full border min-h-9 text-sm transition-colors ${sel ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent/10 border-border"}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md border min-h-9 text-sm transition-colors ${
+                          sel
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-surface text-ink-muted hover:text-ink hover:border-ink/30 border-border"
+                        }`}
                       >
+                        {sel && <Check className="size-3.5" aria-hidden />}
                         {name}
                         {sel && (
                           <Select
                             value={String(sel.proficiency)}
                             onValueChange={(v) => setProficiency(s.id, Number(v))}
                           >
-                            <SelectTrigger className="ml-2 h-6 w-14 inline-flex px-1 py-0 min-h-6 text-[10px]">
+                            <SelectTrigger className="ml-1 h-6 w-14 inline-flex px-1 py-0 min-h-6 text-[10px] border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -391,77 +486,130 @@ export default function WorkerOnboardingPage() {
                           </Select>
                         )}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </section>
       )}
 
-      {/* Step 3: Wage + shift prefs */}
+      {/* Step 3 — Wage + shift preferences */}
       {step === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t("onboardStep3Title")}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="wageMin">{t("onboardWageMin")} (₹/day)</Label>
-                <Input id="wageMin" type="number" min={0} step={50} value={form.wageMin} onChange={e => update("wageMin", e.target.value)} className="min-h-11" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="wageMax">{t("onboardWageMax")} (₹/day)</Label>
-                <Input id="wageMax" type="number" min={0} step={50} value={form.wageMax} onChange={e => update("wageMax", e.target.value)} className="min-h-11" />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="shift">{t("onboardShift")}</Label>
-              <Select value={form.shiftPref} onValueChange={(v) => update("shiftPref", v as FormState["shiftPref"])}>
-                <SelectTrigger id="shift" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">{t("shiftAny")}</SelectItem>
-                  <SelectItem value="day">{t("shiftDay")}</SelectItem>
-                  <SelectItem value="night">{t("shiftNight")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label className="text-sm">{t("onboardRadius")}: <span className="font-semibold">{form.maxRadiusKm} {t("km")}</span></Label>
-              <Slider value={[form.maxRadiusKm]} min={1} max={200} step={5} onValueChange={(v) => update("maxRadiusKm", v[0] ?? 20)} className="mt-2" />
-            </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-300/40 bg-emerald-50 px-3 py-2.5">
-              <Label htmlFor="availableToday" className="text-sm font-medium flex items-center gap-2">
-                <Sparkles className="size-4 text-emerald-700" />
-                {t("onboardAvailableToday")}
-              </Label>
-              <Switch id="availableToday" checked={form.availableToday} onCheckedChange={(v) => update("availableToday", v)} />
-            </div>
+        <section className="surface-raised rounded-md p-5 sm:p-6 flex flex-col gap-5 shadow-raise">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold text-ink">{t("onboardStep3Title")}</h2>
+            <p className="text-meta text-ink-muted">
+              {t("onboardStep3Hint")}
+            </p>
+          </div>
 
-            {/* Strength meter */}
-            <div className="grid gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold flex items-center gap-1.5"><Sparkles className="size-3.5" /> {t("passportStrength")}</span>
-                <span className="tabular-nums">{strength}%</span>
-              </div>
-              <Progress value={strength} className="h-2" />
+          {/* Wage range */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="wageMin" className="text-meta text-ink-subtle uppercase tracking-wide flex items-center gap-1.5">
+                <IndianRupee className="size-3" aria-hidden />
+                {t("onboardWageMin")} (₹/day)
+              </Label>
+              <Input
+                id="wageMin" type="number" min={0} step={50}
+                value={form.wageMin}
+                onChange={e => update("wageMin", e.target.value)}
+                className="min-h-11"
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div className="grid gap-1.5">
+              <Label htmlFor="wageMax" className="text-meta text-ink-subtle uppercase tracking-wide flex items-center gap-1.5">
+                <IndianRupee className="size-3" aria-hidden />
+                {t("onboardWageMax")} (₹/day)
+              </Label>
+              <Input
+                id="wageMax" type="number" min={0} step={50}
+                value={form.wageMax}
+                onChange={e => update("wageMax", e.target.value)}
+                className="min-h-11"
+              />
+            </div>
+          </div>
+
+          {/* Shift preference */}
+          <div className="grid gap-1.5">
+            <Label htmlFor="shift" className="text-meta text-ink-subtle uppercase tracking-wide flex items-center gap-1.5">
+              <Clock className="size-3" aria-hidden />
+              {t("onboardShift")}
+            </Label>
+            <Select value={form.shiftPref} onValueChange={(v) => update("shiftPref", v as FormState["shiftPref"])}>
+              <SelectTrigger id="shift" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">{t("shiftAny")}</SelectItem>
+                <SelectItem value="day">{t("shiftDay")}</SelectItem>
+                <SelectItem value="night">{t("shiftNight")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Travel radius */}
+          <div className="grid gap-1.5">
+            <Label className="text-meta text-ink-subtle uppercase tracking-wide flex items-center justify-between">
+              <span>{t("onboardRadius")}</span>
+              <span className="text-ink font-medium normal-case tabular-nums">{form.maxRadiusKm} {t("km")}</span>
+            </Label>
+            <Slider
+              value={[form.maxRadiusKm]}
+              min={1} max={200} step={5}
+              onValueChange={(v) => update("maxRadiusKm", v[0] ?? 20)}
+              className="mt-3"
+              aria-label={t("onboardRadius")}
+            />
+          </div>
+
+          {/* Available-today toggle — neutral, not emerald */}
+          <div className="surface-inset rounded-md px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <span className="size-9 grid place-items-center rounded-md border border-border bg-surface text-ink-muted shrink-0">
+                <Clock className="size-4" aria-hidden />
+              </span>
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <Label htmlFor="availableToday" className="text-sm font-semibold text-ink">
+                  {t("onboardAvailableToday")}
+                </Label>
+                <p className="text-meta text-ink-muted leading-relaxed">
+                  {t("boardAvailableTodayHint")}
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="availableToday"
+              checked={form.availableToday}
+              onCheckedChange={(v) => update("availableToday", v)}
+              aria-label={t("onboardAvailableToday")}
+            />
+          </div>
+
+          {/* Strength meter — live */}
+          <div className="surface-inset rounded-md p-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-meta text-ink-muted">
+              <span className="font-medium">{t("passportStrength")}</span>
+              <span className="tabular-nums text-ink">{strength}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-surface-sunken overflow-hidden" role="progressbar" aria-valuenow={strength} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full bg-primary transition-all" style={{ width: `${strength}%` }} />
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Footer nav */}
-      <div className="flex items-center justify-between mt-6">
+      <nav className="flex items-center justify-between mt-6 gap-3">
         <Button
           type="button"
           variant="ghost"
           onClick={() => setStep(s => Math.max(0, s - 1) as Step)}
           disabled={step === 0 || submitting}
-          className="gap-1"
+          className="gap-1 min-h-11"
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeft className="size-4" aria-hidden />
           {t("back")}
         </Button>
         {step < 2 ? (
@@ -469,23 +617,23 @@ export default function WorkerOnboardingPage() {
             type="button"
             onClick={() => setStep(s => Math.min(2, s + 1) as Step)}
             disabled={!canAdvance() || voiceBusy}
-            className="gap-2"
+            className="gap-2 min-h-11"
           >
             {t("continue")}
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-4" aria-hidden />
           </Button>
         ) : (
           <Button
             type="button"
             onClick={submit}
             disabled={submitting || !canAdvance()}
-            className="gap-2"
+            className="gap-2 min-h-11"
           >
-            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+            {submitting ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
             {t("onboardSubmit")}
           </Button>
         )}
-      </div>
+      </nav>
     </AppShell>
   );
 }

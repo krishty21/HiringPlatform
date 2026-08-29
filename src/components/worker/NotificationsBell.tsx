@@ -10,7 +10,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useNotifications, type NotificationItem } from "@/hooks/use-notifications";
-import { Bell, Briefcase, Sparkles, ShieldCheck, FileText, CheckCheck, Star } from "lucide-react";
+import {
+  Bell, Briefcase, Gauge, ShieldCheck, FileText, CheckCheck, Star,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function NotificationsBell() {
@@ -20,7 +22,6 @@ export function NotificationsBell() {
   const { items, unread, markAllRead, connection, setUserId, onIncoming } = useNotifications(15000);
   const [open, setOpen] = useState(false);
 
-  // Subscribe to the WebSocket room once we know the user id.
   useEffect(() => {
     const uid = (session?.user as { id?: string } | undefined)?.id ?? null;
     setUserId(uid);
@@ -34,18 +35,14 @@ export function NotificationsBell() {
     } else if (item.type === "new_match" && typeof p.jobId === "string") {
       router.push(`/jobs/${p.jobId}`);
     } else if (item.type === "rating" && typeof p.candidateId === "string") {
-      // Employer ratee → the rated worker's candidate page
       router.push(`/employer/candidates/${p.candidateId}`);
     } else if (item.type === "rating" && typeof p.applicationId === "string") {
-      // Worker ratee → the rated application
       router.push(`/applications/${p.applicationId}`);
     } else {
       router.push("/applications");
     }
   }
 
-  // Toast on incoming WS notification (only when popover is closed — open popover
-  // already shows the item in the list, no toast needed).
   useEffect(() => {
     return onIncoming((n: NotificationItem) => {
       if (open) return;
@@ -54,13 +51,16 @@ export function NotificationsBell() {
       toast(text, {
         duration: 5000,
         action: { label: t("notifView"), onClick: () => gotoItem(n) },
-        icon: <Icon className="size-4 text-accent-foreground" />,
+        icon: <Icon className="size-4 text-ink-muted" />,
       });
     });
   }, [onIncoming, open, t]);
 
   const connected = connection === "connected";
   const stateLabel = connected ? t("notifStateLive") : connection === "connecting" ? t("notifStateConnecting") : t("notifStatePolling");
+
+  // Connection indicator — color + shape, no ping
+  const dotClass = connected ? "is-positive" : connection === "connecting" ? "is-warning" : "is-neutral";
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -72,9 +72,9 @@ export function NotificationsBell() {
           className="relative gap-2 min-h-11 px-2"
           aria-label={t("notifTitle")}
         >
-          <Bell className="size-5" />
+          <Bell className="size-5" aria-hidden />
           {unread > 0 && (
-            <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums px-1 animate-in zoom-in-50 duration-200">
+            <span className="absolute top-1 right-1 inline-flex items-center justify-center min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums px-1">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -82,22 +82,15 @@ export function NotificationsBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0">
         <div className="flex items-center justify-between p-3 border-b border-border">
-          <DropdownMenuLabel className="p-0 text-sm font-semibold">{t("notifTitle")}</DropdownMenuLabel>
+          <DropdownMenuLabel className="p-0 text-sm font-semibold text-ink">
+            {t("notifTitle")}
+          </DropdownMenuLabel>
           <div className="flex items-center gap-3">
-            {/* Real-time connection indicator */}
             <span
-              className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"
+              className="inline-flex items-center gap-1 text-meta text-ink-muted"
               title={connected ? t("notifWsConnectedTip") : t("notifWsPollingTip")}
             >
-              <span className="relative flex size-1.5" aria-hidden>
-                {connected && (
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                )}
-                <span className={cn(
-                  "relative inline-flex size-1.5 rounded-full",
-                  connected ? "bg-emerald-500" : connection === "connecting" ? "bg-amber-500" : "bg-muted-foreground/50",
-                )} />
-              </span>
+              <span className={`status-dot ${dotClass}`} aria-hidden />
               {stateLabel}
             </span>
             {unread > 0 && (
@@ -108,7 +101,7 @@ export function NotificationsBell() {
                 className="h-8 text-xs gap-1 px-2"
                 onClick={() => { void markAllRead(); }}
               >
-                <CheckCheck className="size-3" />
+                <CheckCheck className="size-3" aria-hidden />
                 {t("notifMarkAllRead")}
               </Button>
             )}
@@ -118,7 +111,7 @@ export function NotificationsBell() {
         <ScrollArea className="max-h-96">
           <ul className="divide-y divide-border">
             {items.length === 0 && (
-              <li className="p-4 text-center text-sm text-muted-foreground">{t("notifEmpty")}</li>
+              <li className="p-4 text-center text-sm text-ink-muted">{t("notifEmpty")}</li>
             )}
             {items.map(n => {
               const text = notificationText(n, t);
@@ -129,24 +122,28 @@ export function NotificationsBell() {
                     type="button"
                     onClick={() => gotoItem(n)}
                     className={cn(
-                      "w-full flex items-start gap-3 p-3 text-left hover:bg-accent/10 transition-colors",
+                      "w-full flex items-start gap-3 p-3 text-left hover:bg-surface-sunken transition-colors",
                       !n.read && "bg-accent/5",
                     )}
                   >
-                    <span className={cn(
-                      "size-8 rounded-full grid place-items-center shrink-0",
-                      n.read ? "bg-muted text-muted-foreground" : "bg-accent text-accent-foreground",
-                    )}>
-                      <Icon className="size-4" />
+                    <span
+                      className={cn(
+                        "size-8 grid place-items-center rounded-md border shrink-0",
+                        n.read
+                          ? "border-border bg-surface-sunken text-ink-subtle"
+                          : "border-accent/30 bg-accent/5 text-ink",
+                      )}
+                    >
+                      <Icon className="size-4" aria-hidden />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm leading-snug line-clamp-3">{text}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
+                      <p className="text-sm leading-snug line-clamp-3 text-ink">{text}</p>
+                      <p className="text-meta text-ink-subtle mt-1 tabular-nums">
                         {new Date(n.createdAt).toLocaleString()}
                       </p>
                     </div>
                     {!n.read && (
-                      <span className="size-2 rounded-full bg-accent mt-1.5 shrink-0" aria-hidden />
+                      <span className="status-dot is-warning mt-1.5 shrink-0" aria-hidden />
                     )}
                   </button>
                 </li>
@@ -180,7 +177,7 @@ function notificationText(n: NotificationItem, t: (k: any, v?: Record<string, st
 function iconForType(type: NotificationItem["type"]) {
   switch (type) {
     case "application_status": return Briefcase;
-    case "new_match": return Sparkles;
+    case "new_match": return Gauge;
     case "endorsement": return ShieldCheck;
     case "verification": return FileText;
     case "rating": return Star;

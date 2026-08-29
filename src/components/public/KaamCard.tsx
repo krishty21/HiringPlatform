@@ -4,25 +4,11 @@ import { useLanguage, type LanguageCode } from "@/lib/i18n/LanguageProvider";
 import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
 import { TopRatedBadge } from "@/components/ratings/TopRatedBadge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  MapPin,
-  Briefcase,
-  Clock,
-  Star,
+  MapPin, Briefcase, Clock, ShieldCheck, Lock, ArrowLeft, Check, IdCard, Award, Trophy,
   Share2,
-  ShieldCheck,
-  Lock,
-  ArrowLeft,
-  Check,
-  IdCard,
-  Award,
-  Trophy,
-  Sparkles,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 
@@ -53,11 +39,10 @@ export type PublicWorkerData = {
     idVerifiedAt: string | null;
     skillVerifiedAt: string | null;
   };
-  // Round 11: public stats (counts only, no PII).
   stats?: {
     applicationsSent: number;
     hires: number;
-    ratingAvg: number;     // 0-5 (one decimal)
+    ratingAvg: number;
     ratingCount: number;
   };
 };
@@ -69,7 +54,6 @@ const TIER_INDEX: Record<PublicWorkerData["trustTier"], number> = {
   top_pro: 3,
 };
 
-// Locale map for date formatting — follows the card's language toggle.
 const DATE_LOCALES: Record<LanguageCode, string> = { en: "en-IN", hi: "hi-IN", te: "te-IN" };
 
 function formatJourneyDate(iso: string, lang: LanguageCode): string {
@@ -84,9 +68,14 @@ function formatJourneyDate(iso: string, lang: LanguageCode): string {
   }
 }
 
+function pickLocalized(en: string, hi: string, te: string, lang: LanguageCode): string {
+  if (lang === "hi") return hi || en;
+  if (lang === "te") return te || en;
+  return en;
+}
+
 // Public trust journey — compact milestone strip (dates only, no PII).
-// Shows what the worker has achieved on ShramSetu so employers can
-// gauge trust at a glance without logging in.
+// Master Prompt §34: never expose PII the application intentionally protects.
 function KaamTrustJourney({
   journey,
   trustTier,
@@ -100,9 +89,8 @@ function KaamTrustJourney({
     key: string;
     label: string;
     date: string | null;
-    icon: typeof Sparkles;
-    iconClass: string;
-    ringClass: string;
+    icon: typeof IdCard;
+    dotClass: string;
   };
 
   const milestones: Milestone[] = [
@@ -110,9 +98,8 @@ function KaamTrustJourney({
       key: "joined",
       label: t("kaamTrustJoined"),
       date: journey.joinedAt,
-      icon: Sparkles,
-      iconClass: "text-muted-foreground",
-      ringClass: "border-border bg-muted/40",
+      icon: Briefcase,
+      dotClass: "is-neutral",
     },
   ];
   if (journey.idVerifiedAt) {
@@ -121,8 +108,7 @@ function KaamTrustJourney({
       label: t("kaamTrustIdVerified"),
       date: journey.idVerifiedAt,
       icon: IdCard,
-      iconClass: "text-sky-700",
-      ringClass: "border-sky-200 bg-sky-50",
+      dotClass: "is-info",
     });
   }
   if (journey.skillVerifiedAt) {
@@ -131,8 +117,7 @@ function KaamTrustJourney({
       label: t("kaamTrustSkillVerified"),
       date: journey.skillVerifiedAt,
       icon: Award,
-      iconClass: "text-emerald-700",
-      ringClass: "border-emerald-200 bg-emerald-50",
+      dotClass: "is-positive",
     });
   }
   if (trustTier === "top_pro") {
@@ -141,117 +126,81 @@ function KaamTrustJourney({
       label: t("kaamTrustTopPro"),
       date: null,
       icon: Trophy,
-      iconClass: "text-amber-700",
-      ringClass: "border-amber-200 bg-amber-50",
+      dotClass: "is-warning",
     });
   }
 
-  // Nothing achieved beyond joining → don't render the strip.
   if (milestones.length < 2) return null;
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
-      className="flex flex-col gap-3"
-      aria-label={t("kaamTrustTitle")}
-    >
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+    <section className="flex flex-col gap-3" aria-label={t("kaamTrustTitle")}>
+      <h2 className="text-meta font-semibold uppercase tracking-wider text-ink-subtle">
         {t("kaamTrustTitle")}
       </h2>
-      <ol className="relative flex flex-col sm:flex-row sm:items-stretch gap-0 sm:gap-0 rounded-xl border border-border bg-gradient-to-br from-card/80 to-secondary/30 p-3 sm:p-4 overflow-hidden">
-        {/* subtle top hairline */}
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent"
-        />
+      <ol className="relative flex flex-col sm:flex-row sm:items-stretch gap-0 rounded-md border border-border bg-surface p-3 sm:p-4 overflow-hidden">
         {milestones.map((m, idx) => {
           const Icon = m.icon;
           const isLast = idx === milestones.length - 1;
           return (
-            <motion.li
+            <li
               key={m.key}
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 + idx * 0.08 }}
               className="relative flex items-start gap-3 py-2 sm:py-0 sm:flex-1 sm:flex-col sm:items-center sm:gap-2 sm:text-center"
             >
-              {/* connector — vertical on mobile, horizontal on sm+ */}
               {!isLast && (
                 <span
                   aria-hidden
-                  className="absolute left-[19px] top-[38px] bottom-0 w-px bg-gradient-to-b from-border to-transparent sm:left-[calc(50%+24px)] sm:right-[calc(-50%+24px)] sm:top-[19px] sm:bottom-auto sm:h-px sm:w-auto sm:bg-gradient-to-r"
+                  className="absolute left-[19px] top-[38px] bottom-0 w-px bg-border sm:left-[calc(50%+24px)] sm:right-[calc(-50%+24px)] sm:top-[19px] sm:bottom-auto sm:h-px sm:w-auto"
                 />
               )}
-              <span
-                className={`relative z-10 grid size-10 shrink-0 place-items-center rounded-full border-2 ${m.ringClass}`}
-              >
-                <Icon className={`size-[18px] ${m.iconClass}`} aria-hidden />
+              <span className="relative z-10 grid size-10 shrink-0 place-items-center rounded-full border-2 border-border bg-surface">
+                <Icon className="size-[18px] text-ink-muted" aria-hidden />
+                <span
+                  className={`absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface status-dot ${m.dotClass}`}
+                  aria-hidden
+                />
               </span>
               <span className="flex flex-col sm:items-center gap-0.5 min-w-0">
-                <span className="text-sm font-semibold text-foreground leading-tight">
+                <span className="text-sm font-semibold text-ink leading-tight">
                   {m.label}
                 </span>
-                {m.date && (
-                  <span className="text-xs text-muted-foreground">
+                {m.date ? (
+                  <span className="text-meta text-ink-muted tabular-nums">
                     {formatJourneyDate(m.date, lang)}
                   </span>
-                )}
+                ) : null}
                 {!m.date && m.key === "top" && (
-                  <span className="text-xs font-medium text-amber-700">{t("trustTimelineNow")}</span>
+                  <span className="text-meta font-medium text-ink-muted">
+                    {t("trustTimelineNow")}
+                  </span>
                 )}
               </span>
-            </motion.li>
+            </li>
           );
         })}
       </ol>
-    </motion.section>
+    </section>
   );
 }
 
-function pickLocalized(
-  en: string,
-  hi: string,
-  te: string,
-  lang: LanguageCode,
-): string {
-  if (lang === "hi") return hi || en;
-  if (lang === "te") return te || en;
-  return en;
-}
-
-// Round 11: public worker stats card — applications sent, hires, avg rating.
+// Public worker stats — applications sent, hires, avg rating.
 // Renders only when the worker has at least one application OR one rating.
-// All values are aggregates; no PII (no employer names, no co-worker IDs).
 function KaamStats({ stats }: { stats: NonNullable<PublicWorkerData["stats"]> }) {
   const { t } = useLanguage();
   const { applicationsSent, hires, ratingAvg, ratingCount } = stats;
 
-  // Don't render for brand-new workers (zero applications, zero ratings).
   if (applicationsSent === 0 && ratingCount === 0) return null;
 
   const hireRate = applicationsSent > 0
     ? Math.round((hires / applicationsSent) * 100)
     : 0;
-
   const hasRating = ratingCount > 0 && ratingAvg > 0;
 
-  const tiles: {
-    key: string;
-    value: string;
-    label: string;
-    desc: string;
-    icon: typeof Briefcase;
-    tone: string;
-  }[] = [
+  const tiles: { key: string; value: string; label: string; desc: string }[] = [
     {
       key: "apps",
       value: String(applicationsSent),
       label: t("kaamCardStatsApplications"),
       desc: t("kaamCardStatsApplicationsDesc"),
-      icon: Briefcase,
-      tone: "text-primary",
     },
     {
       key: "hires",
@@ -260,8 +209,6 @@ function KaamStats({ stats }: { stats: NonNullable<PublicWorkerData["stats"]> })
       desc: hires > 0
         ? t("kaamCardStatsHireRate", { pct: hireRate })
         : t("kaamCardStatsHiresDesc"),
-      icon: Award,
-      tone: "text-emerald-700 dark:text-emerald-300",
     },
     {
       key: "rating",
@@ -272,60 +219,35 @@ function KaamStats({ stats }: { stats: NonNullable<PublicWorkerData["stats"]> })
             ? t("employerFromOne")
             : t("employerFromMany", { count: ratingCount }))
         : t("kaamCardStatsNotRated"),
-      icon: Star,
-      tone: "text-amber-600 dark:text-amber-400",
     },
   ];
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: 0.18, ease: "easeOut" }}
-      className="flex flex-col gap-3"
-      aria-label={t("kaamCardStatsTitle")}
-    >
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+    <section className="flex flex-col gap-3" aria-label={t("kaamCardStatsTitle")}>
+      <h2 className="text-meta font-semibold uppercase tracking-wider text-ink-subtle">
         {t("kaamCardStatsTitle")}
       </h2>
-      <div className="grid grid-cols-3 gap-2 rounded-xl border border-border bg-gradient-to-br from-card/80 to-secondary/30 p-3 overflow-hidden relative">
-        {/* subtle top hairline */}
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent"
-        />
-        {tiles.map((tile, idx) => {
-          const Icon = tile.icon;
-          return (
-            <motion.div
-              key={tile.key}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.22 + idx * 0.06, ease: "easeOut" }}
-              className="relative flex flex-col items-center text-center gap-1 px-1 py-2"
-            >
-              <Icon className={`size-4 ${tile.tone}`} aria-hidden />
-              <span className="text-xl sm:text-2xl font-bold tabular-nums leading-none">
-                {tile.value}
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {tile.label}
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-muted-foreground/80 leading-tight line-clamp-2 max-w-[110px]">
-                {tile.desc}
-              </span>
-              {/* vertical divider */}
-              {idx < tiles.length - 1 && (
-                <span
-                  aria-hidden
-                  className="absolute right-[-2px] top-1/2 -translate-y-1/2 h-2/3 w-px bg-border"
-                />
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
-    </motion.section>
+      <dl className="grid grid-cols-3 gap-2 rounded-md border border-border bg-surface p-3">
+        {tiles.map((tile, idx) => (
+          <div
+            key={tile.key}
+            className={`relative flex flex-col items-center text-center gap-1 px-1 py-2 ${
+              idx < tiles.length - 1 ? "sm:border-r sm:border-border" : ""
+            }`}
+          >
+            <dt className="text-meta font-semibold uppercase tracking-wide text-ink-subtle">
+              {tile.label}
+            </dt>
+            <dd className="text-xl sm:text-2xl font-semibold tabular-nums text-ink leading-none">
+              {tile.value}
+            </dd>
+            <dd className="text-meta text-ink-muted leading-tight line-clamp-2 max-w-[110px] text-pretty">
+              {tile.desc}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
@@ -361,7 +283,6 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // graceful fallback
       toast.error(t("errGeneric"));
     }
   };
@@ -371,54 +292,45 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
   }, [worker.firstName]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="w-full max-w-2xl mx-auto"
-    >
+    <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
       <Link
         href="/"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink transition-colors min-h-11"
       >
-        <ArrowLeft className="size-4" />
+        <ArrowLeft className="size-4" aria-hidden />
         <span>{t("kaamCardBackToHome")}</span>
       </Link>
 
-      <Card className="passport-card relative overflow-hidden">
-        {/* Verified stamp (rotated dashed border) */}
+      <article className="passport-card rounded-md">
+        {/* Verified stamp — dashed, rotated, no glow */}
         {isVerified && (
-          <div
-            className="passport-stamp absolute top-4 right-4 sm:top-6 sm:right-6 z-10 px-3 py-1.5 rounded-md bg-accent/10"
+          <span
+            className="passport-stamp absolute top-4 right-4 sm:top-6 sm:right-6 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-meta font-semibold uppercase tracking-wider"
             aria-label={t("kaamCardVerifiedStamp")}
           >
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-              <ShieldCheck className="size-4" />
-              {t("kaamCardVerifiedStamp")}
-            </div>
-          </div>
+            <ShieldCheck className="size-3.5" aria-hidden />
+            {t("kaamCardVerifiedStamp")}
+          </span>
         )}
 
-        <CardContent className="p-6 sm:p-8 flex flex-col gap-6">
-          {/* Header: initials avatar + name + trade + tier */}
-          <header className="flex items-start gap-4 pr-16">
+        <div className="p-6 sm:p-8 flex flex-col gap-6">
+          {/* Header — name, trade, tier */}
+          <header className="flex items-start gap-4 pr-16 sm:pr-20">
             <div
-              className="size-16 sm:size-20 shrink-0 rounded-full bg-primary text-primary-foreground grid place-items-center text-2xl sm:text-3xl font-bold"
+              className="size-16 sm:size-20 shrink-0 rounded-md bg-primary text-primary-foreground grid place-items-center text-2xl sm:text-3xl font-semibold"
               aria-hidden="true"
             >
               {initials}
             </div>
-            <div className="flex flex-col gap-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("kaamCardPublicBadge")}
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground break-words">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <p className="text-meta font-semibold uppercase tracking-wider text-ink-subtle">
+                {t("kaamCardPublicBadge")}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-ink break-words">
                 {worker.firstName}
               </h1>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                <span className="text-base sm:text-lg font-medium text-foreground">
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                <span className="text-base sm:text-lg font-medium text-ink">
                   {tradeName}
                 </span>
                 <TrustTierBadge
@@ -431,106 +343,72 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
             </div>
           </header>
 
-          {/* Available-today chip */}
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant="outline"
-              className={
-                worker.availableToday
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                  : "bg-muted/50 text-muted-foreground"
-              }
-            >
-              <Clock className="size-3.5" />
-              {worker.availableToday
-                ? t("kaamCardAvailableToday")
-                : t("kaamCardNotAvailableToday")}
-            </Badge>
-            <Badge variant="outline" className="bg-card">
-              <Briefcase className="size-3.5" />
-              {t("kaamCardExperience")} · {worker.yearsExp} {t("kaamCardYears")}
-            </Badge>
-            <Badge variant="outline" className="bg-card">
-              <MapPin className="size-3.5" />
+          {/* Identity row — verified trade, city, experience */}
+          <section className="flex flex-wrap gap-3">
+            {worker.availableToday && (
+              <p className="inline-flex items-center gap-1.5 text-meta font-medium text-positive">
+                <span className="status-dot is-positive" aria-hidden />
+                {t("kaamCardAvailableToday")}
+              </p>
+            )}
+            <p className="inline-flex items-center gap-1.5 text-meta text-ink-muted">
+              <Briefcase className="size-3.5" aria-hidden />
+              {worker.yearsExp} {t("kaamCardYears")} {t("kaamCardExperience").toLowerCase()}
+            </p>
+            <p className="inline-flex items-center gap-1.5 text-meta text-ink-muted">
+              <MapPin className="size-3.5" aria-hidden />
               {worker.city}
-            </Badge>
-          </div>
+            </p>
+            <p className="inline-flex items-center gap-1.5 text-meta text-ink-muted">
+              <Clock className="size-3.5" aria-hidden />
+              {t(worker.shiftPref === "day" ? "shiftDay" : worker.shiftPref === "night" ? "shiftNight" : "shiftAny")}
+            </p>
+          </section>
 
-          {/* Quick facts grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card/50">
-              <Briefcase className="size-5 text-primary shrink-0" aria-hidden />
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">
-                  {t("kaamCardTrade")}
-                </span>
-                <span className="text-sm font-semibold text-foreground">
-                  {tradeName}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card/50">
-              <MapPin className="size-5 text-primary shrink-0" aria-hidden />
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">
-                  {t("kaamCardCity")}
-                </span>
-                <span className="text-sm font-semibold text-foreground">
-                  {worker.city}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Wage */}
-          <div className="flex items-center justify-between gap-3 p-4 rounded-lg border-2 border-accent/30 bg-accent/5">
-            <div className="flex flex-col">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {/* Wage — bordered panel, no gradient */}
+          <section className="rounded-md border border-border bg-surface-sunken p-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-meta uppercase tracking-wider text-ink-subtle">
                 {t("kaamCardWage")}
-              </span>
-              <WageDisplay
-                min={worker.wageMin}
-                max={worker.wageMax}
-                size="lg"
-              />
+              </p>
+              <p className="text-2xl font-semibold tabular-nums text-ink">
+                <WageDisplay min={worker.wageMin} max={worker.wageMax} size="lg" />
+              </p>
             </div>
-          </div>
+            <p className="text-meta text-ink-subtle">{t("perDay")}</p>
+          </section>
 
-          {/* Skills */}
+          {/* Skills — inline text, no chips. Skill verified marker on each row. */}
           {worker.skills.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <section className="flex flex-col gap-2">
+              <h2 className="text-meta font-semibold uppercase tracking-wider text-ink-subtle">
                 {t("kaamCardSkills")}
               </h2>
-              <ul className="flex flex-wrap gap-2" aria-label={t("kaamCardSkills")}>
+              <ul className="flex flex-col gap-1.5" aria-label={t("kaamCardSkills")}>
                 {worker.skills.map((s, i) => (
                   <li
                     key={`${s.nameEn}-${i}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-sm"
+                    className="flex items-center justify-between gap-3 text-sm text-ink py-1.5 border-b border-border last:border-b-0"
                   >
-                    <span className="text-foreground font-medium">
-                      {pickLocalized(s.nameEn, s.nameHi, s.nameTe, lang)}
-                    </span>
+                    <span className="font-medium">{pickLocalized(s.nameEn, s.nameHi, s.nameTe, lang)}</span>
                     <span
                       className="inline-flex items-center gap-0.5"
-                      aria-label={`${s.proficiency}/5`}
+                      aria-label={`Proficiency ${s.proficiency} of 5`}
                     >
                       {Array.from({ length: 5 }).map((_, idx) => (
-                        <Star
+                        <span
                           key={idx}
-                          className={
-                            idx < s.proficiency
-                              ? "size-3 fill-accent text-accent"
-                              : "size-3 text-muted-foreground/40"
-                          }
-                          aria-hidden="true"
+                          aria-hidden
+                          className={`size-1.5 rounded-full ${
+                            idx < s.proficiency ? "bg-accent" : "bg-border"
+                          }`}
                         />
                       ))}
                     </span>
                   </li>
                 ))}
               </ul>
-            </div>
+            </section>
           )}
 
           {/* Trust journey — public milestone strip */}
@@ -538,20 +416,24 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
             <KaamTrustJourney journey={worker.trustJourney} trustTier={worker.trustTier} />
           )}
 
-          {/* Round 11: public worker stats */}
-          {worker.stats && (
-            <KaamStats stats={worker.stats} />
-          )}
+          {/* Public worker stats */}
+          {worker.stats && <KaamStats stats={worker.stats} />}
+
+          {/* "Verified by ShramSetu" — credential infrastructure framing */}
+          <section className="flex items-center gap-2 text-meta text-ink-muted border-t border-border pt-4">
+            <ShieldCheck className="size-4 text-positive shrink-0" aria-hidden />
+            <span>{t("kaamCardVerifiedBy")}</span>
+          </section>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
               asChild
               size="lg"
               className="flex-1 min-h-12 text-base gap-2"
             >
               <Link href="/login" aria-label={t("kaamCardContact")}>
-                <Lock className="size-4" />
+                <Lock className="size-4" aria-hidden />
                 {t("kaamCardContact")}
               </Link>
             </Button>
@@ -559,36 +441,36 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
               type="button"
               variant="outline"
               size="lg"
-              className="flex-1 min-h-12 text-base gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              className="flex-1 min-h-12 text-base gap-2"
               onClick={onWhatsAppShare}
               aria-label={t("kaamCardShareWhatsApp")}
             >
-              <Share2 className="size-4" />
+              <ShieldCheck className="size-4" aria-hidden />
               {t("kaamCardShareWhatsApp")}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1.5">
+          <p className="text-meta text-ink-muted text-center flex items-center justify-center gap-1.5">
             <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
             {t("kaamCardContactHelp")}
           </p>
 
-          {/* Subtle copy-link row */}
+          {/* Copy-link row — subtle */}
           <button
             type="button"
             onClick={onCopyLink}
-            className="self-center inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11 px-3"
+            className="self-center inline-flex items-center gap-1.5 text-meta text-ink-muted hover:text-ink transition-colors min-h-11 px-3"
             aria-label={t("copyPublicLink")}
             title={t("copyPublicLink")}
           >
             {copied ? (
-              <Check className="size-3.5 text-emerald-600" aria-hidden />
+              <Check className="size-3.5 text-positive" aria-hidden />
             ) : (
               <Share2 className="size-3.5" aria-hidden />
             )}
             <span>{t("kaamCardPoweredBy")}</span>
           </button>
-        </CardContent>
-      </Card>
-    </motion.div>
+        </div>
+      </article>
+    </div>
   );
 }
