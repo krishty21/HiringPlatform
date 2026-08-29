@@ -108,7 +108,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
   async function generateDescription() {
     const v = getValues();
     if (!v.title || !v.tradeId || !v.city) {
-      toast.error("Fill title, trade, and city first.");
+      toast.error(t("postJobAiNeedFields"));
       return;
     }
     setAiBusy(true);
@@ -133,7 +133,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
       setValue("description", data.description);
       toast.success(t("postJobAiEdit"));
     } catch (e) {
-      toast.error("AI generation failed. Please write the description manually.");
+      toast.error(t("postJobAiFailed"));
     } finally {
       setAiBusy(false);
     }
@@ -158,7 +158,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
       toast.success(`${t("postJobSuccess")} (${(elapsed / 1000).toFixed(1)}s)`);
       router.push("/employer/jobs");
     } catch (e) {
-      toast.error("Could not post the job. Please try again.");
+      toast.error(t("postJobSubmitFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -173,10 +173,10 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="title">{t("postJobTrade")} — Job title</Label>
+            <Label htmlFor="title">{t("postJobJobTitle")}</Label>
             <Input
               id="title"
-              placeholder="e.g. Urgent Electrician — Wiring & Panel Work"
+              placeholder={t("postJobTitlePlaceholder")}
               className="min-h-11"
               {...register("title")}
             />
@@ -230,7 +230,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="wageMin">{t("postJobWageRange")} — Min (₹/day)</Label>
+              <Label htmlFor="wageMin">{t("postJobWageMin")}</Label>
               <Input
                 id="wageMin" type="number" min={0} step={50}
                 className="min-h-11"
@@ -238,7 +238,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="wageMax">Max (₹/day)</Label>
+              <Label htmlFor="wageMax">{t("postJobWageMax")}</Label>
               <Input
                 id="wageMax" type="number" min={0} step={50}
                 className="min-h-11"
@@ -318,7 +318,7 @@ export function JobPostForm({ skills }: { skills: Skill[] }) {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               {t("postJobSkills")}
-              <Badge variant="outline" className="text-xs">{selectedSkills.length} selected</Badge>
+              <Badge variant="outline" className="text-xs">{t("postJobSelectedCount", { count: selectedSkills.length })}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>

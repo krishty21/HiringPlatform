@@ -1200,3 +1200,48 @@ Recommended next:
 3. Ratings → trust score coordinated contract change (ratingBonus capped +5, embeddingBonus pattern) — closes the trust loop.
 4. Per-city landing pages for SEO (round-10 rec #4, still open).
 5. Consider making dev.log a symlink to /tmp/dev-next.log or documenting the real log path — dev.log at project root is stale/misleading (writes go to /tmp/dev-next.log when ensure-dev.sh spawns the server).
+
+---
+Task ID: r13 (13-orchestrator + 13-3 subagent)
+Agent: Orchestrator (round 13)
+Task: QA sweep → P0 mobile-nav bug fix + job close/reopen feature + i18n audit tail completion
+
+Work Log:
+- Baseline QA: lint 0 errors, 49/49 tests, dev server healthy; agent-browser sweep of all worker/employer/admin pages + 3 demo logins — all render. Found the known NextAuth quirk (clicking demo login twice / with stale CSRF → /api/auth/error; pre-existing, documented STATUS.md #1) and a Z.ai splash-page gateway glitch recoverable via `agent-browser close --all`.
+- P0 BUG FOUND via mobile snapshot: employers/admins had NO navigation on mobile — AppShell sidebar is `hidden md:flex` and only workers get the bottom tab bar; the code comment said "via sheet" but the sheet was never built. On 375px an employer could not move between dashboard/jobs/candidates/pipeline/post except via in-page back links.
+- FIX (AppShell.tsx, surgical additive edit to frozen shared component, same interpretation as rounds 11–12): hamburger button (md:hidden, non-worker roles only, localized aria-label navMenuAria ×3 langs) opening a left Sheet drawer with the role nav (same items/active states as sidebar), branded header (श्र + ShramSetu), logout action at bottom; closes on link click (onClick, NOT a pathname effect — first attempt used an effect and tripped the react-hooks/set-state-in-effect lint rule; refactored before merging).
+- E2E verified: sheet opens on employer dashboard at 375px (all 5 nav items in Hindi), link click navigates + auto-closes; admin nav (2 items) verified too.
+
+FEATURE (main round-13 feature): Employer job CLOSE / REOPEN — closes the "filled jobs accept applications forever" workflow gap using the pre-existing frozen PATCH /api/jobs/:id (UpdateJobBody already allowed status open|closed; no schema/API-contract change).
+- NEW GET /api/jobs/:id handler (additive, same route file as PATCH): single-job detail for ANY status with feed-identical enrichment (employer rating summary, worker matchScore + distanceKm + MatchScore cache upsert). Reason: the job detail page fetched the feed (status:"open" only) — a worker's application card for a since-closed job would infinite-skeleton. Detail page now fetches by id; 404 → proper localized EmptyState (jobNotFoundTitle/Hint).
+- API GUARD: POST /api/applications now loads the job first — closed job → 409 {error:"JOB_CLOSED"} (also NOT_FOUND 404 for missing jobs). Verified by direct fetch from the browser: 409 Conflict. Client job detail surfaces it as a localized toast even though the button is already disabled (stale-page safety).
+- Employer /employer/jobs table: CloseReopenButton per row — two-step arm→confirm (4s auto-disarm) when CLOSING (risky direction), single-click REOPEN (non-destructive — first build armed both directions with no armed-state visual on the closed branch; caught in E2E and fixed). Localized status badges (myJobsStatusOpen emerald w/ dot, myJobsStatusClosed slate outline), closed rows dimmed (opacity-70 + muted title), ChevronRight on Pipeline links, "{count} hired" localized.
+- Worker job detail closed state: slate "Closed" badge next to title (dimmed title), apply rail swaps to slate border + closed banner (jobClosedBanner + jobClosedHint), Apply button disabled → "Applications closed"; SimilarJobs rail still renders (discovery path).
+- E2E verified full round-trip (agent-browser + DB): close Plumber job (arm→confirm→toast, DB status "closed", board count 10→9, worker detail shows closed banner + disabled button, direct POST → 409), reopen (single click → "open", DB restored, board back to 10). Demo data restored to seed state.
+
+i18n AUDIT TAIL (round-12 rec #1 — delegated to a general-purpose subagent which completed the code but timed out before writing this log; verified + recorded by orchestrator):
+- Dictionaries 497→555 keys (+58 ×3 langs, parity programmatically verified, zero dups after removing one duplicated en.ts block caused by a partially-failed append script).
+- Migrated: JobPostForm (AI toasts, wage min/max labels, title placeholder, "{n} selected"), UploadDropzone (3 validation errors + 3 upload-success toasts, t threaded into validate useCallback), AdminQueueItem (already-reviewed toast, manual-review, unsupported-preview + download), VerificationList (Preview, unsupported-preview + download), PipelineKanban (stage-failed toast, bulk-shortlist plural pair, Interview action), PerJobDrilldownRow (views & applicants, score buckets), not-found.tsx (bridge title/hint/CTA), error.tsx (gained useLanguage — errTitle/Hint/TryAgain/BackHome + footerMission/brand), admin verifications table headers, plus bonus files the subagent swept: EndorsementModal (2 toasts), RatingDialog (5 rating presets), worker JobCard (save/unsave toasts + aria labels), employer dashboard + pipeline single strings.
+- Hindi E2E verified: admin table headers (प्रकार/जमा करने वाला/…), 404 page (यह पेज किसी और पुल पर चला गया।), verify dropzone (फ़ाइल यहाँ खींचें…), post-job form (नौकरी का शीर्षक, न्यूनतम/अधिकतम ₹/दिन), pipeline bulk labels.
+
+BUG FIX (pre-existing, found in mobile sweep): job detail page overflowed 375px by 42px (scrollWidth 417) on EVERY job — the employer rating row (5 RatingStars + avg + count + "highly rated" badge) was `flex` WITHOUT flex-wrap → ~340px min-content vs 295px available, blowing the grid item past the viewport. Fixed with flex-wrap in jobs/[id] page + same latent fix in CandidateCard. Verified 375px exact after fix; all 13 routes re-swept clean.
+
+STYLING (directive "more details"): mobile nav Sheet (branded header, active-item states, min-h-11 touch targets, logout footer), emerald/slate status badge system with dot indicators, closed-row archived treatment (dimmed title + opacity), slate closed banner with dot + hint, ChevronRight pipeline affordance, gap-x-2 rating row spacing.
+
+QA VERIFICATION: 27 screenshots qa-r13-00..26 (download/). Lint 0 errors; 49/49 tests; /tmp/dev-next.log clean of new errors; mobile 375px clean across 13 routes incl. fixed job detail; desktop landing + public Kaam card 1280px clean.
+
+Stage Summary:
+- P0 bug fixed: employer/admin mobile navigation (was completely unreachable).
+- Pre-existing bug fixed: 42px horizontal overflow on every job detail page at 375px.
+- New feature: job close/reopen end-to-end (API guard 409 + two-step close/single-click reopen UI + closed-state worker detail + board exclusion) — zero frozen-contract changes (PATCH + UpdateJobBody already existed; GET handler is additive; "closed" status was already in the schema comment).
+- i18n: +58 keys ×3 langs (497→555, parity verified), finishing the round-12 audit tail incl. bonus sweep of RatingDialog presets/EndorsementModal/JobCard.
+- Frozen contracts: prisma/schema.prisma, schemas/index.ts, ai/*, auth.ts, authz.ts, matching/*, trust/*, globals.css untouched. components/shared/*: only AppShell.tsx (surgical additive mobile-nav fix — justified: it was a reachability bug; same interpretation as LoadingSkeleton in round 12). i18n dicts: additive keys only.
+- Files touched (~25): components/shared/AppShell.tsx, api/jobs/[id]/route.ts (new GET), api/applications/route.ts (guard), app/jobs/[id]/page.tsx (direct fetch + closed UI + flex-wrap), app/employer/jobs/page.tsx (close/reopen + localization), components/employer/CandidateCard.tsx (flex-wrap), i18n/{en,hi,te}.ts, + 13 files from the subagent's i18n sweep.
+- Known limitations (unchanged): sandbox reaps dev server (ensure-dev.sh restores); WS mini-service uptime; NextAuth [NO_SECRET] 500 on /api/auth/error via direct POST (STATUS.md #1); ratings don't feed computeTrustScore (frozen contract).
+
+Recommended next:
+1. WCAG AA audit (axe-core) — round-12 rec #2 still open; the new mobile Sheet + two-step close buttons should get focus-trap/order verification.
+2. Ratings → trust score coordinated contract change (ratingBonus capped +5) — round-12 rec #3.
+3. Per-city landing/SEO surfaces — round-10 rec #4.
+4. Optional: guard POST /api/applications re-apply branch is covered by the same JOB_CLOSED check (it sits before the existing-row branch) — verified by ordering.
+5. dev.log symlink (round-12 rec #5) — still open.

@@ -58,8 +58,8 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
     e.stopPropagation();
     const wasSaved = isSaved(job.id);
     toggle(job.id);
-    if (wasSaved) toast.success("Removed from saved");
-    else toast.success("Saved job");
+    if (wasSaved) toast.success(t("jobUnsavedToast"));
+    else toast.success(t("jobSavedToast"));
   }
 
   function stopCardKeypress(e: React.KeyboardEvent) {
@@ -151,8 +151,8 @@ export function JobCard({ job, applied: initialApplied = false }: { job: WorkerJ
               onClick={toggleSave}
               onKeyDown={stopCardKeypress}
               aria-pressed={saved}
-              aria-label={saved ? "Remove from saved" : "Save job"}
-              title={saved ? "Remove from saved" : "Save job"}
+              aria-label={saved ? t("unsaveJobLabel") : t("saveJobLabel")}
+              title={saved ? t("unsaveJobLabel") : t("saveJobLabel")}
               className={`grid place-items-center size-8 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 saved
                   ? "text-primary bg-primary/10 hover:bg-primary/15"

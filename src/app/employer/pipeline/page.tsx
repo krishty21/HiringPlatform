@@ -71,7 +71,7 @@ function PipelinePageBody() {
         <EmptyState
           icon={Users}
           title={t("pipelineEmpty")}
-          description="When workers apply to your jobs, their cards will appear here for shortlisting, interview, offer and hire."
+          description={t("pipelineEmptyHint")}
         />
       )}
 

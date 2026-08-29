@@ -99,7 +99,7 @@ export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
             {/* Worker rating (round 8) — inline stars + avg + count */}
             {hasRating && (
               <div
-                className="flex items-center gap-1.5 text-xs"
+                className="flex items-center gap-1.5 text-xs flex-wrap"
                 aria-label={t("candidateRatingAria", { avg: ratingAvg, count: ratingCount })}
                 title={t("candidateRatingAria", { avg: ratingAvg, count: ratingCount })}
               >

@@ -128,7 +128,7 @@ export function PipelineKanban({
         }
       }
     } catch {
-      toast.error("Could not update stage. Try again.");
+      toast.error(t("pipelineStageFailed"));
     } finally {
       setBusy(null);
     }
@@ -185,7 +185,7 @@ export function PipelineKanban({
     });
     setBulkSelected(new Set());
     setBusy(null);
-    toast.success(`Shortlisted ${ok} candidate${ok === 1 ? "" : "s"} ✓`);
+    toast.success(ok === 1 ? t("pipelineBulkDoneOne") : t("pipelineBulkDoneMany", { count: ok }));
   }
 
   return (
@@ -253,6 +253,7 @@ function PipelineColumn({
   busyId: string | null;
 }) {
   const { setNodeRef } = useDroppable({ id: status });
+  const { t } = useLanguage();
   const cardIds = useMemo(() => applications.map(a => a.id), [applications]);
   return (
     <div className="shrink-0 w-72 sm:w-80 snap-start">
@@ -270,7 +271,7 @@ function PipelineColumn({
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {applications.length === 0 ? (
             <p className="text-xs text-muted-foreground py-6 text-center border border-dashed border-border/60 rounded-lg">
-              No candidates here.
+              {t("pipelineEmpty")}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -322,10 +323,10 @@ function PipelineCard({
   // Action set per status — accessibility + mobile-friendly (directive §13)
   const actions: { label: string; status: Status; tone: string }[] = [];
   if (application.status === "applied") {
-    actions.push({ label: t("pipelineBulkShortlist").replace(" shortlist", ""), status: "shortlisted", tone: "bg-amber-100 text-amber-900 hover:bg-amber-200" });
+    actions.push({ label: t("shortlistCta"), status: "shortlisted", tone: "bg-amber-100 text-amber-900 hover:bg-amber-200" });
   }
   if (application.status === "shortlisted") {
-    actions.push({ label: "Interview", status: "interview", tone: "bg-sky-100 text-sky-900 hover:bg-sky-200" });
+    actions.push({ label: t("pipelineInterview"), status: "interview", tone: "bg-sky-100 text-sky-900 hover:bg-sky-200" });
   }
   if (application.status === "interview") {
     actions.push({ label: t("trackerStageOffer"), status: "offer", tone: "bg-violet-100 text-violet-900 hover:bg-violet-200" });
@@ -391,7 +392,7 @@ function PipelineCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-        <Badge variant="outline" className="text-[10px]">{w.yearsExp} yrs</Badge>
+        <Badge variant="outline" className="text-[10px]">{w.yearsExp} {t("unitYears")}</Badge>
         <Badge variant="outline" className="text-[10px]">₹{w.wageMin}–{w.wageMax}</Badge>
         {w.availableToday && (
           <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300">

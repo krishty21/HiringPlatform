@@ -192,7 +192,7 @@ export default function EmployerDashboardPage() {
             <EmptyState
               icon={Briefcase}
               title={t("myJobsEmpty")}
-              description="Post your first job to see per-job analytics here."
+              description={t("dashPerJobEmptyHint")}
             />
           ) : (
             <div className="flex flex-col gap-3">

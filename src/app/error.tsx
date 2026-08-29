@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
 
@@ -11,6 +12,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useLanguage();
+
   useEffect(() => {
     // Log to the console for dev visibility (production would ship to Sentry).
     console.error("[ShramSetu] route error:", error);
@@ -19,11 +22,11 @@ export default function GlobalError({
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-destructive/5 via-background to-background overflow-x-clip">
       <header className="px-4 sm:px-6 py-4">
-        <Link href="/" className="inline-flex items-center gap-2 font-bold text-primary" aria-label="ShramSetu">
+        <Link href="/" className="inline-flex items-center gap-2 font-bold text-primary" aria-label={t("brand")}>
           <span className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center text-base shadow-sm">
             श्र
           </span>
-          <span className="text-xl tracking-tight">ShramSetu</span>
+          <span className="text-xl tracking-tight">{t("brand")}</span>
         </Link>
       </header>
 
@@ -38,11 +41,10 @@ export default function GlobalError({
 
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Something went wrong.
+              {t("errTitle")}
             </h1>
             <p className="text-sm text-muted-foreground max-w-sm">
-              An unexpected error occurred while rendering this page. Try again —
-              if the problem persists, head back home.
+              {t("errHint")}
             </p>
           </div>
 
@@ -55,12 +57,12 @@ export default function GlobalError({
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button onClick={() => reset()} className="gap-2 min-h-11">
               <RotateCcw className="size-4" />
-              Try again
+              {t("errTryAgain")}
             </Button>
             <Button asChild variant="outline" className="gap-2 min-h-11">
               <Link href="/">
                 <Home className="size-4" />
-                Back to home
+                {t("errBackHome")}
               </Link>
             </Button>
           </div>
@@ -69,9 +71,7 @@ export default function GlobalError({
 
       <footer className="border-t border-border bg-secondary/30 mt-auto">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 py-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            We are not building a job portal; we are building the trust layer India's blue-collar workforce has never had.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("footerMission")}</p>
         </div>
       </footer>
     </div>

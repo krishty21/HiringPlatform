@@ -59,6 +59,10 @@ export default function AdminVerificationsPage() {
     setOpen(false);
   }, []);
 
+  // Localized role label (raw "worker"/"employer" never shown to admins)
+  const roleLabel = (role: string) =>
+    role === "employer" ? t("adminRoleEmployer") : role === "worker" ? t("adminRoleWorker") : role;
+
   return (
     <AppShell>
       <div className="flex flex-col gap-6 max-w-6xl mx-auto">
@@ -88,7 +92,7 @@ export default function AdminVerificationsPage() {
           <EmptyState
             icon={FileText}
             title={t("adminQueueEmpty")}
-            description="New submissions will appear here for review."
+            description={t("adminQueueEmptyHint")}
           />
         )}
 
@@ -97,11 +101,11 @@ export default function AdminVerificationsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">Type</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead className="w-40">Submitted</TableHead>
-                  <TableHead className="w-32">Status</TableHead>
-                  <TableHead className="w-16 text-right">Action</TableHead>
+                  <TableHead className="w-16">{t("adminColType")}</TableHead>
+                  <TableHead>{t("adminColOwner")}</TableHead>
+                  <TableHead className="w-40">{t("adminColSubmitted")}</TableHead>
+                  <TableHead className="w-32">{t("adminColStatus")}</TableHead>
+                  <TableHead className="w-16 text-right">{t("adminColAction")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -128,7 +132,7 @@ export default function AdminVerificationsPage() {
                       <div className="flex flex-col min-w-0">
                         <span className="text-sm font-medium truncate">{item.owner.name}</span>
                         <span className="text-xs text-muted-foreground truncate">
-                          {item.owner.role}{item.owner.trade ? ` · ${item.owner.trade}` : ""}
+                          {roleLabel(item.owner.role)}{item.owner.trade ? ` · ${item.owner.trade}` : ""}
                         </span>
                       </div>
                     </TableCell>
@@ -157,7 +161,7 @@ export default function AdminVerificationsPage() {
                           onRowClick(item);
                         }}
                       >
-                        Review
+                        {t("adminReview")}
                       </Button>
                     </TableCell>
                   </TableRow>

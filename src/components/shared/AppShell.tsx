@@ -4,11 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
 import { AIDemoModeIndicator } from "./AIDemoModeIndicator";
 import { LanguageToggle } from "./LanguageToggle";
 import {
   Home, User, Briefcase, Bell, FileText,
-  LayoutDashboard, Users, Settings, ShieldAlert, LogOut, Plus, Search,
+  LayoutDashboard, Users, Settings, ShieldAlert, LogOut, Plus, Search, Menu,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
@@ -20,6 +23,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  // Mobile nav sheet (round 13): employers/admins had NO navigation on mobile —
+  // the sidebar is `hidden md:flex` and only workers get the bottom tab bar.
+  // This hamburger sheet restores reachability for every non-worker role.
+  const [navOpen, setNavOpen] = useState(false);
   const role = (session?.user as any)?.role as "worker" | "employer" | "admin" | undefined;
   const isPublic = pathname === "/" || pathname?.startsWith("/c/") || pathname?.startsWith("/login");
 
@@ -75,6 +82,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="text-base hidden sm:inline">ShramSetu</span>
           </Link>
           <div className="flex items-center gap-2">
+            {!showBottomBar && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-muted-foreground hover:text-foreground size-10"
+                onClick={() => setNavOpen(true)}
+                aria-label={t("navMenuAria")}
+                aria-haspopup="dialog"
+              >
+                <Menu className="size-5" />
+              </Button>
+            )}
             <AIDemoModeIndicator />
             <LanguageToggle compact />
             <Button
@@ -125,6 +145,56 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="animate-fade-in">{children}</div>
         </main>
       </div>
+
+      {/* Mobile nav sheet (employer/admin) — slide-in drawer with the same
+          items as the desktop sidebar; closes on route change (effect above). */}
+      {!showBottomBar && (
+        <Sheet open={navOpen} onOpenChange={setNavOpen}>
+          <SheetContent side="left" className="w-72 p-0 flex flex-col">
+            <SheetHeader className="px-4 py-4 border-b border-border bg-secondary/30">
+              <SheetTitle className="text-base flex items-center gap-2 text-primary">
+                <span className="size-7 rounded-md bg-primary text-primary-foreground grid place-items-center text-sm">श्र</span>
+                ShramSetu
+              </SheetTitle>
+              <SheetDescription className="sr-only">{t("navMenuAria")}</SheetDescription>
+            </SheetHeader>
+            <nav className="flex-1 flex flex-col gap-1 p-3" aria-label="Mobile">
+              {nav.map(item => {
+                const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setNavOpen(false)}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors min-h-11 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"}`}
+                  >
+                    <Icon className="size-5" />
+                    {t(item.labelKey)}
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="border-t border-border p-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground min-h-11"
+                onClick={async () => {
+                  setNavOpen(false);
+                  await signOut({ redirect: false });
+                  router.push("/");
+                  router.refresh();
+                }}
+              >
+                <LogOut className="size-5" />
+                {t("navLogout")}
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Bottom tab bar (mobile worker) */}
       {showBottomBar && (

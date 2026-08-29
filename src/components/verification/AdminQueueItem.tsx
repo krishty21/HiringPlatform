@@ -92,7 +92,7 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
           let msg = t("errGeneric");
           try {
             const j = await res.json();
-            if (j?.error === "ALREADY_REVIEWED") msg = "This document has already been reviewed.";
+            if (j?.error === "ALREADY_REVIEWED") msg = t("adminAlreadyReviewed");
             else if (j?.error === "UNAUTHORIZED") msg = t("errUnauthorized");
             else if (j?.error === "FORBIDDEN") msg = t("errForbidden");
           } catch {}
@@ -112,6 +112,13 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
 
   if (!item) return null;
 
+  // Localized role label (raw "worker"/"employer" never shown to admins)
+  const roleLabel = item.owner.role === "employer"
+    ? t("adminRoleEmployer")
+    : item.owner.role === "worker"
+      ? t("adminRoleWorker")
+      : item.owner.role;
+
   const isPdf = item.fileType === "application/pdf";
   const isImage = item.fileType === "image/jpeg" || item.fileType === "image/png";
   const src = token ? `/api/storage/file?token=${encodeURIComponent(token)}` : null;
@@ -122,7 +129,7 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
         <SheetHeader>
           <SheetTitle>{item.maskedLabel}</SheetTitle>
           <SheetDescription>
-            {item.owner.name} · {item.owner.role}{item.owner.trade ? ` · ${item.owner.trade}` : ""}
+            {item.owner.name} · {roleLabel}{item.owner.trade ? ` · ${item.owner.trade}` : ""}
             {" · "}{new Date(item.submittedAt).toLocaleString()}
           </SheetDescription>
         </SheetHeader>
@@ -144,7 +151,7 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
           ) : (
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <AlertCircle className="size-4" />
-              Manual review required.
+              {t("adminManualReview")}
             </p>
           )}
         </section>
@@ -163,8 +170,8 @@ export function AdminQueueItem({ item, open, onOpenChange, onActioned }: AdminQu
             <img src={src} alt={item.maskedLabel} className="w-full h-[55vh] object-contain" />
           ) : (
             <div className="p-6 text-sm text-muted-foreground">
-              Unsupported preview type.{" "}
-              <a href={src} className="text-primary underline" download>Download</a>
+              {t("adminUnsupportedPreview")}{" "}
+              <a href={src} className="text-primary underline" download>{t("adminDownload")}</a>
             </div>
           )}
         </section>

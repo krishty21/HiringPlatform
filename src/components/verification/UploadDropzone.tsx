@@ -43,11 +43,11 @@ export function UploadDropzone({
   const [error, setError] = useState<string | null>(null);
 
   const validate = useCallback((file: File): string | null => {
-    if (!ALLOWED_TYPES.has(file.type)) return "Only PDF, JPG, or PNG files are accepted.";
-    if (file.size > MAX_BYTES) return "File exceeds the 5MB limit.";
-    if (file.size === 0) return "File appears to be empty.";
+    if (!ALLOWED_TYPES.has(file.type)) return t("uploadBadType");
+    if (file.size > MAX_BYTES) return t("uploadTooBig");
+    if (file.size === 0) return t("uploadEmpty");
     return null;
-  }, []);
+  }, [t]);
 
   const onFile = useCallback(
     async (file: File) => {
@@ -111,7 +111,9 @@ export function UploadDropzone({
       }
       const data = (await res.json()) as UploadedDoc & { previewToken?: string };
       setPickedFile(null);
-      toast.success(`Uploaded ${docType === "id" ? "ID" : docType === "company" ? "company doc" : "skill cert"}`);
+      toast.success(
+        docType === "id" ? t("uploadDoneId") : docType === "company" ? t("uploadDoneCompany") : t("uploadDoneCert"),
+      );
       onUploaded?.(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errGeneric"));

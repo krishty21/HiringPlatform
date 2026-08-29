@@ -27,12 +27,12 @@ interface RatingDialogProps {
   children?: React.ReactNode;
 }
 
-const PRESETS: { score: number; en: string }[] = [
-  { score: 5, en: "Excellent — would hire again" },
-  { score: 4, en: "Good — reliable" },
-  { score: 3, en: "Okay — met expectations" },
-  { score: 2, en: "Below expectations" },
-  { score: 1, en: "Poor — would not recommend" },
+const PRESETS: { score: number; key: "ratingPreset5" | "ratingPreset4" | "ratingPreset3" | "ratingPreset2" | "ratingPreset1" }[] = [
+  { score: 5, key: "ratingPreset5" },
+  { score: 4, key: "ratingPreset4" },
+  { score: 3, key: "ratingPreset3" },
+  { score: 2, key: "ratingPreset2" },
+  { score: 1, key: "ratingPreset1" },
 ];
 
 export function RatingDialog({
@@ -162,7 +162,7 @@ export function RatingDialog({
                 }`}
                 aria-pressed={score === p.score}
               >
-                {p.en}
+                {t(p.key)}
               </button>
             ))}
           </div>

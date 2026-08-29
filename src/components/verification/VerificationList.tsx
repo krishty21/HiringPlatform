@@ -130,7 +130,7 @@ export function VerificationList({ refreshKey = 0 }: VerificationListProps) {
                 onClick={() => setPreviewItem(item)}
               >
                 <Eye className="size-4" />
-                Preview
+                {t("verifyPreview")}
               </Button>
             </div>
           </li>
@@ -178,9 +178,9 @@ function PreviewDialog({ item, onClose }: { item: VerificationItem | null; onClo
           )}
           {!isPdf && !isImage && (
             <div className="p-6 text-sm text-muted-foreground">
-              Unsupported preview type.{" "}
+              {t("adminUnsupportedPreview")}{" "}
               <a href={src} className="text-primary underline" download>
-                Download
+                {t("adminDownload")}
               </a>
             </div>
           )}

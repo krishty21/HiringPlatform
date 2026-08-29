@@ -31,6 +31,7 @@ interface JobDetail {
   city: string;
   shift: "day" | "night" | "any";
   isUrgent: boolean;
+  status: string;
   description: string;
   employer?: { id: string; companyName: string; city: string; isVerified: boolean; ratingAvg?: number; ratingCount?: number };
   skills: { skillId: string; required: boolean; skill?: { nameEn: string; nameHi: string; nameTe: string } }[];
@@ -49,20 +50,23 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const { t, lang } = useLanguage();
   const [job, setJob] = useState<JobDetail | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [existingApp, setExistingApp] = useState<ApplicationExisting | null>(null);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
 
   useEffect(() => {
-    // We use the feed endpoint to get the same enriched payload (no separate /api/jobs/:id GET).
-    // Fall back to first page if jobId isn't in the default feed.
-    fetch(`/api/jobs?pageSize=100`, { cache: "no-store" })
-      .then(r => r.json())
-      .then((data: { items: JobDetail[] }) => {
-        const found = data.items?.find(j => j.id === id) ?? null;
-        setJob(found);
+    // Round 13: fetch the single job directly from GET /api/jobs/:id (any
+    // status — the feed only returns open jobs, which made closed-job details
+    // unreachable from application cards). 404 → proper empty state.
+    fetch(`/api/jobs/${encodeURIComponent(id)}`, { cache: "no-store" })
+      .then(r => {
+        if (r.status === 404) { setNotFound(true); return null; }
+        if (!r.ok) throw new Error("fetch failed");
+        return r.json();
       })
-      .catch(() => setJob(null));
+      .then((data: JobDetail | null) => { if (data) setJob(data); })
+      .catch(() => setNotFound(true));
   }, [id]);
 
   async function apply() {
@@ -73,13 +77,23 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jobId: id }),
       });
-      if (!res.ok) throw new Error("apply-failed");
+      if (!res.ok) {
+        // Round 13: surface the JOB_CLOSED API guard as a clear localized toast
+        // (the button is disabled client-side, but a stale page can still fire).
+        const j = await res.json().catch(() => null);
+        if (j?.error === "JOB_CLOSED") throw new Error("job-closed");
+        throw new Error("apply-failed");
+      }
       const data = (await res.json()) as ApplicationExisting;
       setExistingApp(data);
       setApplied(true);
       toast.success(t("jobApplied"));
-    } catch {
-      toast.error(t("errGeneric"));
+    } catch (e) {
+      toast.error(
+        e instanceof Error && e.message === "job-closed"
+          ? t("jobClosedBanner")
+          : t("errGeneric"),
+      );
     } finally {
       setApplying(false);
     }
@@ -95,6 +109,23 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  if (notFound) {
+    return (
+      <AppShell>
+        <EmptyState
+          icon={Briefcase}
+          title={t("jobNotFoundTitle")}
+          description={t("jobNotFoundHint")}
+          action={
+            <Button asChild className="gap-2 min-h-11">
+              <Link href="/jobs">{t("boardTitle")}</Link>
+            </Button>
+          }
+        />
+      </AppShell>
+    );
+  }
+
   if (!job) {
     return (
       <AppShell>
@@ -107,6 +138,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     ? (lang === "hi" ? job.trade.nameHi : lang === "te" ? job.trade.nameTe : job.trade.nameEn)
     : null;
   const isApplied = applied || !!existingApp;
+  const isClosed = job.status !== "open";
   // Round 8: employer reputation
   const employerRating = job.employer?.ratingCount && job.employer.ratingCount > 0
     ? { avg: job.employer.ratingAvg ?? 0, count: job.employer.ratingCount }
@@ -143,7 +175,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     {t("feedUrgent")}
                   </div>
                 )}
-                <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
+                <h1 className={`text-2xl font-bold tracking-tight ${isClosed ? "text-muted-foreground" : ""}`}>{job.title}</h1>
+                {isClosed && (
+                  <Badge variant="outline" className="mt-2 border-slate-300 bg-slate-100 text-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:border-slate-700 gap-1">
+                    <span aria-hidden className="size-1.5 rounded-full bg-slate-500" />
+                    {t("jobClosedBadge")}
+                  </Badge>
+                )}
                 <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5 flex-wrap">
                   {tradeName && <span>{tradeName}</span>}
                   {tradeName && <span aria-hidden>·</span>}
@@ -263,7 +301,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         </div>
                         {employerRating && (
                           <div
-                            className="flex items-center gap-1.5 text-xs"
+                            className="flex items-center gap-1.5 gap-x-2 text-xs flex-wrap"
                             aria-label={t("employerRatingAria", { avg: employerRating.avg, count: employerRating.count })}
                           >
                             <RatingStars value={employerRating.avg} size="sm" readOnly />
@@ -293,25 +331,34 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
             >
-            <Card className="border-primary/30 shadow-sm">
+            <Card className={`${isClosed ? "border-slate-300 dark:border-slate-700" : "border-primary/30"} shadow-sm`}>
               <CardContent className="p-4 flex flex-col gap-3">
                 <p className="text-sm font-semibold flex items-center gap-2">
                   <Sparkles className="size-4 text-accent-foreground" />
-                  {isApplied ? t("jobApplied") : t("jobApply")}
+                  {isApplied ? t("jobApplied") : isClosed ? t("jobClosedBadge") : t("jobApply")}
                 </p>
-                {!isApplied && (
+                {isClosed && !isApplied && (
+                  <div className="rounded-lg border border-slate-300 bg-slate-50 dark:bg-slate-950/40 dark:border-slate-700 p-3 flex flex-col gap-1">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <span aria-hidden className="size-1.5 rounded-full bg-slate-500" />
+                      {t("jobClosedBanner")}
+                    </p>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400">{t("jobClosedHint")}</p>
+                  </div>
+                )}
+                {!isApplied && !isClosed && (
                   <p className="text-xs text-muted-foreground">{t("jobApplyConfirm")}</p>
                 )}
                 <Button
                   type="button"
                   onClick={apply}
-                  disabled={isApplied || applying}
+                  disabled={isApplied || applying || isClosed}
                   className="min-h-12 gap-2"
-                  variant={isApplied ? "secondary" : "default"}
+                  variant={isApplied ? "secondary" : isClosed ? "outline" : "default"}
                   size="lg"
                 >
                   {applying ? <Loader2 className="size-4 animate-spin" /> : isApplied ? <Check className="size-5" /> : <Briefcase className="size-5" />}
-                  {isApplied ? t("applied") : t("jobApply")}
+                  {isApplied ? t("applied") : isClosed ? t("jobClosedApplyDisabled") : t("jobApply")}
                 </Button>
                 <Button
                   type="button"

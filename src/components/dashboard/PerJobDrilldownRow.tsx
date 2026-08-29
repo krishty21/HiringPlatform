@@ -37,6 +37,19 @@ const STAGE_TONES: Record<string, string> = {
   rejected: "bg-rose-100 text-rose-800 border-rose-200",
 };
 
+// Localized full stage names (tracker keys shared with the pipeline + tracker)
+const STAGE_LABEL_KEYS: Record<
+  string,
+  "trackerStageApplied" | "trackerStageShortlisted" | "trackerStageInterview" | "trackerStageOffer" | "trackerStageHired" | "trackerStageRejected"
+> = {
+  applied: "trackerStageApplied",
+  shortlisted: "trackerStageShortlisted",
+  interview: "trackerStageInterview",
+  offer: "trackerStageOffer",
+  hired: "trackerStageHired",
+  rejected: "trackerStageRejected",
+};
+
 export function PerJobDrilldownRow({ job }: { job: PerJob }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -70,7 +83,8 @@ export function PerJobDrilldownRow({ job }: { job: PerJob }) {
               {job.title}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {totalApps} applicant{totalApps === 1 ? "" : "s"} · {job.status}
+              {totalApps === 1 ? t("dashApplicantOne") : t("dashApplicantMany", { count: totalApps })}
+              {" · "}{job.status === "closed" ? t("myJobsStatusClosed") : t("myJobsStatusOpen")}
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
@@ -84,6 +98,7 @@ export function PerJobDrilldownRow({ job }: { job: PerJob }) {
                   key={stage}
                   variant="outline"
                   className={cn("text-[10px] px-1.5 py-0 tabular-nums", STAGE_TONES[stage])}
+                  title={t(STAGE_LABEL_KEYS[stage] ?? "trackerStageApplied")}
                 >
                   {stage[0].toUpperCase()}{n}
                 </Badge>
@@ -101,12 +116,12 @@ export function PerJobDrilldownRow({ job }: { job: PerJob }) {
             {/* Applicants by stage (full labels) */}
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
-                {t("dashPerJob")} — applicants by stage
+                {t("dashApplicantsByStage")}
               </p>
               <div className="flex flex-col gap-1.5">
                 {stages.map(([stage, n]) => (
                   <div key={stage} className="flex items-center justify-between text-xs">
-                    <span className="capitalize">{stage}</span>
+                    <span>{t(STAGE_LABEL_KEYS[stage] ?? "trackerStageApplied")}</span>
                     <span className="tabular-nums font-semibold">{n}</span>
                   </div>
                 ))}
@@ -115,16 +130,16 @@ export function PerJobDrilldownRow({ job }: { job: PerJob }) {
 
             {/* Views + total */}
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Views & applicants</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("dashViewsApplicants")}</p>
               <div className="flex items-center gap-2 text-sm">
                 <Eye className="size-4 text-muted-foreground" />
                 <span className="tabular-nums font-semibold">{job.views}</span>
-                <span className="text-muted-foreground">views</span>
+                <span className="text-muted-foreground">{t("dashFunnelViews").toLowerCase()}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Users className="size-4 text-muted-foreground" />
                 <span className="tabular-nums font-semibold">{totalApps}</span>
-                <span className="text-muted-foreground">applicants</span>
+                <span className="text-muted-foreground">{t("myJobsApplicants")}</span>
               </div>
             </div>
 
@@ -132,7 +147,7 @@ export function PerJobDrilldownRow({ job }: { job: PerJob }) {
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">{t("dashScoreDist")}</p>
               <ScoreDistributionSparkline distribution={job.scoreDistribution} />
-              <p className="text-[10px] text-muted-foreground">Score buckets 0–100</p>
+              <p className="text-[10px] text-muted-foreground">{t("dashScoreBuckets")}</p>
             </div>
 
             {/* CTA → pipeline Kanban with this job pre-selected */}

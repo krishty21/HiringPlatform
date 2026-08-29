@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireWorker, errorResponse } from "@/lib/authz";
+import { requireWorker, errorResponse, HTTPError } from "@/lib/authz";
 import { rateLimit, clientKey, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/applications — one-tap apply
@@ -16,6 +16,17 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { jobId } = body as { jobId?: string };
     if (!jobId) return errorResponse(new Error("VALIDATION"));
+
+    // Round 13: applications to closed jobs are rejected at the API level.
+    // The board hides closed jobs, but the endpoint must not rely on UI
+    // hiding — a stale card, a direct POST, or a re-apply on a job closed
+    // after withdrawal must all fail cleanly with JOB_CLOSED (409).
+    const targetJob = await db.job.findUnique({
+      where: { id: jobId },
+      select: { status: true },
+    });
+    if (!targetJob) throw new HTTPError(404, "NOT_FOUND");
+    if (targetJob.status !== "open") throw new HTTPError(409, "JOB_CLOSED");
 
     // Prevent double-apply — but a WITHDRAWN application may be re-submitted
     // (round 12): reset the row to a fresh "applied" state and re-notify.

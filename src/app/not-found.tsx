@@ -47,11 +47,10 @@ export default function NotFound() {
             className="flex flex-col gap-2"
           >
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              This page took a different bridge.
+              {t("nfTitle")}
             </h1>
             <p className="text-sm text-muted-foreground max-w-sm">
-              The page you’re looking for may have moved, expired, or never existed.
-              Let’s get you back to honest work.
+              {t("nfHint")}
             </p>
           </motion.div>
 
@@ -64,7 +63,7 @@ export default function NotFound() {
             <Button asChild className="gap-2 min-h-11">
               <Link href="/home">
                 <Home className="size-4" />
-                Jobs near you
+                {t("nfCta")}
               </Link>
             </Button>
             <Button asChild variant="outline" className="gap-2 min-h-11">

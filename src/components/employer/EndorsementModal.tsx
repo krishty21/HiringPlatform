@@ -34,7 +34,7 @@ export function EndorsementModal({
 
   async function submit() {
     if (!skillId) {
-      toast.error("Pick a skill to endorse.");
+      toast.error(t("endorsementPickSkill"));
       return;
     }
     setBusy(true);
@@ -50,7 +50,7 @@ export function EndorsementModal({
       setSkillId("");
       setComment("");
     } catch {
-      toast.error("Could not add endorsement. Try again.");
+      toast.error(t("endorsementFailed"));
     } finally {
       setBusy(false);
     }
