@@ -27,8 +27,8 @@ export const authOptions: NextAuthOptions = {
         const account = DEMO_ACCOUNTS.find(d => d.id === id);
         if (!account) return null;
         const user = await db.user.upsert({
-          where: { email: account.email },
-          update: { role: account.role },
+          where: { id: account.id },
+          update: { email: account.email, role: account.role },
           create: { id: account.id, email: account.email, role: account.role, name: account.label.split(" ")[0] },
         });
         return { id: user.id, email: user.email, role: account.role, name: user.name ?? account.label };
