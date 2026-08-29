@@ -1,0 +1,66 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface TopRatedBadgeProps {
+  workerProfileId: string;
+  className?: string;
+  size?: "sm" | "md";
+  // Min avg to qualify (default 4.5)
+  minAvg?: number;
+  // Min count to qualify (default 3)
+  minCount?: number;
+}
+
+/**
+ * "Top Rated" badge — appears only when a worker has at least `minCount`
+ * ratings (default 3) with avg ≥ `minAvg` (default 4.5). Lazy-fetches the
+ * worker's rating summary via the public /api/ratings/worker endpoint.
+ */
+export function TopRatedBadge({
+  workerProfileId,
+  className,
+  size = "sm",
+  minAvg = 4.5,
+  minCount = 3,
+}: TopRatedBadgeProps) {
+  const [summary, setSummary] = useState<{ avg: number; count: number } | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/ratings/worker?userId=${encodeURIComponent(workerProfileId)}`, { cache: "no-store" });
+      if (res.ok) {
+        const d = await res.json();
+        setSummary({ avg: d.avg, count: d.count });
+      } else {
+        setSummary(null);
+      }
+    } catch {
+      setSummary(null);
+    }
+  }, [workerProfileId]);
+
+  useEffect(() => {
+    const id = setTimeout(load, 0);
+    return () => clearTimeout(id);
+  }, [load]);
+
+  if (!summary || summary.count < minCount || summary.avg < minAvg) return null;
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1 border-amber-500/40 bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+        size === "sm" ? "text-[10px]" : "text-xs",
+        className,
+      )}
+      title={`Top rated · ${summary.avg.toFixed(1)} avg from ${summary.count} ratings`}
+    >
+      <Star className="size-3 fill-amber-400 text-amber-500" />
+      Top Rated
+    </Badge>
+  );
+}

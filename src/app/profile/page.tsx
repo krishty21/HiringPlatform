@@ -7,6 +7,7 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
 import { StatCard } from "@/components/shared/StatCard";
+import { RatingSummary } from "@/components/ratings/RatingSummary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -564,6 +565,13 @@ export default function WorkerProfilePage() {
             value={profile.profileViews}
             icon={Eye}
             tone="accent"
+          />
+
+          {/* Worker's employer-rating summary (R16) — avg rating received from employers */}
+          <RatingSummary
+            endpoint="/api/ratings/worker"
+            userId={profile.id}
+            title={t("ratingSummaryWorkerTitle")}
           />
 
           <Card>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
+import { TopRatedBadge } from "@/components/ratings/TopRatedBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Zap, Sparkles, ArrowRight } from "lucide-react";
@@ -74,6 +75,7 @@ export function CandidateCard({ candidate }: { candidate: CandidateCardData }) {
             {/* Trust tier + available today */}
             <div className="flex flex-wrap items-center gap-2">
               <TrustTierBadge tier={candidate.trustTier} score={candidate.trustScore} size="sm" />
+              <TopRatedBadge workerProfileId={candidate.id} />
               {candidate.availableToday && (
                 <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 gap-1 text-xs">
                   <Zap className="size-3" />

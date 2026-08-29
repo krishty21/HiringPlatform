@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useLanguage, type LanguageCode } from "@/lib/i18n/LanguageProvider";
 import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
 import { WageDisplay } from "@/components/shared/WageDisplay";
+import { TopRatedBadge } from "@/components/ratings/TopRatedBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -160,6 +161,7 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
                   score={worker.trustScore}
                   size="md"
                 />
+                <TopRatedBadge workerProfileId={worker.slug} />
               </div>
             </div>
           </header>

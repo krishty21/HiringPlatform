@@ -319,6 +319,39 @@ export const en = {
 
   // ---- footer ----
   footerMission: "We are not building a job portal; we are building the trust layer India's blue-collar workforce has never had.",
+
+  // ---- ratings (R16) ----
+  ratingPromptCta: "Rate now",
+  ratingPromptWorkerTitle: "Rate your employer",
+  ratingPromptWorkerBody: "How was your experience with {name}? Your rating helps other workers decide.",
+  ratingPromptEmployerTitle: "Rate this worker",
+  ratingPromptEmployerBody: "How did {name} perform? Your rating builds trust on ShramSetu.",
+  ratingPromptCooldown: "Available in {hours}h (post-hire cooldown).",
+  ratingPromptJobContext: "For: {title}",
+  ratingWorkerTitle: "Rate {name}",
+  ratingEmployerTitle: "Rate {name}",
+  ratingWorkerDescription: "Share your honest experience. Ratings are visible to other workers.",
+  ratingEmployerDescription: "Share your honest experience. Ratings are visible to other employers.",
+  ratingSelectHint: "Tap a star to begin",
+  ratingStarsAriaLabel: "Rating selector",
+  ratingCommentLabel: "Add a comment (optional)",
+  ratingCommentPlaceholder: "What went well? What could be better?",
+  ratingSubmit: "Submit rating",
+  ratingSubmitting: "Submitting…",
+  ratingSubmittedToast: "Rating submitted ✓",
+  ratingErrorNoScore: "Please pick a star rating first.",
+  ratingCooldown: "Rating unlocks in {hours}h.",
+  ratingAlreadyRated: "You've already rated this application.",
+  ratingNotHired: "You can only rate after being hired.",
+  ratingSummaryTitle: "Employer rating",
+  ratingSummaryWorkerTitle: "Worker rating",
+  ratingSummaryEmpty: "No ratings yet.",
+  ratingSummaryCount: "{count} rating{s}",
+  ratingPanelTitle: "Ratings on this application",
+  ratingRoleYou: "you",
+  ratingRoleOther: "other party",
+  ratingDirectionGiven: "given by you",
+  ratingDirectionReceived: "received",
 } as const;
 
 export type Dictionary = typeof en;

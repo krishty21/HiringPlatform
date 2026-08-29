@@ -13,9 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import {
-  ArrowLeft, MapPin, Briefcase, Users, Clock, Share2, Building2, RefreshCcw, Zap,
+  ArrowLeft, MapPin, Briefcase, Users, Clock, Share2, Building2, RefreshCcw, Zap, Star,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { RatingDialog } from "@/components/ratings/RatingDialog";
+import { ApplicationRatingsPanel } from "@/components/ratings/ApplicationRatingsPanel";
+import { RatingSummary } from "@/components/ratings/RatingSummary";
 import type { Application } from "@/lib/schemas";
 
 interface ApplicationDetail extends Application {
@@ -42,6 +45,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const { t, lang } = useLanguage();
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [ratingTick, setRatingTick] = useState(0); // bump to force ApplicationRatingsPanel re-fetch
+  const [hasRated, setHasRated] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -204,6 +209,11 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
                       {app.job.employer.city}
                     </Badge>
                     <Badge variant="secondary" className="text-xs">{app.job.employer.industry}</Badge>
+                    <RatingSummary
+                      endpoint="/api/ratings/employer"
+                      userId={app.job.employer.id}
+                      variant="compact"
+                    />
                   </div>
                 </div>
               )}
@@ -243,6 +253,62 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
               </p>
             </div>
             <TrackerTimeline application={app} />
+
+            {/* Rating flow (R16): prompt after hired + 24h */}
+            {app.status === "hired" && app.hiredAt && app.job.employer && !hasRated && (() => {
+              const elapsed = Date.now() - new Date(app.hiredAt).getTime();
+              const cooldownMs = 24 * 60 * 60 * 1000;
+              const eligible = elapsed >= cooldownMs;
+              const hoursLeft = Math.ceil((cooldownMs - elapsed) / (60 * 60 * 1000));
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className={`rounded-xl border p-4 ${
+                    eligible
+                      ? "border-amber-500/30 bg-gradient-to-br from-amber-50/60 via-card to-card dark:from-amber-950/15"
+                      : "border-dashed border-border bg-muted/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
+                      <Star className="size-4 text-amber-500 fill-amber-400" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold">{t("ratingPromptWorkerTitle")}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {eligible
+                          ? t("ratingPromptWorkerBody", { name: app.job.employer.companyName })
+                          : t("ratingPromptCooldown", { hours: hoursLeft })}
+                      </p>
+                      {eligible && (
+                        <div className="mt-3">
+                          <RatingDialog
+                            applicationId={app.id}
+                            direction="worker_to_employer"
+                            rateeName={app.job.employer.companyName}
+                            triggerLabel={t("ratingPromptCta")}
+                            triggerVariant="default"
+                            triggerSize="sm"
+                            onSubmitted={() => setRatingTick(prev => prev + 1)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })()}
+
+            {/* Ratings received on this application (refreshes when ratingTick bumps) */}
+            <ApplicationRatingsPanel
+              key={ratingTick}
+              applicationId={app.id}
+              callerRole="worker"
+              rateeDisplayName={app.job.employer?.companyName}
+              onRatedByMe={setHasRated}
+            />
           </aside>
         </div>
       </div>

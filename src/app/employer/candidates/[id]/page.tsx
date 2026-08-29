@@ -20,6 +20,10 @@ import { ArrowLeft, MapPin, Briefcase, Star, Languages, Eye, Zap } from "lucide-
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { RatingDialog } from "@/components/ratings/RatingDialog";
+import { ApplicationRatingsPanel } from "@/components/ratings/ApplicationRatingsPanel";
+import { RatingSummary } from "@/components/ratings/RatingSummary";
+import { TopRatedBadge } from "@/components/ratings/TopRatedBadge";
 import type { Skill } from "@/lib/schemas";
 
 interface CandidateDetail {
@@ -59,6 +63,10 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
   const [shortlistJobId, setShortlistJobId] = useState<string>("");
   const [shortlisting, setShortlisting] = useState(false);
   const [endorsementOpen, setEndorsementOpen] = useState(false);
+  // Hired application (if any) for this candidate at this employer's jobs.
+  const [hiredApp, setHiredApp] = useState<{ id: string; hiredAt: string | null; jobTitle: string } | null>(null);
+  const [ratingTick, setRatingTick] = useState(0);
+  const [hasRated, setHasRated] = useState(false);
 
   useEffect(() => {
     // Fetch candidate + bump profile_views atomically.
@@ -71,6 +79,19 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
 
     fetch("/api/skills").then(r => r.json()).then((d: { items: Skill[] }) => setSkills(d.items ?? []));
     fetch("/api/employer/jobs").then(r => r.json()).then((d: { items: { id: string; title: string }[] }) => setJobs(d.items ?? []));
+    // Look up any HIRED application for this worker at the caller's jobs.
+    fetch(`/api/employer/applications`)
+      .then(r => r.ok ? r.json() : { items: [] })
+      .then(d => {
+        const found = (d.items ?? []).find((a: { workerId: string; status: string; job: { title: string } }) =>
+          a.workerId === id && a.status === "hired");
+        if (found) {
+          setHiredApp({ id: found.id, hiredAt: found.hiredAt ?? null, jobTitle: found.job.title });
+        } else {
+          setHiredApp(null);
+        }
+      })
+      .catch(() => setHiredApp(null));
   }, [id]);
 
   async function shortlist() {
@@ -138,6 +159,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                     <TrustTierBadge tier={candidate.trustTier} score={candidate.trustScore} size="lg" />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <TopRatedBadge workerProfileId={id} size="md" />
                     {candidate.availableToday && (
                       <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 gap-1 text-xs">
                         <Zap className="size-3" />
@@ -282,6 +304,74 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Worker rating summary — avg received from all employers */}
+            <RatingSummary
+              endpoint="/api/ratings/worker"
+              userId={id}
+              title={t("ratingSummaryWorkerTitle")}
+            />
+
+            {/* Rate-this-worker prompt: appears only when there's a hired application + 24h cooldown */}
+            {hiredApp && !hasRated && (() => {
+              const elapsed = hiredApp.hiredAt ? Date.now() - new Date(hiredApp.hiredAt).getTime() : 0;
+              const cooldownMs = 24 * 60 * 60 * 1000;
+              const eligible = elapsed >= cooldownMs;
+              const hoursLeft = Math.max(0, Math.ceil((cooldownMs - elapsed) / (60 * 60 * 1000)));
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className={`rounded-xl border p-4 ${
+                    eligible
+                      ? "border-amber-500/30 bg-gradient-to-br from-amber-50/60 via-card to-card dark:from-amber-950/15"
+                      : "border-dashed border-border bg-muted/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
+                      <Star className="size-4 text-amber-500 fill-amber-400" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold">{t("ratingPromptEmployerTitle")}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {eligible
+                          ? t("ratingPromptEmployerBody", { name: candidate?.fullName ?? "" })
+                          : t("ratingPromptCooldown", { hours: hoursLeft })}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1 italic">
+                        {t("ratingPromptJobContext", { title: hiredApp.jobTitle })}
+                      </p>
+                      {eligible && candidate && (
+                        <div className="mt-3">
+                          <RatingDialog
+                            applicationId={hiredApp.id}
+                            direction="employer_to_worker"
+                            rateeName={candidate.fullName}
+                            triggerLabel={t("ratingPromptCta")}
+                            triggerVariant="default"
+                            triggerSize="sm"
+                            onSubmitted={() => setRatingTick(prev => prev + 1)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })()}
+
+            {/* Ratings received on this application (refreshes when ratingTick bumps) */}
+            {hiredApp && (
+              <ApplicationRatingsPanel
+                key={ratingTick}
+                applicationId={hiredApp.id}
+                callerRole="employer"
+                rateeDisplayName={candidate?.fullName}
+                onRatedByMe={setHasRated}
+              />
+            )}
           </aside>
         </div>
 
