@@ -20,7 +20,7 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
   Search, X, Zap, Bookmark, ArrowDownWideNarrow, MapPin, Briefcase,
-  ChevronDown, Loader2, Compass, SlidersHorizontal, Star,
+  ChevronDown, Loader2, Compass, SlidersHorizontal, Star, Radio,
 } from "lucide-react";
 import type { Skill } from "@/lib/schemas";
 import { toast } from "sonner";
@@ -64,6 +64,12 @@ function JobBoard() {
   const [profileExists, setProfileExists] = useState<boolean | null>(null);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
+  // ---- worker "Available today" quick-toggle (round 11) ----
+  // Visible only to logged-in workers. Mirrors the toggle on /home but lets
+  // a worker flip their availability while browsing the board.
+  const [availableToday, setAvailableToday] = useState<boolean | null>(null);
+  const [availableSaving, setAvailableSaving] = useState(false);
+
   // Skills taxonomy (for trade filter)
   useEffect(() => {
     fetch("/api/skills")
@@ -84,9 +90,37 @@ function JobBoard() {
         if (!r.ok) return null;
         return r.json();
       })
-      .then(data => { if (data !== null) setProfileExists(true); })
+      .then(data => {
+        if (data === null) return;
+        setProfileExists(true);
+        // Round 11: seed the quick-toggle from the worker's stored flag.
+        if (typeof data.availableToday === "boolean") {
+          setAvailableToday(data.availableToday);
+        }
+      })
       .catch(() => setProfileExists(false));
   }, [status, session]);
+
+  // Round 11: workers can flip availability directly from the board header.
+  async function toggleAvailableToday(checked: boolean) {
+    if (availableToday === null) return;
+    setAvailableToday(checked);
+    setAvailableSaving(true);
+    try {
+      const res = await fetch("/api/worker/profile", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ availableToday: checked }),
+      });
+      if (!res.ok) throw new Error("patch-failed");
+      toast.success(checked ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff"));
+    } catch {
+      setAvailableToday(!checked); // rollback
+      toast.error(t("errGeneric"));
+    } finally {
+      setAvailableSaving(false);
+    }
+  }
 
   useEffect(() => {
     if (profileExists === false && status === "authenticated") {
@@ -252,6 +286,7 @@ function JobBoard() {
   }
 
   const hasActiveFilters = chips.length > 0;
+  const isWorker = (session?.user as { role?: string } | undefined)?.role === "worker";
 
   if (status === "loading" || profileExists === null) {
     return (
@@ -308,6 +343,59 @@ function JobBoard() {
                 </button>
               )}
             </div>
+
+            {/* Round 11: worker "Available today" quick toggle */}
+            {isWorker && availableToday !== null && (
+              <motion.button
+                type="button"
+                onClick={() => toggleAvailableToday(!availableToday)}
+                disabled={availableSaving}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                aria-pressed={availableToday}
+                aria-label={t("boardAvailableToday")}
+                className={`group inline-flex items-center gap-3 self-start rounded-xl border px-4 py-2.5 text-left transition-all duration-200 ${
+                  availableToday
+                    ? "border-emerald-400/70 bg-emerald-50 dark:bg-emerald-950/40 shadow-[0_0_0_3px_rgba(16,185,129,0.08)]"
+                    : "border-border bg-card hover:border-emerald-300 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className={`relative grid size-9 place-items-center rounded-full transition-colors ${
+                    availableToday
+                      ? "bg-emerald-500 text-white"
+                      : "bg-muted text-muted-foreground group-hover:bg-emerald-100 group-hover:text-emerald-700"
+                  }`}
+                >
+                  {availableSaving ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Radio className={`size-4 ${availableToday ? "animate-pulse" : ""}`} />
+                  )}
+                  {availableToday && (
+                    <span aria-hidden className="absolute inset-0 rounded-full bg-emerald-400 opacity-40 motion-safe:animate-ping" />
+                  )}
+                </span>
+                <span className="flex flex-col gap-0.5 min-w-0">
+                  <span className={`text-sm font-semibold leading-tight ${availableToday ? "text-emerald-800 dark:text-emerald-200" : "text-foreground"}`}>
+                    {availableToday ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff")}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground truncate">
+                    {t("boardAvailableTodayHint")}
+                  </span>
+                </span>
+                <Switch
+                  checked={availableToday}
+                  disabled={availableSaving}
+                  onCheckedChange={toggleAvailableToday}
+                  onClick={e => e.stopPropagation()} // avoid double-trigger from outer button
+                  className="ml-1 data-[state=checked]:bg-emerald-600"
+                  aria-label={t("boardAvailableToday")}
+                />
+              </motion.button>
+            )}
           </div>
         </section>
 

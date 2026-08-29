@@ -458,6 +458,29 @@ export const en = {
   analyticsHiresWeeks: "{count} hires · last 6 weeks",
   analyticsApplicationsUnit: "applications",
   analyticsWorkersPct: "{count} workers · {pct}%",
+
+  // ---- round 11: jobs board available-today toggle, similar jobs, worker stats ----
+  boardAvailableToday: "Available today",
+  boardAvailableTodayHint: "Surface to employers searching now",
+  boardAvailableTodayOn: "You're visible as available",
+  boardAvailableTodayOff: "Mark yourself available",
+  boardAvailableTodaySaved: "Updated",
+  jobSimilarTitle: "Similar jobs",
+  jobSimilarSubtitle: "Other openings in the same trade",
+  jobSimilarSubtitleCity: "More openings near {city}",
+  jobSimilarEmpty: "No similar jobs open right now",
+  jobSimilarView: "View job",
+  jobSimilarMatchLabel: "{score}% match",
+  kaamCardStatsTitle: "On ShramSetu",
+  kaamCardStatsApplications: "Applications",
+  kaamCardStatsApplicationsDesc: "sent across the platform",
+  kaamCardStatsHires: "Hires",
+  kaamCardStatsHiresDesc: "completed through ShramSetu",
+  kaamCardStatsRating: "Avg rating",
+  kaamCardStatsNotRated: "Not rated yet",
+  kaamCardStatsRatingDesc: "from {count} employer{s}",
+  kaamCardStatsHireRate: "{pct}% hire rate",
+  skeletonLoading: "Loading…",
 } as const;
 
 export type Dictionary = typeof en;

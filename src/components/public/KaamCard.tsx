@@ -53,6 +53,13 @@ export type PublicWorkerData = {
     idVerifiedAt: string | null;
     skillVerifiedAt: string | null;
   };
+  // Round 11: public stats (counts only, no PII).
+  stats?: {
+    applicationsSent: number;
+    hires: number;
+    ratingAvg: number;     // 0-5 (one decimal)
+    ratingCount: number;
+  };
 };
 
 const TIER_INDEX: Record<PublicWorkerData["trustTier"], number> = {
@@ -212,6 +219,112 @@ function pickLocalized(
   if (lang === "hi") return hi || en;
   if (lang === "te") return te || en;
   return en;
+}
+
+// Round 11: public worker stats card — applications sent, hires, avg rating.
+// Renders only when the worker has at least one application OR one rating.
+// All values are aggregates; no PII (no employer names, no co-worker IDs).
+function KaamStats({ stats }: { stats: NonNullable<PublicWorkerData["stats"]> }) {
+  const { t } = useLanguage();
+  const { applicationsSent, hires, ratingAvg, ratingCount } = stats;
+
+  // Don't render for brand-new workers (zero applications, zero ratings).
+  if (applicationsSent === 0 && ratingCount === 0) return null;
+
+  const hireRate = applicationsSent > 0
+    ? Math.round((hires / applicationsSent) * 100)
+    : 0;
+
+  const hasRating = ratingCount > 0 && ratingAvg > 0;
+
+  const tiles: {
+    key: string;
+    value: string;
+    label: string;
+    desc: string;
+    icon: typeof Briefcase;
+    tone: string;
+  }[] = [
+    {
+      key: "apps",
+      value: String(applicationsSent),
+      label: t("kaamCardStatsApplications"),
+      desc: t("kaamCardStatsApplicationsDesc"),
+      icon: Briefcase,
+      tone: "text-primary",
+    },
+    {
+      key: "hires",
+      value: String(hires),
+      label: t("kaamCardStatsHires"),
+      desc: hires > 0
+        ? t("kaamCardStatsHireRate", { pct: hireRate })
+        : t("kaamCardStatsHiresDesc"),
+      icon: Award,
+      tone: "text-emerald-700 dark:text-emerald-300",
+    },
+    {
+      key: "rating",
+      value: hasRating ? ratingAvg.toFixed(1) : "—",
+      label: t("kaamCardStatsRating"),
+      desc: hasRating
+        ? t("kaamCardStatsRatingDesc", { count: ratingCount, s: ratingCount === 1 ? "" : "s" })
+        : t("kaamCardStatsNotRated"),
+      icon: Star,
+      tone: "text-amber-600 dark:text-amber-400",
+    },
+  ];
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.18, ease: "easeOut" }}
+      className="flex flex-col gap-3"
+      aria-label={t("kaamCardStatsTitle")}
+    >
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        {t("kaamCardStatsTitle")}
+      </h2>
+      <div className="grid grid-cols-3 gap-2 rounded-xl border border-border bg-gradient-to-br from-card/80 to-secondary/30 p-3 overflow-hidden relative">
+        {/* subtle top hairline */}
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent"
+        />
+        {tiles.map((tile, idx) => {
+          const Icon = tile.icon;
+          return (
+            <motion.div
+              key={tile.key}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.22 + idx * 0.06, ease: "easeOut" }}
+              className="relative flex flex-col items-center text-center gap-1 px-1 py-2"
+            >
+              <Icon className={`size-4 ${tile.tone}`} aria-hidden />
+              <span className="text-xl sm:text-2xl font-bold tabular-nums leading-none">
+                {tile.value}
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {tile.label}
+              </span>
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground/80 leading-tight line-clamp-2 max-w-[110px]">
+                {tile.desc}
+              </span>
+              {/* vertical divider */}
+              {idx < tiles.length - 1 && (
+                <span
+                  aria-hidden
+                  className="absolute right-[-2px] top-1/2 -translate-y-1/2 h-2/3 w-px bg-border"
+                />
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+    </motion.section>
+  );
 }
 
 export function KaamCard({ worker }: { worker: PublicWorkerData }) {
@@ -421,6 +534,11 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
           {/* Trust journey — public milestone strip */}
           {worker.trustJourney && (
             <KaamTrustJourney journey={worker.trustJourney} trustTier={worker.trustTier} />
+          )}
+
+          {/* Round 11: public worker stats */}
+          {worker.stats && (
+            <KaamStats stats={worker.stats} />
           )}
 
           {/* Actions */}

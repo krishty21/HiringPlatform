@@ -172,10 +172,10 @@ export default function WorkerHomePage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ availableToday: checked }),
       });
-      toast.success(checked ? "You're visible as available today" : "Available-today off");
+      toast.success(checked ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff"));
     } catch {
       setAvailableToday(!checked);
-      toast.error("Could not update. Try again.");
+      toast.error(t("errGeneric"));
     }
   }
 
@@ -249,7 +249,7 @@ export default function WorkerHomePage() {
             </span>
             <div>
               <Label htmlFor="availableToday" className="text-sm font-semibold">{t("onboardAvailableToday")}</Label>
-              <p className="text-xs text-muted-foreground">Surface to employers searching now.</p>
+              <p className="text-xs text-muted-foreground">{t("boardAvailableTodayHint")}</p>
             </div>
           </div>
           <Switch

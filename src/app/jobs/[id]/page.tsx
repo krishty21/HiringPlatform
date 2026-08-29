@@ -8,6 +8,7 @@ import { WageDisplay } from "@/components/shared/WageDisplay";
 import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { RatingStars } from "@/components/ratings/RatingStars";
+import { SimilarJobs } from "@/components/jobs/SimilarJobs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -331,6 +332,22 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </motion.div>
           </aside>
         </div>
+
+        {/* Round 11: Similar jobs discovery rail */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.2, ease: "easeOut" }}
+          className="mt-2"
+        >
+          <SimilarJobs
+            currentJobId={job.id}
+            tradeId={job.tradeId}
+            city={job.city}
+            currentEmployerId={job.employer?.id}
+            limit={3}
+          />
+        </motion.div>
       </div>
     </AppShell>
   );

@@ -15,6 +15,7 @@ import {
   KaamCardNotFound,
 } from "@/components/public/KaamCardShared";
 import { PublicFooter } from "@/components/public/PublicFooter";
+import { getWorkerRatingSummary } from "@/lib/ratings";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -111,7 +112,7 @@ export default async function PublicKaamCardPage({
 
   // Public-safe trust journey (dates only — no doc contents, no PII):
   // first approved ID doc + first approved skill cert review timestamps.
-  const [firstIdDoc, firstSkillDoc] = await Promise.all([
+  const [firstIdDoc, firstSkillDoc, applicationCount, hireCount, ratingSummary] = await Promise.all([
     db.verificationDocument.findFirst({
       where: { ownerUserId: worker.userId, docType: "id", status: "approved" },
       orderBy: { reviewedAt: "asc" },
@@ -122,6 +123,9 @@ export default async function PublicKaamCardPage({
       orderBy: { reviewedAt: "asc" },
       select: { reviewedAt: true },
     }),
+    db.application.count({ where: { workerId: worker.id } }),
+    db.application.count({ where: { workerId: worker.id, status: "hired" } }),
+    getWorkerRatingSummary(db, worker.userId),
   ]);
 
   // PII minimization: first name only; no email, phone, photo, lat/lng, address beyond city.
@@ -156,6 +160,13 @@ export default async function PublicKaamCardPage({
       joinedAt: worker.createdAt.toISOString(),
       idVerifiedAt: firstIdDoc?.reviewedAt?.toISOString() ?? null,
       skillVerifiedAt: firstSkillDoc?.reviewedAt?.toISOString() ?? null,
+    },
+    // Round 11: public stats (counts only — no PII, no employer names).
+    stats: {
+      applicationsSent: applicationCount,
+      hires: hireCount,
+      ratingAvg: ratingSummary.avg,
+      ratingCount: ratingSummary.count,
     },
   };
 

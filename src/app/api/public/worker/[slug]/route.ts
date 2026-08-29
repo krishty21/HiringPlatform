@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { HTTPError, errorResponse } from "@/lib/authz";
+import { getWorkerRatingSummary } from "@/lib/ratings";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       }),
     ]);
 
+    // Round 11: public stats — counts only (no PII, no employer names).
+    // Applications sent, hires, avg rating (if any). All values already public
+    // by aggregation; nothing here can identify a specific employer or co-worker.
+    const [applicationCount, hireCount, ratingSummary] = await Promise.all([
+      db.application.count({ where: { workerId: worker.id } }),
+      db.application.count({ where: { workerId: worker.id, status: "hired" } }),
+      getWorkerRatingSummary(db, worker.userId),
+    ]);
+
     // PII minimization — PUB-01: only first name; no last name, email, phone, photo, lat/lng.
     const firstName = worker.fullName.split(/\s+/)[0] || worker.fullName;
 
@@ -74,6 +84,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
           joinedAt: worker.createdAt.toISOString(),
           idVerifiedAt: firstIdDoc?.reviewedAt?.toISOString() ?? null,
           skillVerifiedAt: firstSkillDoc?.reviewedAt?.toISOString() ?? null,
+        },
+        // Round 11: public stats (counts only, no PII).
+        stats: {
+          applicationsSent: applicationCount,
+          hires: hireCount,
+          ratingAvg: ratingSummary.avg,
+          ratingCount: ratingSummary.count,
         },
         // NOTE: deliberately NOT included: fullName, lastName, email, phone, photoUrl,
         // lat, lng, languages, bio, profileViews, maxRadiusKm, passportPublic, userId.
