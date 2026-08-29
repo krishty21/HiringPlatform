@@ -30,42 +30,60 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
 
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-local-*
+
+# AI / editor config
 .claude
 .z-ai-config
+local-*
+
+# Logs
 *.log
 dev.log
 dev.out.log
-test
-prompt
-
 server.log
-# Skills directory
-/skills/
-# Database files
-/db/*.db
-/db/*.db-journal
 
-# Archives
+# Dev helper scripts (local only)
+rewrite_full.ps1
+Caddyfile
+bun.lock
+
+# Local database
+/db/
+
+# Archives / uploads (local work files)
 *.tar
+download/
+upload/
+tool-results/
+prompt
+test
 
-# Unrequired project files
-*.md
+# AI agent context folders (local only)
 .zscripts/
 agent-ctx/
 examples/
-docs/screenshots/
-download/
-tool-results/
-upload/
 
+# Internal worklog/build notes (not for public repo)
+BUILD_PLAN.md
+DECISIONS.md
+EXPLANATION_LOG.md
+ROADMAP.md
+STATUS.md
+worklog.md
+
+# Storage seed files
+/storage/seed-demo-*.pdf
+
+# Public generated icons
+public/apple-touch-icon.png
+public/icon-192.png
+public/icon-512.png

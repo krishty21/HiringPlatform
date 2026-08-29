@@ -12,7 +12,7 @@ export default function NotFound() {
       <header className="px-4 sm:px-6 py-4">
         <Link href="/" className="inline-flex items-center gap-2 font-bold text-primary" aria-label={t("brand")}>
           <span className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center text-base shadow-sm">
-            श्र
+            JH
           </span>
           <span className="text-xl tracking-tight">{t("brand")}</span>
         </Link>
@@ -81,7 +81,7 @@ export default function NotFound() {
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground mt-2"
           >
             <Compass className="size-3.5" aria-hidden />
-            ShramSetu · {t("tagline")}
+            Jobhunt · {t("tagline")}
           </motion.p>
         </div>
       </main>

@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,23 +27,23 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "ShramSetu",
+    title: "Jobhunt",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },
-  title: "ShramSetu — A bridge between India's skilled hands and honest work",
+  title: "Jobhunt — A bridge between India's skilled hands and honest work",
   description: "Voice-first Kaam Profile, Skill Passport, explainable SmartMatch. Trust-first blue-collar hiring for India.",
-  keywords: ["ShramSetu", "blue-collar", "hiring", "India", "Skill Passport", "voice", "trust", "verified"],
-  authors: [{ name: "ShramSetu Team" }],
+  keywords: ["Jobhunt", "blue-collar", "hiring", "India", "Skill Passport", "voice", "trust", "verified"],
+  authors: [{ name: "Jobhunt Team" }],
   openGraph: {
-    title: "ShramSetu",
+    title: "Jobhunt",
     description: "A bridge between India's skilled hands and honest work.",
-    siteName: "ShramSetu",
+    siteName: "Jobhunt",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ShramSetu",
+    title: "Jobhunt",
     description: "Trust-first blue-collar hiring for India.",
   },
 };

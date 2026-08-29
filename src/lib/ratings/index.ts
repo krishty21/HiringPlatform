@@ -1,4 +1,4 @@
-// ShramSetu — Worker↔Employer rating flow (ROADMAP R16).
+﻿// Jobhunt — Worker↔Employer rating flow (ROADMAP R16).
 // Self-contained module: ratings zod schemas + summary helpers + eligibility.
 // FROZEN contracts respected:
 //   - prisma/schema.prisma Rating model is unchanged (already had all fields)

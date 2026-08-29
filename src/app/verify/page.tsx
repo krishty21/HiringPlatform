@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 // /verify — credential infrastructure (Master Prompt §33).
 // Workers: upload government ID + skill certificate (+ skill picker) +
 //           list of submitted docs with statuses (Identity Verified / Skills
@@ -220,7 +220,7 @@ export default function VerifyPage() {
                       <SelectTrigger className="min-h-11">
                         <SelectValue placeholder={t("search")} />
                       </SelectTrigger>
-                      <SelectContent className="max-h-72 shramsetu-scroll">
+                      <SelectContent className="max-h-72 Jobhunt-scroll">
                         {skills.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             <span className="inline-flex items-center gap-1.5">

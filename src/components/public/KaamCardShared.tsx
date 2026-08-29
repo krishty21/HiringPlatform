@@ -61,7 +61,7 @@ export function KaamCardHeader() {
         aria-label={t("brand")}
       >
         <span className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center text-base">
-          श्र
+          JH
         </span>
         <span className="text-xl">{t("brand")}</span>
       </Link>

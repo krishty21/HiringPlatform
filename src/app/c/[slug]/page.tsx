@@ -37,21 +37,21 @@ export async function generateMetadata({
   });
   if (!worker || !worker.passportPublic) {
     return {
-      title: "Kaam Card · ShramSetu",
-      description: "ShramSetu — A bridge between India's skilled hands and honest work.",
+      title: "Kaam Card · Jobhunt",
+      description: "Jobhunt — A bridge between India's skilled hands and honest work.",
     };
   }
   const firstName = worker.fullName.split(/\s+/)[0];
   const tradeName = worker.trade?.nameEn ?? "Skilled worker";
-  const title = `${firstName} — ${tradeName} | ShramSetu Kaam Card`;
-  const description = `${firstName} is a ${tradeName.toLowerCase()} in ${worker.city}. Verified through ShramSetu's Skill Passport.`;
+  const title = `${firstName} — ${tradeName} | Jobhunt Kaam Card`;
+  const description = `${firstName} is a ${tradeName.toLowerCase()} in ${worker.city}. Verified through Jobhunt's Skill Passport.`;
   return {
     title,
     description,
     openGraph: {
       title,
       description,
-      siteName: "ShramSetu",
+      siteName: "Jobhunt",
       type: "profile",
       images: [
         {

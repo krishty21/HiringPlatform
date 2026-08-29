@@ -1,4 +1,4 @@
-// ShramSetu — frozen zod schemas (shared client/server)
+﻿// Jobhunt — frozen zod schemas (shared client/server)
 // Per directive P0.4: nothing in the repo hand-rolls these shapes.
 import { z } from "zod";
 

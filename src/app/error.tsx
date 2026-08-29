@@ -16,7 +16,7 @@ export default function GlobalError({
 
   useEffect(() => {
     // Log to the console for dev visibility (production would ship to Sentry).
-    console.error("[ShramSetu] route error:", error);
+    console.error("[Jobhunt] route error:", error);
   }, [error]);
 
   return (
@@ -24,7 +24,7 @@ export default function GlobalError({
       <header className="px-4 sm:px-6 py-4">
         <Link href="/" className="inline-flex items-center gap-2 font-bold text-primary" aria-label={t("brand")}>
           <span className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center text-base shadow-sm">
-            श्र
+            JH
           </span>
           <span className="text-xl tracking-tight">{t("brand")}</span>
         </Link>

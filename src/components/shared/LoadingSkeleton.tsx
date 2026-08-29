@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 // Round 12 fix: `use client` added — round-11 redesign introduced `useLanguage()`
 // (a client-only hook) but server components (e.g. src/app/loading.tsx) render
 // this too, which crashed SSR with "Attempted to call useLanguage() from the
@@ -21,10 +21,10 @@ function ShimmerSheen({ delay = 0 }: { delay?: number }) {
         background:
           "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)",
         backgroundSize: "200% 100%",
-        animation: `shramsetu-sheen 1.6s ease-in-out ${delay}ms infinite`,
+        animation: `Jobhunt-sheen 1.6s ease-in-out ${delay}ms infinite`,
       }}
     >
-      <style>{`@keyframes shramsetu-sheen { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+      <style>{`@keyframes Jobhunt-sheen { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
     </span>
   );
 }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { en, type Dictionary, type DictKey } from "./en";
 import { hi } from "./hi";
@@ -6,7 +6,7 @@ import { te } from "./te";
 
 export type LanguageCode = "en" | "hi" | "te";
 const DICTS: Record<LanguageCode, Dictionary> = { en, hi, te };
-const STORAGE_KEY = "shramsetu.lang";
+const STORAGE_KEY = "Jobhunt.lang";
 
 type Ctx = {
   lang: LanguageCode;

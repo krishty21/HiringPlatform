@@ -3,7 +3,7 @@
 import type { Dictionary } from "./en";
 
 export const hi: Dictionary = {
-  brand: "श्रमसेतु",
+  brand: "Jobhunt",
   tagline: "भारत के कुशल हाथों और ईमानदार काम के बीच एक पुल",
   aiDemoBadge: "एआई: डेमो मोड",
 
@@ -50,7 +50,7 @@ export const hi: Dictionary = {
   // ---- landing ---- (Master Prompt §36: human, grounded copy)
   landingHeroEyebrow: "भरोसे-पहले कार्यबल नेटवर्क",
   landingHeroTitle: "किसी मज़दूर के कौशल की खोज, सत्यापन और भरोसा होना चाहिए।",
-  landingHeroSubtitle: "श्रमसेतु भारत के कुशल कार्यबल के लिए एक डिजिटल पहचान और नियुक्ति नेटवर्क है। एक भरोसेमंद काम पहचान बनाइए, सत्यापित हों, उपयुक्त काम पाएँ।",
+  landingHeroSubtitle: "Jobhunt भारत के कुशल कार्यबल के लिए एक डिजिटल पहचान और नियुक्ति नेटवर्क है। एक भरोसेमंद काम पहचान बनाइए, सत्यापित हों, उपयुक्त काम पाएँ।",
   landingCtaWorker: "मुझे काम चाहिए",
   landingCtaEmployer: "मैं मज़दूर रख रहा हूँ",
   landingCtaWorkerSublabel: "३ मिनट में अपना वर्कफ़ोर्स पासपोर्ट बनाएँ।",
@@ -88,7 +88,7 @@ export const hi: Dictionary = {
   landingS4Title: "भरोसा एक प्रणाली है, बैज नहीं।",
   landingS4Body: "हर मज़दूर एक वर्कफ़ोर्स पासपोर्ट रखता है जिसमें भरोसे की तीन परतें होती हैं — पहचान, कौशल और विश्वसनीयता। हर नियोक्ता भी सत्यापित होता है। आप हमेशा जानते हैं कि प्रोफ़ाइल के पीछे क्या है।",
   landingS4Identity: "पहचान",
-  landingS4IdentityBody: "श्रमसेतु द्वारा सरकारी पहचान सत्यापित।",
+  landingS4IdentityBody: "Jobhunt द्वारा सरकारी पहचान सत्यापित।",
   landingS4Skills: "कौशल",
   landingS4SkillsBody: "व्यवसाय प्रमाणपत्र समीक्षित और पुष्ट।",
   landingS4Reliability: "विश्वसनीयता",
@@ -114,7 +114,7 @@ export const hi: Dictionary = {
   landingS6StageHired: "हायर्ड",
   landingS7Eyebrow: "यह क्यों मायने रखता है",
   landingS7Title: "भरोसा, भारत को ज़रूरी स्तर पर।",
-  landingS7Body: "भारत में करोड़ों कुशल मज़दूर हैं जिनके काम ने देश को टिकाए रखा है। श्रमसेतु इसी के लिए बना है कि उनका कौशल खोज योग्य हो, उनकी पहचान भरोसेमंद हो, और उनकी अगली नौकरी एक टैप दूर हो।",
+  landingS7Body: "भारत में करोड़ों कुशल मज़दूर हैं जिनके काम ने देश को टिकाए रखा है। Jobhunt इसी के लिए बना है कि उनका कौशल खोज योग्य हो, उनकी पहचान भरोसेमंद हो, और उनकी अगली नौकरी एक टैप दूर हो।",
   landingPillar1Title: "वर्कफ़ोर्स पासपोर्ट",
   landingPillar1Body: "तेलुगू, हिंदी या अंग्रेज़ी में अपने काम के बारे में बताएँ। हम इसे संरचित करते हैं एक भरोसेमंद प्रोफ़ाइल में जिसे आप नियंत्रित करते हैं। ३ मिनट, बिना टाइप।",
   landingPillar2Title: "सत्यापित, दावा नहीं",
@@ -135,7 +135,7 @@ export const hi: Dictionary = {
   landingFinalCtaWorker: "मैं मज़दूर हूँ",
   landingFinalCtaEmployer: "मैं नियुक्ति कर रहा हूँ",
 
-  loginTitle: "श्रमसेतु में साइन इन करें",
+  loginTitle: "Jobhunt में साइन इन करें",
   loginEmail: "ईमेल",
   loginMagicLink: "मैजिक लिंक भेजें",
   loginOr: "या",
@@ -188,7 +188,7 @@ export const hi: Dictionary = {
 
   // ---- job board (/jobs) — round 6 addition ----
   boardTitle: "सभी नौकरियाँ देखें",
-  boardSubtitle: "श्रमसेतु की हर खुली नौकरी — खोजें, छानें, क्रम लगाएँ।",
+  boardSubtitle: "Jobhunt की हर खुली नौकरी — खोजें, छानें, क्रम लगाएँ।",
   boardSearchPlaceholder: "शीर्षक, कंपनी या कौशल खोजें…",
   boardSortLabel: "क्रम",
   boardSortMatch: "सर्वश्रेष्ठ मैच",
@@ -364,7 +364,7 @@ export const hi: Dictionary = {
   adminExtract: "निकाले गए फ़ील्ड",
 
   kaamCardTitle: "काम कार्ड",
-  kaamCardContact: "श्रमसेतु से संपर्क करें",
+  kaamCardContact: "Jobhunt से संपर्क करें",
   kaamCardDisabled: "इस मज़दूर ने सार्वजनिक कार्ड बंद कर रखा है।",
   kaamCardLoginToContact: "संपर्क के लिए लॉगिन करें।",
   kaamCardTrade: "ट्रेड",
@@ -378,11 +378,11 @@ export const hi: Dictionary = {
   kaamCardVerifiedStamp: "सत्यापित",
   kaamCardShareWhatsApp: "व्हाट्सऐप पर शेयर करें",
   kaamCardNotFound: "मज़दूर नहीं मिला।",
-  kaamCardBackToHome: "श्रमसेतु पर वापस",
+  kaamCardBackToHome: "Jobhunt पर वापस",
   kaamCardPublicBadge: "सार्वजनिक काम कार्ड",
-  kaamCardContactHelp: "संपर्क विवरण केवल श्रमसेतु के माध्यम से साझा किए जाते हैं — आपका फ़ोन नंबर और ईमेल कभी सार्वजनिक रूप से नहीं दिखाए जाते।",
+  kaamCardContactHelp: "संपर्क विवरण केवल Jobhunt के माध्यम से साझा किए जाते हैं — आपका फ़ोन नंबर और ईमेल कभी सार्वजनिक रूप से नहीं दिखाए जाते।",
   kaamCardNoSkills: "कौशल अभी सूचीबद्ध नहीं हैं।",
-  kaamCardPoweredBy: "श्रमसेतु द्वारा संचालित",
+  kaamCardPoweredBy: "Jobhunt द्वारा संचालित",
 
   notifTitle: "सूचनाएँ",
   notifEmpty: "कोई सूचना नहीं।",
@@ -419,7 +419,7 @@ export const hi: Dictionary = {
   ratingPromptWorkerTitle: "अपने नियोक्ता को रेट करें",
   ratingPromptWorkerBody: "{name} के साथ आपका अनुभव कैसा रहा? आपकी रेटिंग अन्य श्रमिकों को तय करने में मदद करती है।",
   ratingPromptEmployerTitle: "इस श्रमिक को रेट करें",
-  ratingPromptEmployerBody: "{name} ने कैसा प्रदर्शन किया? आपकी रेटिंग श्रमसेतु पर भरोसा बनाती है।",
+  ratingPromptEmployerBody: "{name} ने कैसा प्रदर्शन किया? आपकी रेटिंग Jobhunt पर भरोसा बनाती है।",
   ratingPromptCooldown: "{hours} घंटे में उपलब्ध (नियुक्ति के बाद का कूलडाउन)।",
   ratingPromptJobContext: "इसके लिए: {title}",
   ratingWorkerTitle: "{name} को रेट करें",
@@ -498,9 +498,9 @@ export const hi: Dictionary = {
   trustTimelineSkillVerified: "स्किल वेरिफाइड",
   trustTimelineSkillVerifiedDesc: "हमारी टीम ने आपका स्किल प्रमाणपत्र स्वीकृत किया।",
   trustTimelineTopPro: "टॉप प्रो पहुँचे",
-  trustTimelineTopProDesc: "आप श्रमसेतु पर सबसे ऊँचे विश्वास स्तर पर पहुँचे।",
+  trustTimelineTopProDesc: "आप Jobhunt पर सबसे ऊँचे विश्वास स्तर पर पहुँचे।",
   trustTimelineStart: "प्रोफ़ाइल बनी",
-  trustTimelineStartDesc: "आप श्रमसेतु में शामिल हुए। स्वागत है!",
+  trustTimelineStartDesc: "आप Jobhunt में शामिल हुए। स्वागत है!",
   trustTimelineUpnextId: "अपनी आईडी वेरिफाई करें",
   trustTimelineUpnextIdDesc: "“आईडी वेरिफाइड” स्तर के लिए वेरिफाई पेज पर सरकारी आईडी अपलोड करें।",
   trustTimelineUpnextSkill: "कोई स्किल वेरिफाई करें",
@@ -549,7 +549,7 @@ export const hi: Dictionary = {
   allClear: "सब ठीक है",
   boardSortNearest: "सबसे नज़दीक पहले",
   kaamTrustTitle: "विश्वास यात्रा",
-  kaamTrustJoined: "ShramSetu से जुड़े",
+  kaamTrustJoined: "Jobhunt से जुड़े",
   kaamTrustIdVerified: "आईडी सत्यापित",
   kaamTrustSkillVerified: "कौशल सत्यापित",
   kaamTrustTopPro: "टॉप प्रो",
@@ -582,11 +582,11 @@ export const hi: Dictionary = {
   jobSimilarEmpty: "अभी कोई समान काम खुला नहीं है",
   jobSimilarView: "काम देखें",
   jobSimilarMatchLabel: "{score}% मैच",
-  kaamCardStatsTitle: "श्रमसेतु पर",
+  kaamCardStatsTitle: "Jobhunt पर",
   kaamCardStatsApplications: "आवेदन",
   kaamCardStatsApplicationsDesc: "प्लेटफ़ॉर्म पर भेजे",
   kaamCardStatsHires: "हायर",
-  kaamCardStatsHiresDesc: "श्रमसेतु के माध्यम से पूरे",
+  kaamCardStatsHiresDesc: "Jobhunt के माध्यम से पूरे",
   kaamCardStatsRating: "औसत रेटिंग",
   kaamCardStatsNotRated: "अभी तक कोई रेटिंग नहीं",
   kaamCardStatsRatingDesc: "{count} नियोक्ता से",
@@ -698,7 +698,7 @@ export const hi: Dictionary = {
   verifyUploadIdHint: "कोई सरकारी फ़ोटो पहचान पत्र अपलोड करें (आधार, पैन, वोटर, ड्राइविंग लाइसेंस)। हम आईडी नंबर कभी संग्रहीत नहीं करते।",
   verifyUploadCertHint: "कोई ITI/ट्रेड प्रमाणपत्र या कौशल पत्र अपलोड करें। PDF/JPG, अधिकतम 5 MB।",
   verifyDocsListLabel: "जमा किए गए दस्तावेज़",
-  kaamCardVerifiedBy: "श्रमसेतु द्वारा सत्यापित",
+  kaamCardVerifiedBy: "Jobhunt द्वारा सत्यापित",
 
   // ---- r14 employer + admin redesign: employer dashboard / candidates dossier
   // / pipeline (operational, ATS, accessible) / job post / admin queue ----

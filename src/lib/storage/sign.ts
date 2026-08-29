@@ -1,4 +1,4 @@
-// Storage signed-URL helper (private bucket simulation in /storage).
+﻿// Storage signed-URL helper (private bucket simulation in /storage).
 // HMAC-signed short-lived token → /api/storage/file?token=...
 import { createHash, createHmac } from "crypto";
 import { promises as fs } from "fs";
@@ -6,7 +6,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 
 const STORAGE_DIR = path.join(process.cwd(), "storage");
-const SECRET = process.env.STORAGE_HMAC_SECRET ?? "shramsetu-dev-secret-please-rotate";
+const SECRET = process.env.STORAGE_HMAC_SECRET ?? "Jobhunt-dev-secret-please-rotate";
 
 export function getStorageDir() { return STORAGE_DIR; }
 

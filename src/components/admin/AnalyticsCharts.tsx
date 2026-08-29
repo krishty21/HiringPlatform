@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 // Admin analytics section — visual charts fed by GET /api/admin/analytics.
 // Master Prompt §32/§33: avoid decorative analytics; restraint over glow. Keep charts
 // only where a chart communicates information better than a number/table/bar.
@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Gauge } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
-// Brand palette — aligned with the ShramSetu design tokens (no rainbow).
+// Brand palette — aligned with the Jobhunt design tokens (no rainbow).
 const PRIMARY = "#12355B";      // --primary navy
 const ACCENT = "#D97732";        // --accent orange
 const INFO = "#1E4F8B";          // --info navy variant

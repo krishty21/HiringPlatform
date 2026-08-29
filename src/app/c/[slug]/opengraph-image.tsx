@@ -1,16 +1,16 @@
 // /c/[slug]/opengraph-image.tsx — OG image for WhatsApp link preview (PUB-02).
 // Renders a 1200x630 PNG via next/og ImageResponse with:
-//   - ShramSetu brand logo ("श्र")
+//   - Jobhunt brand logo ("JH")
 //   - Worker first name + trade
 //   - "Skill Verified" stamp if applicable
 //   - Wage range + city
 //   - Brand colors (deep navy + saffron)
-// If worker disabled or missing, renders a generic ShramSetu brand card.
+// If worker disabled or missing, renders a generic Jobhunt brand card.
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
-export const alt = "ShramSetu Kaam Card";
+export const alt = "Jobhunt Kaam Card";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const dynamic = "force-dynamic";
@@ -73,9 +73,9 @@ export default async function PublicKaamCardOG({
                 fontWeight: 700,
               }}
             >
-              श्र
+              JH
             </div>
-            <div style={{ fontSize: 64, fontWeight: 700 }}>ShramSetu</div>
+            <div style={{ fontSize: 64, fontWeight: 700 }}>Jobhunt</div>
           </div>
           <div style={{ fontSize: 36, color: "#f3d9a0" }}>
             Honest work finds the right hands.
@@ -143,7 +143,7 @@ export default async function PublicKaamCardOG({
               fontWeight: 700,
             }}
           >
-            श्र
+            JH
           </div>
           <div
             style={{
@@ -153,7 +153,7 @@ export default async function PublicKaamCardOG({
             }}
           >
             <div style={{ fontSize: 44, fontWeight: 700, lineHeight: 1.1 }}>
-              ShramSetu
+              Jobhunt
             </div>
             <div style={{ fontSize: 18, color: "#f3d9a0" }}>Kaam Card</div>
           </div>
@@ -296,7 +296,7 @@ export default async function PublicKaamCardOG({
             fontSize: 22,
           }}
         >
-          <span>shramsetu.app/c/{worker.id.slice(-8)}</span>
+          <span>Jobhunt.app/c/{worker.id.slice(-8)}</span>
           <span style={{ fontWeight: 600, color: "#1a2750" }}>
             Honest work. Right hands. Built for India.
           </span>

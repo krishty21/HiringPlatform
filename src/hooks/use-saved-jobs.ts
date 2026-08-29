@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import { useCallback, useSyncExternalStore } from "react";
 
-const STORAGE_KEY = "shramsetu.savedJobs";
+const STORAGE_KEY = "Jobhunt.savedJobs";
 
 /** Stable empty set returned on the server / during hydration. */
 const EMPTY_IDS: Set<string> = new Set<string>();

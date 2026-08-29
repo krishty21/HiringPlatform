@@ -1,4 +1,4 @@
-// ShramSetu middleware — role-based route guards (AUTH-03)
+﻿// Jobhunt middleware — role-based route guards (AUTH-03)
 // Per directive: worker cannot open /employer/*; redirect to own home; unauth → /login
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";

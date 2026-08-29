@@ -84,8 +84,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <Link href={role === "worker" ? "/home" : role === "employer" ? "/employer/dashboard" : "/admin"} className="flex items-center gap-2 font-bold text-primary">
-            <span className="size-7 rounded-md bg-primary text-primary-foreground grid place-items-center text-sm">श्र</span>
-            <span className="text-base hidden sm:inline">ShramSetu</span>
+            <span className="size-7 rounded-md bg-primary text-primary-foreground grid place-items-center text-sm">JH</span>
+            <span className="text-base hidden sm:inline">Jobhunt</span>
           </Link>
           <div className="flex items-center gap-2">
             {!showBottomBar && (
@@ -159,8 +159,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SheetContent side="left" className="w-72 p-0 flex flex-col">
             <SheetHeader className="px-4 py-4 border-b border-border bg-secondary/30">
               <SheetTitle className="text-base flex items-center gap-2 text-primary">
-                <span className="size-7 rounded-md bg-primary text-primary-foreground grid place-items-center text-sm">श्र</span>
-                ShramSetu
+                <span className="size-7 rounded-md bg-primary text-primary-foreground grid place-items-center text-sm">JH</span>
+                Jobhunt
               </SheetTitle>
               <SheetDescription className="sr-only">{t("navMenuAria")}</SheetDescription>
             </SheetHeader>

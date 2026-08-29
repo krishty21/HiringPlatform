@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useMemo } from "react";
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor, useSensor, useSensors,
@@ -227,7 +227,7 @@ export function PipelineKanban({
       </div>
 
       {/* Horizontal scroll on mobile; 6-column grid on desktop */}
-      <div className="flex gap-3 overflow-x-auto pb-4 shramsetu-scroll snap-x">
+      <div className="flex gap-3 overflow-x-auto pb-4 Jobhunt-scroll snap-x">
         {STATUSES.map(status => (
           <PipelineColumn
             key={status}

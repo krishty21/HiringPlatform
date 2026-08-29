@@ -56,7 +56,7 @@
 }
 
 :root {
-  /* ── ShramSetu Design System (per Master Prompt §10–§15) ──────────────
+  /* ── Jobhunt Design System (per Master Prompt §10–§15) ──────────────
    * Navy + ivory + industrial orange + professional green.
    * Restrained radius, restrained shadows, borders over glows.
    */
@@ -365,7 +365,7 @@
   border-radius: 9999px;
 }
 .passport-seal::after {
-  content: "श्र";
+  content: "JH";
   position: absolute;
   top: 11px; right: 14px;
   font-size: 13px;
@@ -564,29 +564,29 @@
 }
 
 /* ── Calm fade-in (used for status transitions / match-score reveal) ──── */
-@keyframes shramsetu-fade-in {
+@keyframes Jobhunt-fade-in {
   from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in { animation: shramsetu-fade-in 0.2s ease-out; }
+.animate-fade-in { animation: Jobhunt-fade-in 0.2s ease-out; }
 
 /* match-score reveal — number + bar, no sparkle */
-@keyframes shramsetu-bar-reveal {
+@keyframes Jobhunt-bar-reveal {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
 .animate-bar-reveal {
   transform-origin: left center;
-  animation: shramsetu-bar-reveal 0.4s ease-out;
+  animation: Jobhunt-bar-reveal 0.4s ease-out;
 }
 
 /* custom scrollbar for long lists (kept, restrained) */
-.shramsetu-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
-.shramsetu-scroll::-webkit-scrollbar-thumb {
+.Jobhunt-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.Jobhunt-scroll::-webkit-scrollbar-thumb {
   background: color-mix(in oklch, var(--ink-subtle) 30%, transparent);
   border-radius: 4px;
 }
-.shramsetu-scroll::-webkit-scrollbar-track { background: transparent; }
+.Jobhunt-scroll::-webkit-scrollbar-track { background: transparent; }
 
 /* utility: clamp long lines safely on mobile */
 .text-balance { text-wrap: balance; }

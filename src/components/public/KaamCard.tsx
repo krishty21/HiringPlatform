@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import Link from "next/link";
 import { useLanguage, type LanguageCode } from "@/lib/i18n/LanguageProvider";
 import { TrustTierBadge } from "@/components/shared/TrustTierBadge";
@@ -260,10 +260,10 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
 
   const isVerified = TIER_INDEX[worker.trustTier] >= TIER_INDEX.skill_verified;
   const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://shramsetu.app";
+    typeof window !== "undefined" ? window.location.origin : "https://Jobhunt.app";
 
   const shareUrl = `${baseUrl}/c/${worker.slug}`;
-  const shareText = `${worker.firstName} — ${tradeName} | ShramSetu\n${shareUrl}`;
+  const shareText = `${worker.firstName} — ${tradeName} | Jobhunt\n${shareUrl}`;
 
   const onWhatsAppShare = () => {
     const url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
@@ -419,7 +419,7 @@ export function KaamCard({ worker }: { worker: PublicWorkerData }) {
           {/* Public worker stats */}
           {worker.stats && <KaamStats stats={worker.stats} />}
 
-          {/* "Verified by ShramSetu" — credential infrastructure framing */}
+          {/* "Verified by Jobhunt" — credential infrastructure framing */}
           <section className="flex items-center gap-2 text-meta text-ink-muted border-t border-border pt-4">
             <ShieldCheck className="size-4 text-positive shrink-0" aria-hidden />
             <span>{t("kaamCardVerifiedBy")}</span>

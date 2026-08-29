@@ -1,4 +1,4 @@
-// Telugu dictionary — covers every key in en.ts. (Mandatory per SRD: Telugu mandatory.)
+﻿// Telugu dictionary — covers every key in en.ts. (Mandatory per SRD: Telugu mandatory.)
 import type { Dictionary } from "./en";
 
 export const te: Dictionary = {
@@ -548,7 +548,7 @@ export const te: Dictionary = {
   allClear: "అంతా సరే",
   boardSortNearest: "మొదట సమీపంలోనివి",
   kaamTrustTitle: "నమ్మక ప్రయాణం",
-  kaamTrustJoined: "ShramSetuలో చేరారు",
+  kaamTrustJoined: "Jobhuntలో చేరారు",
   kaamTrustIdVerified: "ID ధృవీకృతం",
   kaamTrustSkillVerified: "నైపుణ్యం ధృవీకృతం",
   kaamTrustTopPro: "టాప్ ప్రో",

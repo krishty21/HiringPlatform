@@ -16,7 +16,7 @@ export function PublicFooter() {
             aria-hidden
             className="size-7 grid place-items-center rounded-md bg-primary text-primary-foreground text-sm"
           >
-            श्र
+            JH
           </span>
           <span className="text-base">{t("brand")}</span>
         </Link>

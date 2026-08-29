@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 // /employer/jobs — clean table with close/reopen, status badges, applicant counts.
 // Master Prompt §16/§28: avoid card-with-card-with-card; use semantic tables.
 // Preserved: two-step arm→confirm UX for close (mirrors worker withdraw).
@@ -173,7 +173,7 @@ export default function MyJobsPage() {
 
         {jobs && jobs.length > 0 && (
           <Card className="surface-raised shadow-raise overflow-hidden">
-            <div className="overflow-x-auto shramsetu-scroll">
+            <div className="overflow-x-auto Jobhunt-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>

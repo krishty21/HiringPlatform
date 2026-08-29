@@ -1,8 +1,8 @@
-// Canonical English dictionary — the source of truth for every UI string.
+﻿// Canonical English dictionary — the source of truth for every UI string.
 // Per directive P0.9, hi.ts and te.ts cover the same key set.
 export const en = {
   // ---- brand ----
-  brand: "ShramSetu",
+  brand: "Jobhunt",
   tagline: "A bridge between India's skilled hands and honest work",
   aiDemoBadge: "AI: demo mode",
 
@@ -51,7 +51,7 @@ export const en = {
   // ---- landing ---- (Master Prompt §36: human, grounded copy)
   landingHeroEyebrow: "Trust-first workforce network",
   landingHeroTitle: "A worker's skill should be discoverable, verifiable, and trusted.",
-  landingHeroSubtitle: "ShramSetu is a digital workforce identity and hiring network for India's skilled workers. Build a credible work identity, get verified, find suitable work.",
+  landingHeroSubtitle: "Jobhunt is a digital workforce identity and hiring network for India's skilled workers. Build a credible work identity, get verified, find suitable work.",
   landingCtaWorker: "I'm looking for work",
   landingCtaEmployer: "I'm hiring workers",
   landingCtaWorkerSublabel: "Build your Workforce Passport in three minutes.",
@@ -89,7 +89,7 @@ export const en = {
   landingS4Title: "Trust is a system, not a badge.",
   landingS4Body: "Every worker carries a Workforce Passport with three layers of credibility — identity, skills, and reliability. Every employer is verified too. You always know what is behind a profile.",
   landingS4Identity: "Identity",
-  landingS4IdentityBody: "Government ID verified by ShramSetu.",
+  landingS4IdentityBody: "Government ID verified by Jobhunt.",
   landingS4Skills: "Skills",
   landingS4SkillsBody: "Trade certificates reviewed and confirmed.",
   landingS4Reliability: "Reliability",
@@ -115,7 +115,7 @@ export const en = {
   landingS6StageHired: "Hired",
   landingS7Eyebrow: "Why this matters",
   landingS7Title: "Trust, at the scale India needs.",
-  landingS7Body: "India has hundreds of millions of skilled workers whose work holds up the country. ShramSetu is built so their skill is discoverable, their identity is credible, and their next job is one tap away.",
+  landingS7Body: "India has hundreds of millions of skilled workers whose work holds up the country. Jobhunt is built so their skill is discoverable, their identity is credible, and their next job is one tap away.",
   landingPillar1Title: "Workforce Passport",
   landingPillar1Body: "Tell us about your work in Telugu, Hindi, or English. We structure it into a credible profile you control. Three minutes, no typing.",
   landingPillar2Title: "Verified, not claimed",
@@ -137,7 +137,7 @@ export const en = {
   landingFinalCtaEmployer: "I'm hiring",
 
   // ---- auth ----
-  loginTitle: "Sign in to ShramSetu",
+  loginTitle: "Sign in to Jobhunt",
   loginEmail: "Email",
   loginMagicLink: "Send magic link",
   loginOr: "or",
@@ -192,7 +192,7 @@ export const en = {
 
   // ---- job board (/jobs) — round 6 addition ----
   boardTitle: "Browse all jobs",
-  boardSubtitle: "Every open job across ShramSetu — search, filter, sort.",
+  boardSubtitle: "Every open job across Jobhunt — search, filter, sort.",
   boardSearchPlaceholder: "Search title, company or skill…",
   boardSortLabel: "Sort",
   boardSortMatch: "Best match",
@@ -380,7 +380,7 @@ export const en = {
 
   // ---- public kaam card ----
   kaamCardTitle: "Kaam Card",
-  kaamCardContact: "Contact via ShramSetu",
+  kaamCardContact: "Contact via Jobhunt",
   kaamCardDisabled: "This worker has disabled their public card.",
   kaamCardLoginToContact: "Log in to contact this worker.",
   kaamCardTrade: "Trade",
@@ -394,11 +394,11 @@ export const en = {
   kaamCardVerifiedStamp: "Verified",
   kaamCardShareWhatsApp: "Share on WhatsApp",
   kaamCardNotFound: "Worker not found.",
-  kaamCardBackToHome: "Back to ShramSetu",
+  kaamCardBackToHome: "Back to Jobhunt",
   kaamCardPublicBadge: "Public Kaam Card",
-  kaamCardContactHelp: "Contact details are shared only through ShramSetu — your phone number and email are never shown publicly.",
+  kaamCardContactHelp: "Contact details are shared only through Jobhunt — your phone number and email are never shown publicly.",
   kaamCardNoSkills: "Skills not listed yet.",
-  kaamCardPoweredBy: "Powered by ShramSetu",
+  kaamCardPoweredBy: "Powered by Jobhunt",
 
   // ---- notifications ----
   notifTitle: "Notifications",
@@ -438,7 +438,7 @@ export const en = {
   ratingPromptWorkerTitle: "Rate your employer",
   ratingPromptWorkerBody: "How was your experience with {name}? Your rating helps other workers decide.",
   ratingPromptEmployerTitle: "Rate this worker",
-  ratingPromptEmployerBody: "How did {name} perform? Your rating builds trust on ShramSetu.",
+  ratingPromptEmployerBody: "How did {name} perform? Your rating builds trust on Jobhunt.",
   ratingPromptCooldown: "Available in {hours}h (post-hire cooldown).",
   ratingPromptJobContext: "For: {title}",
   ratingWorkerTitle: "Rate {name}",
@@ -518,9 +518,9 @@ export const en = {
   trustTimelineSkillVerified: "Skill verified",
   trustTimelineSkillVerifiedDesc: "Your skill certificate was approved by our team.",
   trustTimelineTopPro: "Top Pro reached",
-  trustTimelineTopProDesc: "You’ve reached the highest trust tier on ShramSetu.",
+  trustTimelineTopProDesc: "You’ve reached the highest trust tier on Jobhunt.",
   trustTimelineStart: "Profile created",
-  trustTimelineStartDesc: "You joined ShramSetu. Welcome aboard!",
+  trustTimelineStartDesc: "You joined Jobhunt. Welcome aboard!",
   trustTimelineUpnextId: "Verify your ID",
   trustTimelineUpnextIdDesc: "Upload a government ID on the Verify page to reach the “ID Verified” tier.",
   trustTimelineUpnextSkill: "Verify a skill",
@@ -569,7 +569,7 @@ export const en = {
   allClear: "All clear",
   boardSortNearest: "Nearest first",
   kaamTrustTitle: "Trust journey",
-  kaamTrustJoined: "Joined ShramSetu",
+  kaamTrustJoined: "Joined Jobhunt",
   kaamTrustIdVerified: "ID verified",
   kaamTrustSkillVerified: "Skill verified",
   kaamTrustTopPro: "Top Pro",
@@ -602,11 +602,11 @@ export const en = {
   jobSimilarEmpty: "No similar jobs open right now",
   jobSimilarView: "View job",
   jobSimilarMatchLabel: "{score}% match",
-  kaamCardStatsTitle: "On ShramSetu",
+  kaamCardStatsTitle: "On Jobhunt",
   kaamCardStatsApplications: "Applications",
   kaamCardStatsApplicationsDesc: "sent across the platform",
   kaamCardStatsHires: "Hires",
-  kaamCardStatsHiresDesc: "completed through ShramSetu",
+  kaamCardStatsHiresDesc: "completed through Jobhunt",
   kaamCardStatsRating: "Avg rating",
   kaamCardStatsNotRated: "Not rated yet",
   kaamCardStatsRatingDesc: "from {count} employer{s}",
@@ -718,7 +718,7 @@ export const en = {
   verifyUploadIdHint: "Upload a government photo ID (Aadhaar, PAN, voter, driving licence). We never store the ID number.",
   verifyUploadCertHint: "Upload an ITI/trade certificate or skill letter. PDF/JPG up to 5 MB.",
   verifyDocsListLabel: "Submitted documents",
-  kaamCardVerifiedBy: "Verified by ShramSetu",
+  kaamCardVerifiedBy: "Verified by Jobhunt",
 
   // ---- r14 employer + admin redesign: employer dashboard / candidates dossier
   // / pipeline (operational, ATS, accessible) / job post / admin queue ----

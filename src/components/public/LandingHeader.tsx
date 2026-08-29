@@ -18,7 +18,7 @@ export function LandingHeader() {
             aria-hidden
             className="size-7 grid place-items-center rounded-md bg-primary text-primary-foreground text-sm font-semibold"
           >
-            श्र
+            JH
           </span>
           <span className="text-base tracking-tight">{t("brand")}</span>
         </Link>
