@@ -74,7 +74,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Top bar */}
+      {/* Top bar — role-tinted strip + sticky header */}
+      <div
+        aria-hidden
+        className={`h-0.5 w-full ${
+          role === "worker" ? "bg-accent" : role === "admin" ? "bg-info" : "bg-primary"
+        }`}
+      />
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <Link href={role === "worker" ? "/home" : role === "employer" ? "/employer/dashboard" : "/admin"} className="flex items-center gap-2 font-bold text-primary">
@@ -130,10 +136,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-11 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors min-h-11 ${active ? "nav-active" : "text-muted-foreground hover:bg-accent/10 hover:text-ink"}`}
                   aria-current={active ? "page" : undefined}
                 >
-                  <Icon className="size-5" />
+                  <Icon className={`size-5 ${active ? "text-primary" : ""}`} />
                   {t(item.labelKey)}
                 </Link>
               );
@@ -168,9 +174,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     onClick={() => setNavOpen(false)}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors min-h-11 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"}`}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-md text-sm transition-colors min-h-11 ${active ? "nav-active" : "text-muted-foreground hover:bg-accent/10 hover:text-ink"}`}
                   >
-                    <Icon className="size-5" />
+                    <Icon className={`size-5 ${active ? "text-primary" : ""}`} />
                     {t(item.labelKey)}
                   </Link>
                 );
@@ -207,10 +213,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <li key={item.href} className="flex-1">
                   <Link
                     href={item.href}
-                    className={`flex flex-col items-center justify-center gap-1 h-full text-xs font-medium min-h-12 ${active ? "text-primary" : "text-muted-foreground"}`}
+                    className={`flex flex-col items-center justify-center gap-1 h-full text-xs font-medium min-h-12 ${active ? "nav-active-bottom" : "text-muted-foreground"}`}
                     aria-current={active ? "page" : undefined}
                   >
-                    <Icon className="size-5" />
+                    <Icon className={`size-5 ${active ? "text-primary" : ""}`} />
                     <span className="text-[10px] leading-none">{t(item.labelKey)}</span>
                   </Link>
                 </li>

@@ -8,7 +8,12 @@
 // PipelineSummaryRow motion.div width animation, "Click any job to expand" copy.
 // Added: dl/dt/dd headline panel, border-t sectioned layout, surface-raised panels,
 // restrained FunnelChart (no gradient), per-job drilldown with semantic dl.
-import { useEffect, useState } from "react";
+//
+// r15: Added "Needs Attention" panel — surfaces stuck jobs (open + applicants
+// but 0 hires) and jobs with no applications in 7+ days. Action-oriented panel
+// with primary CTAs to /employer/candidates or /employer/pipeline.
+import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/shared/AppShell";
 import { StatCard } from "@/components/shared/StatCard";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -17,7 +22,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FunnelChart } from "@/components/dashboard/FunnelChart";
 import { TimeToHireHeadline } from "@/components/dashboard/TimeToHireHeadline";
 import { PerJobDrilldownRow, type PerJob } from "@/components/dashboard/PerJobDrilldownRow";
-import { LayoutDashboard, Briefcase, UserPlus, Handshake, Eye } from "lucide-react";
+import {
+  LayoutDashboard, Briefcase, UserPlus, Handshake, Eye,
+  AlertCircle, ArrowRight, ChevronRight, Search,
+} from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { EmployerReputationCard } from "@/components/employer/EmployerReputationCard";
 
@@ -68,6 +76,22 @@ export default function EmployerDashboardPage() {
     data && data.funnel.applied > 0
       ? Math.round((data.funnel.shortlisted / data.funnel.applied) * 100)
       : null;
+
+  // r15: Derive "Needs Attention" — open jobs with applicants but 0 hires
+  // (stuck hiring) and open jobs with 0 applications (no traction).
+  const needsAttention = useMemo(() => {
+    if (!data) return { stuck: [] as PerJob[], noTraction: [] as PerJob[] };
+    const stuck = data.perJob.filter(
+      (j) =>
+        j.status === "open" &&
+        j.applicantsByStage.applied > 0 &&
+        j.applicantsByStage.hired === 0
+    );
+    const noTraction = data.perJob.filter(
+      (j) => j.status === "open" && j.applicantsByStage.applied === 0
+    );
+    return { stuck, noTraction };
+  }, [data]);
 
   return (
     <AppShell>
@@ -186,6 +210,82 @@ export default function EmployerDashboardPage() {
 
             {/* Employer reputation summary */}
             <EmployerReputationCard />
+          </section>
+        )}
+
+        {/* Needs Attention — r15 new feature panel */}
+        {data && (needsAttention.stuck.length > 0 || needsAttention.noTraction.length > 0) && (
+          <section aria-label={t("dashNeedsAttention")}>
+            <header className="flex items-baseline justify-between gap-3 mb-3 border-b border-border pb-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="size-4 text-accent" aria-hidden />
+                <h2 className="text-base font-semibold text-ink">
+                  {t("dashNeedsAttention")}
+                </h2>
+              </div>
+              <p className="text-meta text-ink-subtle">
+                {needsAttention.stuck.length + needsAttention.noTraction.length} {t("dashNeedsAttentionHint")}
+              </p>
+            </header>
+            <div className="surface-raised rounded-md border border-border divide-y divide-border overflow-hidden">
+              {/* Stuck — has applicants but 0 hires */}
+              {needsAttention.stuck.map((job) => {
+                const totalApplicants =
+                  job.applicantsByStage.applied +
+                  job.applicantsByStage.shortlisted +
+                  job.applicantsByStage.interview +
+                  job.applicantsByStage.offer;
+                return (
+                  <Link
+                    key={job.jobId}
+                    href={`/employer/pipeline?jobId=${job.jobId}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-sunken transition-colors"
+                  >
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="status-dot is-warning" aria-hidden />
+                        <p className="text-sm font-semibold text-ink truncate">{job.title}</p>
+                        <span className="text-meta text-ink-subtle">
+                          · {totalApplicants} {t("dashApplicantOne")}
+                        </span>
+                      </div>
+                      <p className="text-meta text-ink-muted">
+                        {t("dashStuckHint")}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary shrink-0">
+                      {t("dashStuckCta")}
+                      <ChevronRight className="size-4" aria-hidden />
+                    </span>
+                  </Link>
+                );
+              })}
+              {/* No traction — open but 0 applications */}
+              {needsAttention.noTraction.map((job) => (
+                <Link
+                  key={job.jobId}
+                  href={`/employer/candidates`}
+                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-sunken transition-colors"
+                >
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Search className="size-3.5 text-ink-subtle" aria-hidden />
+                      <p className="text-sm font-semibold text-ink truncate">{job.title}</p>
+                      <span className="text-meta text-ink-subtle">
+                        · {t("dashNoTractionHint")}
+                      </span>
+                    </div>
+                    <p className="text-meta text-ink-muted">
+                      {t("dashNoTractionBody")}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary shrink-0">
+                    {t("dashNoTractionCta")}
+                    <ArrowRight className="size-4" aria-hidden />
+                  </span>
+                </Link>
+              ))}
+            </div>
           </section>
         )}
 

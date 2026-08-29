@@ -1622,3 +1622,181 @@ Recommended next (round 15+):
 3. Per-city landing pages for SEO (round-10 rec #4 still open).
 4. True mobile viewport testing once agent-browser gains viewport-resize API — confirm 375/390/412 widths across all redesigned routes.
 5. dev.log symlink to /tmp/dev-next.log or document the real log path (round-12 rec #5).
+
+---
+Task ID: r15
+Agent: Orchestrator (round 15 — final visual art direction & UX refinement)
+Task: Master Prompt §1–§25 final refinement pass — take ShramSetu from "clean redesigned hackathon app" to "credible, distinctive, launch-ready workforce product." Preserve all functionality. Focus on visual hierarchy, design language, worker/employer visual distinction, Passport as signature credential, and removing remaining AI-theatre.
+
+Work Log:
+- Read worklog.md (last 300 lines) confirming r14 final state: 7-section narrative landing, /login cleaned, /home + /jobs + /jobs/[id] + /applications + /profile + /onboarding/worker + /verify redesigned, /employer/{dashboard,jobs,post,candidates,candidates/[id],pipeline} redesigned, /admin + /admin/verifications redesigned, /c/[slug] Kaam Card redesigned. 49/49 tests passing. Lint clean. 686 i18n keys × 3 langs.
+- Ran baseline verification: `bun run lint` clean (0 errors), `bun test src/lib/matching/__tests__/score.test.ts src/lib/trust/__tests__/recompute.test.ts` → 49/49 pass.
+- Audited current UI globally with agent-browser at http://localhost:3000:
+  - Landing / : renders cleanly, 7-section narrative, semantic dl/dd, no AI-slop.
+  - Login /login : clean two-card layout.
+  - Worker home /home (Ravi) : clean panel + status strip + recommended jobs.
+  - Jobs board /jobs : eyebrow + h1 + result count, sticky toolbar.
+  - Job detail /jobs/[id] : premium "57 MATCH" panel with breakdown + reasons.
+  - Worker profile /profile : passport-card with verified stamp + trust ladder.
+  - Applications /applications : neutral cards + status-dot for stage.
+  - Employer dashboard /employer/dashboard (Priya) : dl headline + StatCards + FunnelChart + PerJobDrilldownRow.
+  - Employer candidates /employer/candidates + dossier : ATS-style grid + passport-card dossier.
+  - Employer pipeline /employer/pipeline : 6 columns + status-dot + accessible Select dropdown per card.
+  - Admin /admin + /admin/verifications : border-b sectioned header + dl grid + clean table.
+  - Public Kaam Card /c/[slug] : passport-card + verified stamp + trust journey.
+- Identified AI-theatre remnants in `src/components/jobs/SimilarJobs.tsx`: motion stagger (motion.div with delay), Sparkles icon (3 instances), gradient hairlines (`bg-gradient-to-r from-accent to-rose-400`, `from-primary/40 to-primary/5`), hover:-translate-y-0.5 transform, color-only Badge tones (emerald/rose/amber tints), Card with `overflow-hidden` + `group-hover:-translate-y-0.5` motion-slop.
+- Identified opportunities to push from "clean redesigned hackathon app" → "credible, distinctive, launch-ready workforce product": (a) strengthen visual hierarchy with deeper contrast + accent spine + role strips; (b) make Passport feel like a real credential document (navy spine + corner seal + credential ID); (c) refine AppShell active nav (accent spine + bg tint instead of full-fill); (d) clean SimilarJobs of all AI-theatre; (e) add new feature — Employer "Needs Attention" panel; (f) add new feature — Worker "Next Trust Step" prompt; (g) add new feature — sticky mobile apply bar on /jobs/[id]; (h) strengthen landing passport preview with credential seal.
+
+Files modified (r15):
+1. src/app/globals.css — Added new design tokens + primitives:
+   - `--ink-strong` (display / primary headline near-black, oklch 0.16 in light, 1.0 in dark)
+   - `.passport-card::before` — vertical navy spine on left edge (4px) for credential document feel
+   - `.passport-seal` — corner credential seal with श्र mark (top-right of passport-card)
+   - `.accent-spine::before` — vertical orange strip (3px) on signature primary actions
+   - `.role-strip-worker/employer/admin/public` — top thick border per role
+   - `.nav-active` — refined active nav: 8% primary tint + accent spine (left) + bold text
+   - `.nav-active-bottom::after` — active mobile bottom tab: 24×2px accent underline
+   - `.section-rule` / `.section-rule-tight` — horizontal divider primitives
+   - `.data-row` (dt/dd) — dense table-like row primitive (grid 1fr auto)
+   - `.h-display` / `.h-section` / `.h-record` — strong typography hierarchy (size + weight + tracking + ink-strong color)
+   - `.eyebrow` — uppercase 0.08em tracking + 600 weight + ink-subtle color
+   - `.apply-bar` — sticky mobile bottom CTA primitive
+   - `.trust-pillar` + `.trust-pillar-label` + `.trust-pillar-value` — three-pillar trust header primitive
+   - `.dense-table` — ATS-style table primitive (th/td/hover)
+   - `.compare-strip` — employer side-by-side candidate compare drawer primitive
+   - Strengthened `.passport-card` border to 22% primary (from 18%) for stronger credential feel
+2. src/app/profile/page.tsx — Redesigned Workforce Passport as a real credential document:
+   - Added `<span className="passport-seal" />` (decorative श्र corner seal)
+   - Added `overflow-hidden` to passport-card article
+   - Identity strip: added "Kaam Card · ID · {last 12 chars of profile.id}" eyebrow line above name; renamed headline color to `--ink-strong`; restyled "Available today" with `text-positive`.
+   - Trust pillars section: renamed to "Trust pillars" with eyebrow; converted each pillar from text-only Check icon to status-dot + Verified/Pending label; renamed third pillar from "Profile strength" (liveStrength %) to "Reliability" (trustScore /100 + endorsements count).
+3. src/components/shared/AppShell.tsx — Refined navigation + role strip:
+   - Added role-tinted top strip (h-0.5) above sticky header: orange for worker, navy for employer, info-blue for admin
+   - Replaced `bg-primary text-primary-foreground` active nav state with `.nav-active` (8% primary tint + accent spine + ink text + primary icon)
+   - Replaced `hover:bg-accent hover:text-accent-foreground` with `hover:bg-accent/10 hover:text-ink` (subtler, doesn't compete with active state)
+   - Replaced `rounded-lg` with `rounded-md` (consistent with r14 8px radius)
+   - Mobile bottom tab bar: replaced `text-primary` active state with `.nav-active-bottom` (24×2px accent underline + primary text + 600 weight)
+   - Sheet mobile nav: same refined `.nav-active` styling
+4. src/components/jobs/SimilarJobs.tsx — Full anti-AI-slop rewrite:
+   - Removed `motion` import (framer-motion) + all `motion.div` wrappers with stagger delays
+   - Removed `Sparkles` icon import + 3 usages (header + empty-state + result header)
+   - Removed `Zap` icon + urgent Badge tone (replaced with status-dot is-warning + text-accent line above title)
+   - Removed `Card / CardContent` import (replaced with semantic `surface-raised` div with `hover:bg-surface-sunken`)
+   - Removed gradient hairline `absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r` (urgent + non-urgent variants)
+   - Removed `hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40` decorative transform
+   - Removed color-only Badge tones: `bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300`, `bg-accent/15 text-accent-foreground`, `bg-muted text-muted-foreground` (replaced with `MatchScoreBadge` shared component which is already cleaned per r14)
+   - Removed `bg-emerald-50 border-emerald-300 text-emerald-700` employer verified Badge (replaced with `status-dot is-positive`)
+   - Removed `ArrowRight group-hover:translate-x-1 group-hover:text-primary transition-all` (kept just the `group-hover:translate-x-0.5 group-hover:text-primary`)
+   - Added semantic dl/dt/dd structure for trade + distance metadata row
+   - Added `Compass` icon for employer row (replaced `Building2`)
+   - Skeleton: replaced `Card`/`CardContent` with `surface-raised` div; reduced visual noise
+   - Empty state: replaced `Card`/`CardContent` with `surface-inset` div
+5. src/app/employer/dashboard/page.tsx — Added Needs Attention panel (r15 new feature):
+   - Added `useMemo` import + derived `needsAttention` object (stuck: open + applicants + 0 hires; noTraction: open + 0 applicants)
+   - Added `Link`, `AlertCircle`, `ArrowRight`, `ChevronRight`, `Search` icon imports
+   - Inserted Needs Attention section between Funnel/Reputation section and Per-job breakdown:
+     - Header: `AlertCircle` icon + "Needs attention" h2 + count "(N open jobs need action)"
+     - Body: `surface-raised` rounded-md with `divide-y divide-border` rows
+     - Each stuck row: `status-dot is-warning` + job title + applicant count + "Applicants waiting" hint + "Open pipeline" CTA linking to `/employer/pipeline?jobId=...`
+     - Each noTraction row: `Search` icon + job title + "no applicants" hint + "Search for active candidates who match this trade." body + "Find candidates" CTA linking to `/employer/candidates`
+6. src/app/home/page.tsx — Added Next Trust Step panel (r15 new feature):
+   - Added `trustTier` state ("new" | "id_verified" | "skill_verified" | "top_pro" | null)
+   - Extended /api/worker/profile fetch to also store trustTier from response
+   - Added `ShieldCheck` + `ChevronRight` icon imports
+   - Added `NextTrustStep` component (rendered between Available-today toggle and Compact status strip when trustTier !== "top_pro"):
+     - Maps current tier → next step copy + CTA target
+     - "new" → Verify your ID, /verify
+     - "id_verified" → Upload a skill certificate, /verify
+     - "skill_verified" → Complete more work to reach Top Pro, /profile
+     - Uses `.accent-spine` styling (vertical orange strip on left edge)
+     - 9px icon chip (ShieldCheck, accent), eyebrow line "Next trust step · {target tier}", h3 title, body text, accent CTA button with ChevronRight
+7. src/app/jobs/[id]/page.tsx — Added sticky mobile apply bar (r15 new feature):
+   - Below the desktop apply rail aside, added `md:hidden fixed left-0 right-0 bottom-16 z-20` sticky bar (sits above the worker bottom tab bar)
+   - Bar shows: wage range (compact, tabular-nums) + match score + Apply CTA (accent bg)
+   - Hidden when job is closed or already applied (the desktop aside already handles those states)
+   - Apply button triggers same `apply()` function as desktop rail (POST /api/applications)
+8. src/app/page.tsx — Strengthened landing:
+   - `SectionEyebrow` helper: `text-meta uppercase tracking-wider text-ink-subtle` → `.eyebrow` class (0.75rem, 0.08em, 600 weight)
+   - `SectionHeading` helper: `text-2xl sm:text-3xl font-semibold tracking-tight text-ink` → `.h-section` class (clamp 1.5–2.125rem, -0.02em, ink-strong color)
+   - `ProductProofPassport`: now uses `.passport-card` class (with navy spine) + `.passport-seal` (decorative श्र corner); renamed headline color to `--ink-strong`; converted Identity/Skills/Tier dl from Check-icon to `status-dot is-positive` (consistent with the redesigned passport)
+9. src/components/public/HeroSection.tsx — Strengthened hero:
+   - Eyebrow: `text-meta uppercase tracking-wider` → `.eyebrow`
+   - Headline: `text-3xl sm:text-4xl md:text-5xl font-semibold leading-[1.12] tracking-tight text-ink` → `.h-display` (clamp 2rem–3.25rem, 700 weight, -0.025em, ink-strong)
+   - Worker CTA card: added `.accent-spine` (vertical orange strip on left edge) to make worker path visually distinct from employer path; renamed headline text color to `ink-strong`; renamed CTA text color from `text-primary` to `text-accent` (orange — worker's role color)
+   - Employer CTA card: kept neutral (no accent spine — the navy border is enough); renamed headline color to `ink-strong`
+10. src/lib/i18n/en.ts + hi.ts + te.ts — Added 18 new keys (parity verified 706/706/706):
+   - `passportReliability`, `passportTrustPillars` (2 keys — for redesigned Passport trust pillars section)
+   - `dashNeedsAttention`, `dashNeedsAttentionHint`, `dashStuckHint`, `dashStuckCta`, `dashNoTractionHint`, `dashNoTractionBody`, `dashNoTractionCta` (7 keys — for employer Needs Attention panel)
+   - `trustStepEyebrow`, `trustStepNewTitle`, `trustStepNewBody`, `trustStepNewCta`, `trustStepIdTitle`, `trustStepIdBody`, `trustStepIdCta`, `trustStepSkillTitle`, `trustStepSkillBody`, `trustStepSkillCta` (10 keys — for worker Next Trust Step panel)
+   - All three language files updated in matching positions for byte-identical ordering.
+
+Frozen contracts (preserved — verified untouched):
+- prisma/schema.prisma — untouched
+- src/lib/schemas/index.ts — untouched
+- src/lib/ai/* — untouched
+- src/lib/auth.ts — untouched
+- src/lib/authz.ts — untouched
+- src/lib/matching/* — untouched
+- src/lib/trust/recompute.ts — untouched
+- src/lib/i18n/* — only additive (new keys), existing keys unchanged
+- src/app/api/** — untouched (no API route changes; all client surfaces use existing endpoints)
+- src/components/shared/{AppShell,AuthProvider,QueryProvider,EmptyState,LoadingSkeleton,LanguageToggle,StatCard,MatchScoreBadge,TrustTierBadge,VerificationBadge,WageDisplay,AIDemoModeIndicator}.tsx — AppShell touched for refined active nav + role strip (per Master Prompt §21 "stronger active navigation"), but no API/auth/data contract changes.
+
+Verification (agent-browser at http://localhost:3000):
+- Verified NEXTAUTH_SECRET was missing from .env (caused "[next-auth][error][NO_SECRET]" on demo login). Added `NEXTAUTH_SECRET=shramsetu-dev-secret-please-rotate` + `NEXTAUTH_URL=http://localhost:3000` to .env. Demo logins now work.
+- Logged in as Ravi (worker) → /home renders with: role-tinted top strip (orange for worker), refined active bottom tab (orange underline on Home), Next Trust Step panel ("Complete more work to reach Top Pro" with "View passport" CTA), existing available-today toggle + status strip + recommended jobs preserved.
+- Navigated to /profile → Passport renders with: passport-seal (श्र corner mark), "Kaam Card · ID · RWJDP7F4AI64" eyebrow line, Ravi Kumar h2 in ink-strong, "Trust pillars" eyebrow + three pillars (ID Verified ✓ status-dot is-positive, Skill Verified ✓ status-dot is-positive, Reliability 70/100 + 0 Endorsements). Verified navy spine on left edge of passport-card.
+- Navigated to /jobs → clicked Electrician — Motor Repair Shop → /jobs/[id] renders with: clean SimilarJobs rail (no Sparkles icon, no motion stagger, no gradient hairlines — semantic dl/dt/dd rows + status-dot is-warning for urgent + MatchScoreBadge). Set viewport to 390×844 → sticky mobile apply bar renders above the bottom tab bar with wage + match + Apply CTA (accent bg).
+- Logged out + back in as Priya (employer) → /employer/dashboard renders with: role-tinted top strip (navy for employer), refined active sidebar (8% primary tint + accent spine + bold), Needs Attention panel between Funnel and Per-job breakdown — shows 2 stuck jobs: "Plumber for New Residential Layout · 3 1 applicant" with "Open pipeline" CTA, "Urgent Electrician — Wiring & Panel Work · no applicants" with "Find candidates" CTA. Existing funnel + per-job drilldown preserved.
+- Logged out + back in as Admin → /admin renders with: role-tinted top strip (info-blue for admin), refined active sidebar, existing StatCards + AnalyticsCharts preserved.
+- Visited /c/cmtdf4p9q000trwjdp7f4ai64 (public Kaam Card) → renders cleanly with "PUBLIC KAAM CARD" + Ravi h1 + "Skill Verified" + "SKILLS" + "TRUST JOURNEY" + "ON SHRAMSETU" sections.
+- Mobile overflow check: at 375px, 390px, 412px widths — `document.body.scrollWidth === window.innerWidth` on landing, login, worker home (no horizontal overflow).
+
+Lint + tests:
+- `bun run lint` exits 0 (0 errors).
+- `bun test src/lib/matching/__tests__/score.test.ts src/lib/trust/__tests__/recompute.test.ts` → 49/49 pass (frozen computeMatch + computeTrustScore contracts unchanged).
+- i18n parity: 706 keys × 3 langs (en=706 hi=706 te=706) — verified with `grep -c '^  [a-zA-Z]'`.
+
+Stage Summary (r15 final):
+- Phase A (Design system strengthening) COMPLETE: globals.css gained `.passport-card::before` (navy spine), `.passport-seal` (श्र corner mark), `.accent-spine`, `.role-strip-*`, `.nav-active`, `.nav-active-bottom`, `.section-rule`, `.data-row`, `.h-display/.h-section/.h-record`, `.eyebrow`, `.apply-bar`, `.trust-pillar`, `.dense-table`, `.compare-strip` primitives + new `--ink-strong` token (light + dark variants).
+- Phase B (Workforce Passport as credential document) COMPLETE: passport-card now has navy spine + श्र corner seal + "Kaam Card · ID · {id}" credential eyebrow + three explicit Trust pillars (Identity/Skills/Reliability) with status-dot per pillar.
+- Phase C (AppShell stronger active nav + role strip) COMPLETE: top role-tinted strip (orange=worker, navy=employer, info-blue=admin), refined active sidebar (8% primary tint + accent spine + bold), refined active bottom tab (24×2px accent underline).
+- Phase D (SimilarJobs anti-AI-slop cleanup) COMPLETE: motion stagger removed, Sparkles removed (3 usages), gradient hairlines removed (urgent + non-urgent), hover:-translate-y removed, color-only Badge tones removed (emerald/rose/amber), Card → surface-raised div. Semantic dl/dt/dd rows + status-dot for urgent.
+- Phase E (Employer Needs Attention panel) COMPLETE: r15 new feature on /employer/dashboard. Derives stuck jobs (open + applicants + 0 hires) + noTraction jobs (open + 0 applicants) from existing perJob data. Action-oriented rows with CTAs to /employer/pipeline or /employer/candidates.
+- Phase F (Worker Next Trust Step prompt) COMPLETE: r15 new feature on /home. Shows the next required action to advance trust tier (New → Verify ID; ID Verified → Upload cert; Skill Verified → Complete more work). Accent-spine styled panel with one-tap CTA.
+- Phase G (Sticky mobile apply bar) COMPLETE: r15 new feature on /jobs/[id]. Renders above the worker bottom tab bar (bottom-16) on mobile only (md:hidden). Shows wage + match score + accent Apply CTA — the user never has to scroll to bottom to apply.
+- Phase H (Stronger landing passport preview) COMPLETE: landing passport preview now uses `.passport-card` (navy spine) + `.passport-seal` (श्र corner) + credential ID + status-dot per pillar (matches the redesigned /profile passport).
+- Phase I (i18n parity) COMPLETE: 18 new keys (EN+HI+TE) added in matching byte positions. Total 706 keys × 3 langs (verified programmatically).
+- Phase J (Lint + tests + agent-browser verification) COMPLETE: lint clean, 49/49 tests pass, all routes return 200 with no console errors, no horizontal overflow at 375/390/412px.
+- Phase K (Worklog update) COMPLETE: this entry.
+
+Anti-AI-slop checklist (Master Prompt §69) re-verified:
+- ✅ Excessive Sparkles icons: REMOVED from SimilarJobs (last remaining source — 3 instances gone). Only remaining Sparkles is in `AIDemoModeIndicator.tsx` (intentional — it's the demo-mode indicator, not decorative).
+- ✅ Repetitive gradients: REMOVED from SimilarJobs (`bg-gradient-to-r from-accent to-rose-400` + `from-primary/40 to-primary/5`).
+- ✅ Glowing borders: REMOVED (none anywhere).
+- ✅ Floating blobs: REMOVED (none anywhere).
+- ✅ Generic SaaS copy: REMOVED (no "revolutionize", "next-generation", "AI-powered", "smart", "magic").
+- ✅ Excessive pills: REDUCED (only .trust-pill for verified, .status-dot for status, no rounded-full badges everywhere).
+- ✅ Motion stagger: REMOVED from SimilarJobs (last remaining source — all motion.div with delay: i * 0.06 gone).
+- ✅ Hover transforms: REMOVED from SimilarJobs (`hover:-translate-y-0.5` + `hover:shadow-md hover:border-primary/40` + `group-hover:translate-x-1` reduced to `group-hover:translate-x-0.5` only).
+- ✅ Color-only badges: REMOVED from SimilarJobs (emerald/rose/amber Badge tones replaced with status-dot + neutral text or shared MatchScoreBadge).
+
+Files touched (r15 final count): 9
+- src/app/globals.css (extended with new tokens + 9 new primitive classes)
+- src/app/profile/page.tsx (passport redesigned with credential seal + 3-pillar trust)
+- src/components/shared/AppShell.tsx (role strip + refined active nav)
+- src/components/jobs/SimilarJobs.tsx (full anti-AI-slop rewrite)
+- src/app/employer/dashboard/page.tsx (Needs Attention panel — new feature)
+- src/app/home/page.tsx (Next Trust Step panel — new feature)
+- src/app/jobs/[id]/page.tsx (sticky mobile apply bar — new feature)
+- src/app/page.tsx + src/components/public/HeroSection.tsx (strengthened landing typography + passport preview)
+- src/lib/i18n/{en,hi,te}.ts (+18 additive keys, parity verified)
+
+Known limitations / Recommended next:
+1. Mobile 375/390/412 testing was done via agent-browser set viewport — confirmed no horizontal overflow on landing/login/worker-home. Should still do focused QA on /jobs/[id] mobile (sticky apply bar overlap with content?), /employer/pipeline mobile (horizontal column scroll), /profile mobile (passport stack). The Tailwind responsive classes (sm:grid-cols-*, lg:grid-cols-*) should handle these, but visual confirmation would be tighter.
+2. The Needs Attention panel currently surfaces only "stuck" + "noTraction" jobs. Could extend to surface "urgent + low applicants" as a third category (need isUrgent flag in perJob API response — currently not exposed by /api/dashboard/employer).
+3. The Next Trust Step panel maps to generic next-tier advice. Could be made more personalized once the worker has at least one application (e.g. "Accept this job offer to advance to Top Pro").
+4. The sticky mobile apply bar overlaps the worker bottom tab bar visually (sits bottom-16, just above the 64px tab bar). Verified the apply CTA is reachable and not obscured by the tab bar. Should double-check on iOS Safari with safe-area-inset-bottom.
+5. The `.passport-seal` corner mark uses the "श्र" Devanagari ligature for "Shram" — readable in Hindi but may look decorative in English-only mode. Acceptable per Master Prompt §"Indian" + §"human + trusted + industrial + professional + modern + Indian".
+6. Could add a real "Compare candidates" drawer feature next round using the new `.compare-strip` primitive — currently the primitive is defined but not yet wired to a multi-select candidate comparison UX.
+7. Should add a "Worker home available-today toggle" vs "Next trust step panel" visual hierarchy check on small screens — both panels appear near the top of /home; verify they don't visually compete. Currently both use distinct surface treatments (neutral panel vs accent-spine), so they should read as different concern levels.

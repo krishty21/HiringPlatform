@@ -537,6 +537,42 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </aside>
         </div>
       </div>
+
+      {/* r15: Sticky mobile apply bar — sits above the bottom tab bar.
+       * Shows wage + match score compactly + the primary Apply CTA so the
+       * user never has to scroll to the bottom to apply. Hidden on closed
+       * jobs (CTA disabled anyway) and after applied (tracker link shown). */}
+      {!isApplied && !isClosed && (
+        <div
+          className="md:hidden fixed left-0 right-0 bottom-16 z-20 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85 px-4 py-3 flex items-center gap-3"
+          aria-label={t("jobApply")}
+        >
+          <div className="flex flex-col gap-0 min-w-0 flex-1">
+            <p className="text-sm font-semibold tabular-nums text-ink leading-tight">
+              ₹{job.wageMin}–₹{job.wageMax}
+              <span className="text-meta text-ink-subtle font-normal ml-1">{t("perDay")}</span>
+            </p>
+            {typeof job.matchScore === "number" && job.matchScore > 0 && (
+              <p className="text-meta text-ink-muted leading-tight">
+                {job.matchScore} {t("matchHeading")}
+              </p>
+            )}
+          </div>
+          <Button
+            type="button"
+            onClick={apply}
+            disabled={applying}
+            className="min-h-11 gap-2 bg-accent text-accent-foreground hover:opacity-90"
+          >
+            {applying ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Briefcase className="size-4" aria-hidden />
+            )}
+            {t("jobApply")}
+          </Button>
+        </div>
+      )}
     </AppShell>
   );
 }

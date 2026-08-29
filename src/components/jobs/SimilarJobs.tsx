@@ -1,13 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { motion } from "framer-motion";
-import { Briefcase, MapPin, Zap, Sparkles, ArrowRight, Building2 } from "lucide-react";
+import { Briefcase, MapPin, ArrowRight, Compass } from "lucide-react";
 import type { WorkerJobCardData } from "@/components/worker/JobCard";
+import { MatchScoreBadge } from "@/components/shared/MatchScoreBadge";
 
 interface SimilarJobsProps {
   currentJobId: string;
@@ -27,6 +25,11 @@ interface SimilarJobsProps {
 //  3) Order by match score desc, then by wage, then by recency
 //  4) Fall back to same-city jobs if the same-trade pool is too shallow.
 // Renders a horizontal scroll rail on mobile / responsive grid on sm+.
+//
+// r15 anti-AI-slop cleanup: removed motion stagger, Sparkles icon,
+// gradient hairlines, hover:-translate-y-0.5 transform, color-only Badge
+// tones (emerald/rose/amber). Replaced with semantic dl rows, status-dot,
+// surface-raised panels, neutral hover bg.
 export function SimilarJobs({ currentJobId, tradeId, city, currentEmployerId, limit = 3 }: SimilarJobsProps) {
   const { t, lang } = useLanguage();
   const [jobs, setJobs] = useState<WorkerJobCardData[] | null>(null);
@@ -94,24 +97,21 @@ export function SimilarJobs({ currentJobId, tradeId, city, currentEmployerId, li
   }, [currentJobId, tradeId, city, currentEmployerId, limit]);
 
   if (jobs === null) {
-    // Skeleton — 3 placeholder cards matching the final layout.
+    // Skeleton — 3 placeholder rows matching the final layout.
     return (
       <section className="flex flex-col gap-3" aria-label={t("jobSimilarTitle")} aria-busy="true">
-        <header className="flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" aria-hidden />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <header className="flex items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-subtle">
             {t("jobSimilarTitle")}
           </h2>
         </header>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {Array.from({ length: limit }).map((_, i) => (
-            <Card key={i} className="border-border/70">
-              <CardContent className="p-4 flex flex-col gap-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </CardContent>
-            </Card>
+            <div key={i} className="surface-raised rounded-md p-3 flex flex-col gap-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-5 w-20" />
+            </div>
           ))}
         </div>
       </section>
@@ -121,18 +121,15 @@ export function SimilarJobs({ currentJobId, tradeId, city, currentEmployerId, li
   if (jobs.length === 0) {
     return (
       <section className="flex flex-col gap-3" aria-label={t("jobSimilarTitle")}>
-        <header className="flex items-center gap-2">
-          <Sparkles className="size-4 text-muted-foreground" aria-hidden />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <header className="flex items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-subtle">
             {t("jobSimilarTitle")}
           </h2>
         </header>
-        <Card className="border-dashed border-border">
-          <CardContent className="p-4 text-xs text-muted-foreground flex items-center gap-2">
-            <Briefcase className="size-4 shrink-0" aria-hidden />
-            {t("jobSimilarEmpty")}
-          </CardContent>
-        </Card>
+        <div className="surface-inset rounded-md p-4 text-meta text-ink-muted flex items-center gap-2">
+          <Briefcase className="size-4 shrink-0" aria-hidden />
+          {t("jobSimilarEmpty")}
+        </div>
       </section>
     );
   }
@@ -140,105 +137,80 @@ export function SimilarJobs({ currentJobId, tradeId, city, currentEmployerId, li
   return (
     <section className="flex flex-col gap-3" aria-label={t("jobSimilarTitle")}>
       <header className="flex flex-col gap-0.5">
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" aria-hidden />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("jobSimilarTitle")}
-          </h2>
-        </div>
-        <p className="text-xs text-muted-foreground">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-subtle">
+          {t("jobSimilarTitle")}
+        </h2>
+        <p className="text-meta text-ink-muted">
           {tradeId ? t("jobSimilarSubtitle") : t("jobSimilarSubtitleCity", { city })}
         </p>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {jobs.map((job, i) => {
+        {jobs.map((job) => {
           const tradeName = job.trade
             ? (lang === "hi" ? job.trade.nameHi : lang === "te" ? job.trade.nameTe : job.trade.nameEn)
             : null;
           const score = job.matchScore;
           return (
-            <motion.div
+            <Link
               key={job.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: Math.min(i, 4) * 0.06, ease: "easeOut" }}
+              href={`/jobs/${job.id}`}
+              className="group surface-raised rounded-md p-3.5 flex flex-col gap-2 hover:bg-surface-sunken transition-colors"
+              aria-label={`${job.title} — ${t("jobSimilarView")}`}
             >
-              <Card className="group relative h-full overflow-hidden border-border/70 transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5">
-                <Link
-                  href={`/jobs/${job.id}`}
-                  className="block h-full"
-                  aria-label={`${job.title} — ${t("jobSimilarView")}`}
-                >
-                  <CardContent className="p-4 flex flex-col gap-2 h-full">
-                    {/* gradient hairline */}
-                    <span
-                      aria-hidden
-                      className={`absolute inset-x-0 top-0 h-0.5 ${job.isUrgent ? "bg-gradient-to-r from-accent to-rose-400" : "bg-gradient-to-r from-primary/40 to-primary/5"}`}
-                    />
-                    {/* Title + urgent */}
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                        {job.title}
-                      </p>
-                      {job.isUrgent && (
-                        <Badge variant="outline" className="shrink-0 bg-accent/10 text-accent-foreground border-accent/40 text-[10px] px-1.5 py-0">
-                          <Zap className="size-2.5" />
-                          {t("feedUrgent")}
-                        </Badge>
-                      )}
-                    </div>
-                    {/* Meta */}
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
-                      {tradeName && <span className="inline-flex items-center gap-1"><Briefcase className="size-3" />{tradeName}</span>}
-                      {tradeName && <span aria-hidden>·</span>}
-                      <span className="inline-flex items-center gap-1"><MapPin className="size-3" />{job.city}</span>
-                      {job.distanceKm != null && (
-                        <>
-                          <span aria-hidden>·</span>
-                          <span>{job.distanceKm.toFixed(0)} {t("km")}</span>
-                        </>
-                      )}
-                    </p>
-                    {/* Employer */}
-                    {job.employer && (
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate">
-                        <Building2 className="size-3 shrink-0" aria-hidden />
-                        <span className="truncate">{job.employer.companyName}</span>
-                        {job.employer.isVerified && (
-                          <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 shrink-0">
-                            <span aria-hidden>·</span>
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">
-                              {t("feedVerifiedEmployer")}
-                            </Badge>
-                          </span>
-                        )}
-                      </p>
-                    )}
-                    {/* Footer: wage + score + arrow */}
-                    <div className="flex items-center justify-between gap-2 mt-auto pt-1">
-                      <span className="text-xs font-semibold tabular-nums">
-                        ₹{job.wageMin}–₹{job.wageMax}
-                        <span className="text-muted-foreground font-normal text-[10px] ml-1">{t("perDay")}</span>
-                      </span>
-                      {score != null && (
-                        <Badge
-                          variant="secondary"
-                          className={`text-[10px] tabular-nums px-1.5 ${
-                            score >= 70 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                            : score >= 50 ? "bg-accent/15 text-accent-foreground"
-                            : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {t("jobSimilarMatchLabel", { score })}
-                        </Badge>
-                      )}
-                      <ArrowRight className="size-3.5 text-muted-foreground ml-auto group-hover:translate-x-1 group-hover:text-primary transition-all" aria-hidden />
-                    </div>
-                  </CardContent>
-                </Link>
-              </Card>
-            </motion.div>
+              {/* Urgent indicator — small accent spine instead of color badge */}
+              {job.isUrgent && (
+                <p className="text-meta font-semibold text-accent flex items-center gap-1.5">
+                  <span className="status-dot is-warning" aria-hidden />
+                  {t("feedUrgent")}
+                </p>
+              )}
+              {/* Title + match score */}
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold leading-tight line-clamp-2 text-ink-strong group-hover:text-primary transition-colors">
+                  {job.title}
+                </p>
+                {score != null && <MatchScoreBadge score={score} size="sm" />}
+              </div>
+              {/* Trade + distance row — semantic dl */}
+              <dl className="flex items-center gap-1.5 flex-wrap text-meta text-ink-muted">
+                {tradeName && (
+                  <div className="inline-flex items-center gap-1">
+                    <Briefcase className="size-3" aria-hidden />
+                    <dt>{tradeName}</dt>
+                  </div>
+                )}
+                {tradeName && <span aria-hidden>·</span>}
+                <div className="inline-flex items-center gap-1">
+                  <MapPin className="size-3" aria-hidden />
+                  <dt>{job.city}</dt>
+                  {job.distanceKm != null && (
+                    <dd className="tabular-nums">· {job.distanceKm.toFixed(0)} {t("km")}</dd>
+                  )}
+                </div>
+              </dl>
+              {/* Employer */}
+              {job.employer && (
+                <p className="text-meta text-ink-subtle flex items-center gap-1.5 truncate">
+                  <Compass className="size-3 shrink-0" aria-hidden />
+                  <span className="truncate">{job.employer.companyName}</span>
+                  {job.employer.isVerified && (
+                    <span className="status-dot is-positive shrink-0" aria-hidden />
+                  )}
+                </p>
+              )}
+              {/* Wage row */}
+              <div className="flex items-center justify-between gap-2 mt-auto pt-1.5 border-t border-border">
+                <span className="text-sm font-semibold tabular-nums text-ink">
+                  ₹{job.wageMin}–₹{job.wageMax}
+                  <span className="text-meta text-ink-subtle font-normal ml-1">{t("perDay")}</span>
+                </span>
+                <ArrowRight
+                  className="size-3.5 text-ink-subtle group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+                  aria-hidden
+                />
+              </div>
+            </Link>
           );
         })}
       </div>

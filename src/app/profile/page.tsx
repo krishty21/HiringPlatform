@@ -306,10 +306,13 @@ export default function WorkerProfilePage() {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        {/* ── Workforce Passport — signature card ─────────────────────────── */}
-        <article className="passport-card rounded-md flex flex-col">
+        {/* ── Workforce Passport — signature credential document ──────────── */}
+        <article className="passport-card rounded-md flex flex-col overflow-hidden">
+          {/* Credential seal corner — top-right decorative श्र mark */}
+          <span className="passport-seal" aria-hidden />
+
           {/* Identity strip — who is this person? */}
-          <header className="px-5 py-5 sm:px-6 sm:py-6 border-b border-border flex items-start gap-4 flex-wrap">
+          <header className="px-5 sm:px-6 py-5 sm:py-6 border-b border-border flex items-start gap-4 flex-wrap">
             <span
               aria-hidden
               className="size-16 sm:size-20 grid place-items-center rounded-md bg-primary text-primary-foreground text-xl sm:text-2xl font-semibold shrink-0"
@@ -317,7 +320,14 @@ export default function WorkerProfilePage() {
               {initials}
             </span>
             <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-ink break-words">
+              <p className="eyebrow text-ink-subtle flex items-center gap-2">
+                <span>{t("passportKaamCard")}</span>
+                <span aria-hidden className="size-1 rounded-full bg-ink-subtle/40" />
+                <span className="tabular-nums normal-case tracking-normal">
+                  ID · {profile.id.slice(-12).toUpperCase()}
+                </span>
+              </p>
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-ink-strong break-words">
                 {profile.fullName}
               </h2>
               <p className="text-meta text-ink-muted flex items-center gap-1.5 flex-wrap">
@@ -414,48 +424,60 @@ export default function WorkerProfilePage() {
             </ol>
           </section>
 
-          {/* Identity / Skills / Reliability — three-layer dl */}
+          {/* Identity / Skills / Reliability — three trust pillars */}
           <section className="px-5 py-4 sm:px-6 border-b border-border">
+            <p className="eyebrow text-ink-subtle mb-3">
+              {t("passportTrustPillars")}
+            </p>
             <dl className="grid grid-cols-1 sm:grid-cols-3 gap-y-3 gap-x-6">
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
                   <IdCard className="size-3.5" aria-hidden />
                   {t("passportTierIdVerified")}
                 </dt>
-                <dd className="text-sm font-medium text-ink">
+                <dd className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                  <span
+                    className={`status-dot ${profile.trustTier !== "new" ? "is-positive" : "is-neutral"}`}
+                    aria-hidden
+                  />
                   {profile.trustTier !== "new" ? (
-                    <span className="inline-flex items-center gap-1.5 text-positive">
-                      <Check className="size-4" aria-hidden />
-                      {t("passportTierVerified")}
-                    </span>
+                    t("passportTierVerified")
                   ) : (
-                    <span className="text-ink-subtle">{t("passportTierPending")}</span>
+                    <span className="text-ink-subtle font-normal">{t("passportTierPending")}</span>
                   )}
                 </dd>
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
                   <Award className="size-3.5" aria-hidden />
                   {t("passportTierSkillVerified")}
                 </dt>
-                <dd className="text-sm font-medium text-ink">
+                <dd className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                  <span
+                    className={`status-dot ${profile.trustTier === "skill_verified" || profile.trustTier === "top_pro" ? "is-positive" : "is-neutral"}`}
+                    aria-hidden
+                  />
                   {profile.trustTier === "skill_verified" || profile.trustTier === "top_pro" ? (
-                    <span className="inline-flex items-center gap-1.5 text-positive">
-                      <Check className="size-4" aria-hidden />
-                      {t("passportTierVerified")}
-                    </span>
+                    t("passportTierVerified")
                   ) : (
-                    <span className="text-ink-subtle">{t("passportTierPending")}</span>
+                    <span className="text-ink-subtle font-normal">{t("passportTierPending")}</span>
                   )}
                 </dd>
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
                   <Gauge className="size-3.5" aria-hidden />
-                  {t("passportStrength")}
+                  {t("passportReliability")}
                 </dt>
-                <dd className="text-sm font-medium text-ink tabular-nums">
-                  {liveStrength}%
+                <dd className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                  <span
+                    className={`status-dot ${profile.trustScore >= 70 ? "is-positive" : profile.trustScore >= 40 ? "is-warning" : "is-neutral"}`}
+                    aria-hidden
+                  />
+                  <span className="tabular-nums">{profile.trustScore}/100</span>
+                  <span className="text-meta text-ink-subtle font-normal">
+                    · {profile.endorsements.length} {t("passportEndorsements")}
+                  </span>
                 </dd>
               </div>
             </dl>

@@ -24,7 +24,7 @@ import {
 
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-meta uppercase tracking-wider text-ink-subtle">
+    <p className="eyebrow text-ink-subtle">
       {children}
     </p>
   );
@@ -32,7 +32,7 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink text-balance">
+    <h2 className="h-section">
       {children}
     </h2>
   );
@@ -92,10 +92,16 @@ function ProductProofJobCard() {
 function ProductProofPassport() {
   const { t } = useLanguage();
   return (
-    <div className="rounded-md border border-primary/25 bg-surface p-4 sm:p-5 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-meta uppercase tracking-wide text-ink-subtle">
+    <div className="passport-card rounded-md p-4 sm:p-5 flex flex-col gap-3 relative overflow-hidden">
+      {/* Credential seal — top-right decorative श्र mark */}
+      <span className="passport-seal" aria-hidden />
+      <div className="flex items-center justify-between gap-2 relative">
+        <span className="eyebrow text-ink-subtle flex items-center gap-2">
           {t("landingS3PassportLabel")}
+          <span aria-hidden className="size-1 rounded-full bg-ink-subtle/40" />
+          <span className="tabular-nums normal-case tracking-normal text-ink-muted">
+            ID · SHRM-2025
+          </span>
         </span>
         <span className="trust-pill is-verified">
           <Check className="size-3.5" aria-hidden />
@@ -103,27 +109,29 @@ function ProductProofPassport() {
         </span>
       </div>
       <div>
-        <h3 className="text-lg font-semibold text-ink leading-tight">
+        <h3 className="text-lg font-semibold text-ink-strong leading-tight">
           {t("landingS3PassportName")}
         </h3>
         <p className="text-meta text-ink-muted">{t("landingS3PassportTrade")}</p>
       </div>
       <dl className="grid grid-cols-3 gap-y-2 gap-x-3 border-t border-border pt-3">
         <div className="flex flex-col gap-0.5">
-          <dt className="text-meta uppercase text-ink-subtle">Identity</dt>
-          <dd className="text-sm text-positive font-medium flex items-center gap-1">
-            <Check className="size-3.5" aria-hidden /> Verified
+          <dt className="eyebrow text-ink-subtle">Identity</dt>
+          <dd className="text-sm text-positive font-semibold flex items-center gap-1">
+            <span className="status-dot is-positive" aria-hidden />
+            Verified
           </dd>
         </div>
         <div className="flex flex-col gap-0.5">
-          <dt className="text-meta uppercase text-ink-subtle">Skills</dt>
-          <dd className="text-sm text-positive font-medium flex items-center gap-1">
-            <Check className="size-3.5" aria-hidden /> Verified
+          <dt className="eyebrow text-ink-subtle">Skills</dt>
+          <dd className="text-sm text-positive font-semibold flex items-center gap-1">
+            <span className="status-dot is-positive" aria-hidden />
+            Verified
           </dd>
         </div>
         <div className="flex flex-col gap-0.5">
-          <dt className="text-meta uppercase text-ink-subtle">Tier</dt>
-          <dd className="text-sm text-ink font-medium">Top Pro</dd>
+          <dt className="eyebrow text-ink-subtle">Tier</dt>
+          <dd className="text-sm text-ink font-semibold">Top Pro</dd>
         </div>
       </dl>
     </div>

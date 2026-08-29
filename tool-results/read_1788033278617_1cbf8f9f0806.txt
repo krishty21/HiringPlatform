@@ -1,0 +1,775 @@
+     1→"use client";
+     2→import { useEffect, useState, useCallback, useMemo } from "react";
+     3→import Link from "next/link";
+     4→import { AppShell } from "@/components/shared/AppShell";
+     5→import { EmptyState } from "@/components/shared/EmptyState";
+     6→import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
+     7→import { WageDisplay } from "@/components/shared/WageDisplay";
+     8→import { RatingSummary } from "@/components/ratings/RatingSummary";
+     9→import { TrustTimeline } from "@/components/worker/TrustTimeline";
+    10→import { Button } from "@/components/ui/button";
+    11→import { Input } from "@/components/ui/input";
+    12→import { Label } from "@/components/ui/label";
+    13→import { Textarea } from "@/components/ui/textarea";
+    14→import { Switch } from "@/components/ui/switch";
+    15→import {
+    16→  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+    17→} from "@/components/ui/select";
+    18→import { useLanguage } from "@/lib/i18n/LanguageProvider";
+    19→import { toast } from "sonner";
+    20→import {
+    21→  ShieldCheck, MapPin, Eye, Briefcase, Share2, Loader2, Save, Check, IdCard,
+    22→  Award, Trophy, Clock, ChevronRight, Gauge,
+    23→} from "lucide-react";
+    24→
+    25→interface WorkerProfileData {
+    26→  id: string;
+    27→  fullName: string;
+    28→  tradeId: string | null;
+    29→  trade?: { id: string; nameEn: string; nameHi: string; nameTe: string; category: string } | null;
+    30→  yearsExp: number;
+    31→  city: string;
+    32→  lat: number;
+    33→  lng: number;
+    34→  wageMin: number;
+    35→  wageMax: number;
+    36→  shiftPref: "day" | "night" | "any";
+    37→  languages: string[];
+    38→  bio: string;
+    39→  photoUrl: string | null;
+    40→  availableToday: boolean;
+    41→  trustTier: "new" | "id_verified" | "skill_verified" | "top_pro";
+    42→  trustScore: number;
+    43→  passportPublic: boolean;
+    44→  profileViews: number;
+    45→  maxRadiusKm: number;
+    46→  profileStrength: number;
+    47→  skills: { skillId: string; proficiency: number; skill: { id: string; nameEn: string; nameHi: string; nameTe: string; category: string } }[];
+    48→  endorsements: {
+    49→    id: string;
+    50→    comment: string;
+    51→    createdAt: string;
+    52→    skillName: string;
+    53→    companyName: string;
+    54→    employerVerified: boolean;
+    55→  }[];
+    56→}
+    57→
+    58→const TRUST_LADDER: ReadonlyArray<WorkerProfileData["trustTier"]> = [
+    59→  "new", "id_verified", "skill_verified", "top_pro",
+    60→];
+    61→
+    62→const CITIES = [
+    63→  "Bhimavaram", "Tadepalligudem", "Rajahmundry", "Vijayawada",
+    64→  "Visakhapatnam", "Kakinada", "Hyderabad", "Guntur", "Nellore", "Tirupati",
+    65→];
+    66→
+    67→const CITY_LATLNG: Record<string, { lat: number; lng: number }> = {
+    68→  Bhimavaram: { lat: 16.5417, lng: 81.5233 },
+    69→  Tadepalligudem: { lat: 16.8317, lng: 81.5172 },
+    70→  Rajahmundry: { lat: 17.0005, lng: 81.8080 },
+    71→  Vijayawada: { lat: 16.5062, lng: 80.6480 },
+    72→  Visakhapatnam: { lat: 17.6868, lng: 83.2185 },
+    73→  Kakinada: { lat: 16.9600, lng: 82.2377 },
+    74→  Hyderabad: { lat: 17.3850, lng: 78.4867 },
+    75→  Guntur: { lat: 16.3067, lng: 80.4365 },
+    76→  Nellore: { lat: 14.4426, lng: 79.9865 },
+    77→  Tirupati: { lat: 13.6288, lng: 79.4192 },
+    78→};
+    79→
+    80→const TIER_ICON: Record<WorkerProfileData["trustTier"], typeof IdCard> = {
+    81→  new: Clock,
+    82→  id_verified: IdCard,
+    83→  skill_verified: Award,
+    84→  top_pro: Trophy,
+    85→};
+    86→
+    87→export default function WorkerProfilePage() {
+    88→  const { t, lang } = useLanguage();
+    89→  const [profile, setProfile] = useState<WorkerProfileData | null>(null);
+    90→  const [notFound, setNotFound] = useState(false);
+    91→  const [saving, setSaving] = useState(false);
+    92→  const [edit, setEdit] = useState({
+    93→    fullName: "",
+    94→    yearsExp: "0",
+    95→    city: "",
+    96→    wageMin: "0",
+    97→    wageMax: "0",
+    98→    shiftPref: "any" as "day" | "night" | "any",
+    99→    bio: "",
+   100→    photoUrl: "",
+   101→    maxRadiusKm: 20,
+   102→    availableToday: false,
+   103→    passportPublic: true,
+   104→  });
+   105→
+   106→  const load = useCallback(async () => {
+   107→    try {
+   108→      const res = await fetch("/api/worker/profile", { cache: "no-store" });
+   109→      if (res.status === 403 || res.status === 404) {
+   110→        setNotFound(true);
+   111→        return;
+   112→      }
+   113→      if (!res.ok) return;
+   114→      const data = (await res.json()) as WorkerProfileData;
+   115→      setProfile(data);
+   116→      setEdit({
+   117→        fullName: data.fullName,
+   118→        yearsExp: String(data.yearsExp),
+   119→        city: data.city,
+   120→        wageMin: String(data.wageMin),
+   121→        wageMax: String(data.wageMax),
+   122→        shiftPref: data.shiftPref,
+   123→        bio: data.bio,
+   124→        photoUrl: data.photoUrl ?? "",
+   125→        maxRadiusKm: data.maxRadiusKm,
+   126→        availableToday: data.availableToday,
+   127→        passportPublic: data.passportPublic,
+   128→      });
+   129→    } catch {}
+   130→  }, []);
+   131→
+   132→  useEffect(() => { load(); }, [load]);
+   133→
+   134→  // Live strength meter — computed from the editable form state + server-side
+   135→  // languages/skills/trust data.
+   136→  const liveStrength = useMemo(() => {
+   137→    if (!profile) return 0;
+   138→    const has = (b: boolean) => (b ? 1 : 0);
+   139→    const filled =
+   140→      has(!!edit.fullName) +
+   141→      has(Number(edit.yearsExp) > 0) +
+   142→      has(!!edit.city) +
+   143→      has(Number(edit.wageMin) > 0 || Number(edit.wageMax) > 0) +
+   144→      has(!!edit.shiftPref) +
+   145→      has(profile.languages.length > 0) +
+   146→      has(!!edit.bio && edit.bio.length > 0);
+   147→    let s = 30 + 10 * filled;
+   148→    s += Math.min(25, 5 * profile.skills.length);
+   149→    if (edit.bio && edit.bio.length > 50) s += 10;
+   150→    if (edit.photoUrl) s += 10;
+   151→    if (profile.trustTier !== "new") s += 10;
+   152→    return Math.min(100, s);
+   153→  }, [profile, edit]);
+   154→
+   155→  async function saveField(field: string, value: unknown) {
+   156→    setSaving(true);
+   157→    try {
+   158→      const res = await fetch("/api/worker/profile", {
+   159→        method: "PATCH",
+   160→        headers: { "content-type": "application/json" },
+   161→        body: JSON.stringify({ [field]: value }),
+   162→      });
+   163→      if (!res.ok) throw new Error("save-failed");
+   164→      await load();
+   165→      toast.success(t("save"));
+   166→    } catch {
+   167→      toast.error(t("errGeneric"));
+   168→    } finally {
+   169→      setSaving(false);
+   170→    }
+   171→  }
+   172→
+   173→  async function toggleAvailable(checked: boolean) {
+   174→    setEdit(e => ({ ...e, availableToday: checked }));
+   175→    setSaving(true);
+   176→    try {
+   177→      const res = await fetch("/api/worker/profile", {
+   178→        method: "PATCH",
+   179→        headers: { "content-type": "application/json" },
+   180→        body: JSON.stringify({ availableToday: checked }),
+   181→      });
+   182→      if (!res.ok) throw new Error("save-failed");
+   183→      toast.success(checked ? t("boardAvailableTodayOn") : t("boardAvailableTodayOff"));
+   184→      await load();
+   185→    } catch {
+   186→      setEdit(e => ({ ...e, availableToday: !checked }));
+   187→      toast.error(t("errGeneric"));
+   188→    } finally {
+   189→      setSaving(false);
+   190→    }
+   191→  }
+   192→
+   193→  async function togglePassportPublic(checked: boolean) {
+   194→    setEdit(e => ({ ...e, passportPublic: checked }));
+   195→    setSaving(true);
+   196→    try {
+   197→      const res = await fetch("/api/worker/profile", {
+   198→        method: "PATCH",
+   199→        headers: { "content-type": "application/json" },
+   200→        body: JSON.stringify({ passportPublic: checked }),
+   201→      });
+   202→      if (!res.ok) throw new Error("save-failed");
+   203→      toast.success(t("save"));
+   204→      await load();
+   205→    } catch {
+   206→      setEdit(e => ({ ...e, passportPublic: !checked }));
+   207→      toast.error(t("errGeneric"));
+   208→    } finally {
+   209→      setSaving(false);
+   210→    }
+   211→  }
+   212→
+   213→  async function saveProfileEdits() {
+   214→    setSaving(true);
+   215→    try {
+   216→      const body: Record<string, unknown> = {
+   217→        fullName: edit.fullName,
+   218→        yearsExp: Number(edit.yearsExp) || 0,
+   219→        city: edit.city,
+   220→        wageMin: Number(edit.wageMin) || 0,
+   221→        wageMax: Number(edit.wageMax) || 0,
+   222→        shiftPref: edit.shiftPref,
+   223→        bio: edit.bio,
+   224→        photoUrl: edit.photoUrl || null,
+   225→        maxRadiusKm: edit.maxRadiusKm,
+   226→      };
+   227→      if (CITY_LATLNG[edit.city]) {
+   228→        body.lat = CITY_LATLNG[edit.city].lat;
+   229→        body.lng = CITY_LATLNG[edit.city].lng;
+   230→      }
+   231→      const res = await fetch("/api/worker/profile", {
+   232→        method: "PATCH",
+   233→        headers: { "content-type": "application/json" },
+   234→        body: JSON.stringify(body),
+   235→      });
+   236→      if (!res.ok) throw new Error("save-failed");
+   237→      toast.success(t("save"));
+   238→      await load();
+   239→    } catch {
+   240→      toast.error(t("errGeneric"));
+   241→    } finally {
+   242→      setSaving(false);
+   243→    }
+   244→  }
+   245→
+   246→  function shareWhatsApp() {
+   247→    if (!profile) return;
+   248→    const tradeName = profile.trade
+   249→      ? (lang === "hi" ? profile.trade.nameHi : lang === "te" ? profile.trade.nameTe : profile.trade.nameEn)
+   250→      : "Worker";
+   251→    const text = `${t("passportKaamCard")} — ${profile.fullName}\n${tradeName} · ${profile.yearsExp} ${t("passportYears")}\n${profile.city} · ${t("passportTier")}: ${profile.trustTier}\n${t("passportWage")}: ₹${profile.wageMin}-${profile.wageMax}${t("perDay")}`;
+   252→    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+   253→    window.open(url, "_blank", "noopener,noreferrer");
+   254→  }
+   255→
+   256→  if (notFound) {
+   257→    return (
+   258→      <AppShell>
+   259→        <EmptyState
+   260→          icon={ShieldCheck}
+   261→          title={t("errNotFound")}
+   262→          description={t("onboardTitle")}
+   263→          action={<Button asChild><Link href="/onboarding/worker">{t("onboardSubmit")}</Link></Button>}
+   264→        />
+   265→      </AppShell>
+   266→    );
+   267→  }
+   268→
+   269→  if (!profile) {
+   270→    return (
+   271→      <AppShell>
+   272→        <LoadingSkeleton count={4} />
+   273→      </AppShell>
+   274→    );
+   275→  }
+   276→
+   277→  const initials = profile.fullName.split(" ").map(p => p[0]).slice(0, 2).join("").toUpperCase();
+   278→  const tradeName = profile.trade
+   279→    ? (lang === "hi" ? profile.trade.nameHi : lang === "te" ? profile.trade.nameTe : profile.trade.nameEn)
+   280→    : "—";
+   281→
+   282→  // Trust-ladder progression UI (Master Prompt §25):
+   283→  // ○ todo   ● current   ✓ done
+   284→  const currentIdx = TRUST_LADDER.indexOf(profile.trustTier);
+   285→
+   286→  return (
+   287→    <AppShell>
+   288→      {/* Page header */}
+   289→      <header className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+   290→        <div className="flex flex-col gap-1 min-w-0">
+   291→          <p className="text-meta uppercase tracking-wider text-ink-subtle">
+   292→            {t("passportKaamCard")}
+   293→          </p>
+   294→          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink text-balance">
+   295→            {t("passportTitle")}
+   296→          </h1>
+   297→        </div>
+   298→        <Button
+   299→          onClick={shareWhatsApp}
+   300→          variant="outline"
+   301→          className="gap-2 min-h-11 shrink-0"
+   302→        >
+   303→          <Share2 className="size-4" aria-hidden />
+   304→          {t("passportKaamCardShare")}
+   305→        </Button>
+   306→      </header>
+   307→
+   308→      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+   309→        {/* ── Workforce Passport — signature card ─────────────────────────── */}
+   310→        <article className="passport-card rounded-md flex flex-col">
+   311→          {/* Identity strip — who is this person? */}
+   312→          <header className="px-5 py-5 sm:px-6 sm:py-6 border-b border-border flex items-start gap-4 flex-wrap">
+   313→            <span
+   314→              aria-hidden
+   315→              className="size-16 sm:size-20 grid place-items-center rounded-md bg-primary text-primary-foreground text-xl sm:text-2xl font-semibold shrink-0"
+   316→            >
+   317→              {initials}
+   318→            </span>
+   319→            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+   320→              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-ink break-words">
+   321→                {profile.fullName}
+   322→              </h2>
+   323→              <p className="text-meta text-ink-muted flex items-center gap-1.5 flex-wrap">
+   324→                <Briefcase className="size-3.5" aria-hidden />
+   325→                {tradeName}
+   326→                <span aria-hidden>·</span>
+   327→                <span>{profile.yearsExp} {t("passportYears")}</span>
+   328→                <span aria-hidden>·</span>
+   329→                <span className="inline-flex items-center gap-1">
+   330→                  <MapPin className="size-3.5" aria-hidden />
+   331→                  {profile.city}
+   332→                </span>
+   333→              </p>
+   334→              {profile.availableToday && (
+   335→                <p className="inline-flex items-center gap-1.5 text-meta font-medium text-positive">
+   336→                  <span className="status-dot is-positive" aria-hidden />
+   337→                  {t("onboardAvailableToday")}
+   338→                </p>
+   339→              )}
+   340→            </div>
+   341→            {profile.passportPublic && (
+   342→              <span
+   343→                className="passport-stamp inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-meta font-semibold uppercase tracking-wider"
+   344→                aria-label={t("kaamCardVerifiedStamp")}
+   345→              >
+   346→                <ShieldCheck className="size-3.5" aria-hidden />
+   347→                {t("kaamCardVerifiedStamp")}
+   348→              </span>
+   349→            )}
+   350→          </header>
+   351→
+   352→          {/* Trust progression ladder — New → ID → Skill → Top Pro */}
+   353→          <section className="px-5 py-4 sm:px-6 border-b border-border flex flex-col gap-3">
+   354→            <div className="flex items-center justify-between gap-2">
+   355→              <h3 className="text-sm font-semibold text-ink flex items-center gap-1.5">
+   356→                <ShieldCheck className="size-4 text-ink-muted" aria-hidden />
+   357→                {t("passportTier")}
+   358→              </h3>
+   359→              <p className="text-meta text-ink-muted tabular-nums">
+   360→                {profile.trustScore}/100
+   361→              </p>
+   362→            </div>
+   363→            <ol className="grid grid-cols-4 gap-2" aria-label={t("passportTrustScore")}>
+   364→              {([
+   365→                ["new", t("passportTierNew")],
+   366→                ["id_verified", t("passportTierIdVerified")],
+   367→                ["skill_verified", t("passportTierSkillVerified")],
+   368→                ["top_pro", t("passportTierTopPro")],
+   369→              ] as const).map(([tier, label], i) => {
+   370→                const Icon = TIER_ICON[tier];
+   371→                const isDone = i < currentIdx;
+   372→                const isCurrent = i === currentIdx;
+   373→                const isTodo = i > currentIdx;
+   374→                return (
+   375→                  <li
+   376→                    key={tier}
+   377→                    className={`flex flex-col items-center gap-1.5 text-center rounded-md border p-2.5 transition-colors ${
+   378→                      isDone
+   379→                        ? "border-positive/40 bg-positive/5"
+   380→                        : isCurrent
+   381→                          ? "border-accent/40 bg-accent/5"
+   382→                          : "border-border bg-surface-sunken"
+   383→                    }`}
+   384→                    aria-current={isCurrent ? "step" : undefined}
+   385→                  >
+   386→                    <span
+   387→                      className={`size-7 grid place-items-center rounded-full border-2 ${
+   388→                        isDone
+   389→                          ? "border-positive bg-positive text-positive-foreground"
+   390→                          : isCurrent
+   391→                            ? "border-accent bg-accent text-accent-foreground"
+   392→                            : "border-border bg-surface text-ink-subtle"
+   393→                      }`}
+   394→                      aria-hidden
+   395→                    >
+   396→                      {isDone ? (
+   397→                        <Check className="size-3.5" aria-hidden />
+   398→                      ) : isCurrent ? (
+   399→                        <span className="size-1.5 rounded-full bg-current" aria-hidden />
+   400→                      ) : (
+   401→                        <Icon className="size-3.5" aria-hidden />
+   402→                      )}
+   403→                    </span>
+   404→                    <span
+   405→                      className={`text-meta font-medium leading-tight ${
+   406→                        isCurrent ? "text-accent-foreground" : isTodo ? "text-ink-subtle" : "text-ink"
+   407→                      }`}
+   408→                    >
+   409→                      {label}
+   410→                    </span>
+   411→                  </li>
+   412→                );
+   413→              })}
+   414→            </ol>
+   415→          </section>
+   416→
+   417→          {/* Identity / Skills / Reliability — three-layer dl */}
+   418→          <section className="px-5 py-4 sm:px-6 border-b border-border">
+   419→            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-y-3 gap-x-6">
+   420→              <div className="flex flex-col gap-1">
+   421→                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+   422→                  <IdCard className="size-3.5" aria-hidden />
+   423→                  {t("passportTierIdVerified")}
+   424→                </dt>
+   425→                <dd className="text-sm font-medium text-ink">
+   426→                  {profile.trustTier !== "new" ? (
+   427→                    <span className="inline-flex items-center gap-1.5 text-positive">
+   428→                      <Check className="size-4" aria-hidden />
+   429→                      {t("passportTierVerified")}
+   430→                    </span>
+   431→                  ) : (
+   432→                    <span className="text-ink-subtle">{t("passportTierPending")}</span>
+   433→                  )}
+   434→                </dd>
+   435→              </div>
+   436→              <div className="flex flex-col gap-1">
+   437→                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+   438→                  <Award className="size-3.5" aria-hidden />
+   439→                  {t("passportTierSkillVerified")}
+   440→                </dt>
+   441→                <dd className="text-sm font-medium text-ink">
+   442→                  {profile.trustTier === "skill_verified" || profile.trustTier === "top_pro" ? (
+   443→                    <span className="inline-flex items-center gap-1.5 text-positive">
+   444→                      <Check className="size-4" aria-hidden />
+   445→                      {t("passportTierVerified")}
+   446→                    </span>
+   447→                  ) : (
+   448→                    <span className="text-ink-subtle">{t("passportTierPending")}</span>
+   449→                  )}
+   450→                </dd>
+   451→              </div>
+   452→              <div className="flex flex-col gap-1">
+   453→                <dt className="text-meta uppercase tracking-wide text-ink-subtle flex items-center gap-1.5">
+   454→                  <Gauge className="size-3.5" aria-hidden />
+   455→                  {t("passportStrength")}
+   456→                </dt>
+   457→                <dd className="text-sm font-medium text-ink tabular-nums">
+   458→                  {liveStrength}%
+   459→                </dd>
+   460→              </div>
+   461→            </dl>
+   462→          </section>
+   463→
+   464→          {/* Editable details — grouped fields, professional labels */}
+   465→          <section className="px-5 py-4 sm:px-6 border-b border-border flex flex-col gap-4">
+   466→            <h3 className="text-sm font-semibold text-ink">{t("passportExperience")}</h3>
+   467→            <div className="grid sm:grid-cols-2 gap-4">
+   468→              <div className="grid gap-1.5">
+   469→                <Label htmlFor="fullName" className="text-meta text-ink-subtle uppercase tracking-wide">
+   470→                  {t("onboardFullName")}
+   471→                </Label>
+   472→                <Input
+   473→                  id="fullName" value={edit.fullName}
+   474→                  onChange={e => setEdit(s => ({ ...s, fullName: e.target.value }))}
+   475→                  className="min-h-11"
+   476→                />
+   477→              </div>
+   478→              <div className="grid gap-1.5">
+   479→                <Label htmlFor="yearsExp" className="text-meta text-ink-subtle uppercase tracking-wide">
+   480→                  {t("onboardYearsExp")}
+   481→                </Label>
+   482→                <Input
+   483→                  id="yearsExp" type="number" min={0} max={50}
+   484→                  value={edit.yearsExp}
+   485→                  onChange={e => setEdit(s => ({ ...s, yearsExp: e.target.value }))}
+   486→                  className="min-h-11"
+   487→                />
+   488→              </div>
+   489→              <div className="grid gap-1.5">
+   490→                <Label htmlFor="city" className="text-meta text-ink-subtle uppercase tracking-wide">
+   491→                  {t("onboardCity")}
+   492→                </Label>
+   493→                <Select
+   494→                  value={edit.city}
+   495→                  onValueChange={(v) => setEdit(s => ({ ...s, city: v }))}
+   496→                >
+   497→                  <SelectTrigger id="city" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+   498→                  <SelectContent>
+   499→                    {CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+   500→                  </SelectContent>
+   501→                </Select>
+   502→              </div>
+   503→              <div className="grid gap-1.5">
+   504→                <Label htmlFor="shift" className="text-meta text-ink-subtle uppercase tracking-wide">
+   505→                  {t("onboardShift")}
+   506→                </Label>
+   507→                <Select
+   508→                  value={edit.shiftPref}
+   509→                  onValueChange={(v) => setEdit(s => ({ ...s, shiftPref: v as typeof edit.shiftPref }))}
+   510→                >
+   511→                  <SelectTrigger id="shift" className="min-h-11 w-full"><SelectValue /></SelectTrigger>
+   512→                  <SelectContent>
+   513→                    <SelectItem value="any">{t("shiftAny")}</SelectItem>
+   514→                    <SelectItem value="day">{t("shiftDay")}</SelectItem>
+   515→                    <SelectItem value="night">{t("shiftNight")}</SelectItem>
+   516→                  </SelectContent>
+   517→                </Select>
+   518→              </div>
+   519→              <div className="grid gap-1.5">
+   520→                <Label htmlFor="wageMin" className="text-meta text-ink-subtle uppercase tracking-wide">
+   521→                  {t("onboardWageMin")} (₹/day)
+   522→                </Label>
+   523→                <Input
+   524→                  id="wageMin" type="number" min={0} step={50}
+   525→                  value={edit.wageMin}
+   526→                  onChange={e => setEdit(s => ({ ...s, wageMin: e.target.value }))}
+   527→                  className="min-h-11"
+   528→                />
+   529→              </div>
+   530→              <div className="grid gap-1.5">
+   531→                <Label htmlFor="wageMax" className="text-meta text-ink-subtle uppercase tracking-wide">
+   532→                  {t("onboardWageMax")} (₹/day)
+   533→                </Label>
+   534→                <Input
+   535→                  id="wageMax" type="number" min={0} step={50}
+   536→                  value={edit.wageMax}
+   537→                  onChange={e => setEdit(s => ({ ...s, wageMax: e.target.value }))}
+   538→                  className="min-h-11"
+   539→                />
+   540→              </div>
+   541→              <div className="grid gap-1.5">
+   542→                <Label htmlFor="photoUrl" className="text-meta text-ink-subtle uppercase tracking-wide">
+   543→                  {t("onboardPhotoUrl")} <span className="text-ink-subtle normal-case">({t("optional")})</span>
+   544→                </Label>
+   545→                <Input
+   546→                  id="photoUrl" type="url"
+   547→                  value={edit.photoUrl}
+   548→                  onChange={e => setEdit(s => ({ ...s, photoUrl: e.target.value }))}
+   549→                  className="min-h-11" placeholder="https://…"
+   550→                />
+   551→              </div>
+   552→              <div className="grid gap-1.5">
+   553→                <Label htmlFor="radius" className="text-meta text-ink-subtle uppercase tracking-wide">
+   554→                  {t("onboardRadius")}: <span className="text-ink font-medium normal-case">{edit.maxRadiusKm} {t("km")}</span>
+   555→                </Label>
+   556→                <Input
+   557→                  id="radius" type="range" min={1} max={200} step={5}
+   558→                  value={edit.maxRadiusKm}
+   559→                  onChange={e => setEdit(s => ({ ...s, maxRadiusKm: Number(e.target.value) }))}
+   560→                  className="min-h-11"
+   561→                />
+   562→              </div>
+   563→            </div>
+   564→
+   565→            <div className="grid gap-1.5">
+   566→              <Label htmlFor="bio" className="text-meta text-ink-subtle uppercase tracking-wide">
+   567→                {t("onboardBio")} <span className="text-ink-subtle normal-case">({edit.bio.length}/500)</span>
+   568→              </Label>
+   569→              <Textarea
+   570→                id="bio" rows={4} maxLength={500}
+   571→                value={edit.bio}
+   572→                onChange={e => setEdit(s => ({ ...s, bio: e.target.value }))}
+   573→                className="min-h-24"
+   574→              />
+   575→            </div>
+   576→
+   577→            <div className="flex items-center gap-2">
+   578→              <Button
+   579→                onClick={saveProfileEdits}
+   580→                disabled={saving}
+   581→                className="gap-2 min-h-11"
+   582→              >
+   583→                {saving ? (
+   584→                  <Loader2 className="size-4 animate-spin" aria-hidden />
+   585→                ) : (
+   586→                  <Save className="size-4" aria-hidden />
+   587→                )}
+   588→                {t("save")}
+   589→              </Button>
+   590→            </div>
+   591→          </section>
+   592→
+   593→          {/* Skills — verified skill list */}
+   594→          {profile.skills.length > 0 && (
+   595→            <section className="px-5 py-4 sm:px-6 border-b border-border">
+   596→              <h3 className="text-sm font-semibold text-ink mb-2">{t("passportSkills")}</h3>
+   597→              <dl className="grid gap-2 sm:grid-cols-2">
+   598→                {profile.skills.map(s => {
+   599→                  const name = s.skill
+   600→                    ? (lang === "hi" ? s.skill.nameHi : lang === "te" ? s.skill.nameTe : s.skill.nameEn)
+   601→                    : "—";
+   602→                  return (
+   603→                    <div
+   604→                      key={s.skillId}
+   605→                      className="surface-inset rounded-md px-3 py-2 flex items-center justify-between gap-2"
+   606→                    >
+   607→                      <dt className="text-sm font-medium text-ink">{name}</dt>
+   608→                      <dd
+   609→                        className="inline-flex items-center gap-0.5"
+   610→                        aria-label={`Proficiency ${s.proficiency} of 5`}
+   611→                      >
+   612→                        {Array.from({ length: 5 }).map((_, i) => (
+   613→                          <span
+   614→                            key={i}
+   615→                            aria-hidden
+   616→                            className={`size-2 rounded-full ${
+   617→                              i < s.proficiency ? "bg-accent" : "bg-border"
+   618→                            }`}
+   619→                          />
+   620→                        ))}
+   621→                      </dd>
+   622→                    </div>
+   623→                  );
+   624→                })}
+   625→              </dl>
+   626→            </section>
+   627→          )}
+   628→
+   629→          {/* Endorsements — work evidence */}
+   630→          {profile.endorsements.length > 0 && (
+   631→            <section className="px-5 py-4 sm:px-6">
+   632→              <h3 className="text-sm font-semibold text-ink mb-2 flex items-center gap-2">
+   633→                {t("passportEndorsements")}
+   634→                <span className="text-meta tabular-nums text-ink-subtle">
+   635→                  ({profile.endorsements.length})
+   636→                </span>
+   637→              </h3>
+   638→              <ul className="grid gap-2">
+   639→                {profile.endorsements.map(e => (
+   640→                  <li key={e.id} className="surface-inset rounded-md p-3 flex flex-col gap-1">
+   641→                    <div className="flex items-center justify-between gap-2 flex-wrap">
+   642→                      <p className="text-sm font-semibold text-ink">{e.companyName}</p>
+   643→                      {e.employerVerified && (
+   644→                        <span className="trust-pill is-employer">
+   645→                          <ShieldCheck className="size-3.5" aria-hidden />
+   646→                          {t("feedVerifiedEmployer")}
+   647→                        </span>
+   648→                      )}
+   649→                    </div>
+   650→                    <p className="text-sm text-ink-muted text-pretty">
+   651→                      {e.comment || t("endorsementFallback", { skill: e.skillName })}
+   652→                    </p>
+   653→                    <p className="text-meta text-ink-subtle">
+   654→                      {new Date(e.createdAt).toLocaleDateString()}
+   655→                    </p>
+   656→                  </li>
+   657→                ))}
+   658→              </ul>
+   659→            </section>
+   660→          )}
+   661→        </article>
+   662→
+   663→        {/* Side rail — compact status + actions */}
+   664→        <aside className="flex flex-col gap-4">
+   665→          {/* Compact stat strip — views this week */}
+   666→          <section className="surface-raised rounded-md p-4 flex items-center gap-3 shadow-raise">
+   667→            <span className="size-9 grid place-items-center rounded-md border border-border bg-surface-sunken text-ink-muted shrink-0">
+   668→              <Eye className="size-4" aria-hidden />
+   669→            </span>
+   670→            <div className="flex flex-col min-w-0">
+   671→              <p className="text-2xl font-semibold tabular-nums text-ink leading-none">
+   672→                {profile.profileViews}
+   673→              </p>
+   674→              <p className="text-meta text-ink-muted leading-tight mt-1">
+   675→                {t("passportViewsThisWeek")}
+   676→              </p>
+   677→            </div>
+   678→          </section>
+   679→
+   680→          {/* Employer-rating summary */}
+   681→          <RatingSummary
+   682→            endpoint="/api/ratings/worker"
+   683→            userId={profile.id}
+   684→            title={t("ratingSummaryWorkerTitle")}
+   685→          />
+   686→
+   687→          {/* Trust journey timeline — meaningful, no animation stagger */}
+   688→          <TrustTimeline />
+   689→
+   690→          {/* Available-today toggle */}
+   691→          <section className="surface-raised rounded-md p-4 flex items-center justify-between gap-3 shadow-raise">
+   692→            <div className="flex items-start gap-3 min-w-0">
+   693→              <span className="size-9 grid place-items-center rounded-md border border-border bg-surface-sunken text-ink-muted shrink-0">
+   694→                <Clock className="size-4" aria-hidden />
+   695→              </span>
+   696→              <div className="flex flex-col gap-0.5 min-w-0">
+   697→                <p className="text-sm font-semibold text-ink">
+   698→                  {t("onboardAvailableToday")}
+   699→                </p>
+   700→                <p className="text-meta text-ink-muted leading-relaxed">
+   701→                  {t("visibleToEmployers")}
+   702→                </p>
+   703→              </div>
+   704→            </div>
+   705→            <Switch
+   706→              id="avail"
+   707→              checked={edit.availableToday}
+   708→              onCheckedChange={toggleAvailable}
+   709→              disabled={saving}
+   710→              aria-label={t("onboardAvailableToday")}
+   711→            />
+   712→          </section>
+   713→
+   714→          {/* Public Kaam Card toggle */}
+   715→          <section className="surface-raised rounded-md p-4 flex flex-col gap-2 shadow-raise">
+   716→            <div className="flex items-center justify-between gap-3">
+   717→              <div className="flex items-start gap-3 min-w-0">
+   718→                <span className="size-9 grid place-items-center rounded-md border border-border bg-surface-sunken text-ink-muted shrink-0">
+   719→                  <ShieldCheck className="size-4" aria-hidden />
+   720→                </span>
+   721→                <div className="flex flex-col gap-0.5 min-w-0">
+   722→                  <p className="text-sm font-semibold text-ink">
+   723→                    {t("passportKaamCardToggle")}
+   724→                  </p>
+   725→                  <p className="text-meta text-ink-muted leading-relaxed">
+   726→                    {t("passportKaamCardToggleHelp")}
+   727→                  </p>
+   728→                </div>
+   729→              </div>
+   730→              <Switch
+   731→                id="pp"
+   732→                checked={edit.passportPublic}
+   733→                onCheckedChange={togglePassportPublic}
+   734→                disabled={saving}
+   735→                aria-label={t("passportKaamCardToggle")}
+   736→              />
+   737→            </div>
+   738→            {profile.passportPublic && (
+   739→              <Link
+   740→                href={`/c/${profile.id}`}
+   741→                className="mt-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-4 rounded-md border border-border bg-surface text-sm font-medium text-ink hover:bg-surface-sunken transition-colors"
+   742→              >
+   743→                {t("kaamCardPublicBadge")}
+   744→                <ChevronRight className="size-4" aria-hidden />
+   745→              </Link>
+   746→            )}
+   747→          </section>
+   748→
+   749→          {/* Verify-now prompt — credential infrastructure, not gaming */}
+   750→          <section className="surface-inset rounded-md p-4 flex flex-col gap-2">
+   751→            <p className="text-sm font-semibold text-ink flex items-center gap-1.5">
+   752→              <ShieldCheck className="size-4 text-ink-muted" aria-hidden />
+   753→              {t("passportVerifyNow")}
+   754→            </p>
+   755→            <p className="text-meta text-ink-muted leading-relaxed">
+   756→              {t("verifyPiiNote")}
+   757→            </p>
+   758→            <Button
+   759→              asChild
+   760→              variant="outline"
+   761→              size="sm"
+   762→              className="mt-2 gap-1.5 min-h-11 w-full"
+   763→            >
+   764→              <Link href="/verify">
+   765→                {t("passportUploadCert")}
+   766→                <ChevronRight className="size-4" aria-hidden />
+   767→              </Link>
+   768→            </Button>
+   769→          </section>
+   770→        </aside>
+   771→      </div>
+   772→    </AppShell>
+   773→  );
+   774→}
+   775→
